@@ -1,7 +1,7 @@
 import 'package:flutterquiz/features/wallet/models/payoutMethod.dart';
 
 const appName = "Elite Quiz";
-const packageName = "com.wrteam.flutterquiz";
+const packageName = "com.renolation.quiz";
 const iosAppId = "585027354";
 
 //supported language codes

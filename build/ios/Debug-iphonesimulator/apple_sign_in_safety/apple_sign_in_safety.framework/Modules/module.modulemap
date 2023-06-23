@@ -1,6 +1,0 @@
-framework module apple_sign_in_safety {
-  umbrella header "apple_sign_in_safety-umbrella.h"
-
-  export *
-  module * { export * }
-}
