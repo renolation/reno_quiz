@@ -1,0 +1,11 @@
+framework module facebook_audience_network {
+  umbrella header "facebook_audience_network-umbrella.h"
+
+  export *
+  module * { export * }
+}
+
+module facebook_audience_network.Swift {
+  header "facebook_audience_network-Swift.h"
+  requires objc
+}

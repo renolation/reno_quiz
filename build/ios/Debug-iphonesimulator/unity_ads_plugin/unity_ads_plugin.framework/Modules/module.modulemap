@@ -1,0 +1,11 @@
+framework module unity_ads_plugin {
+  umbrella header "unity_ads_plugin-umbrella.h"
+
+  export *
+  module * { export * }
+}
+
+module unity_ads_plugin.Swift {
+  header "unity_ads_plugin-Swift.h"
+  requires objc
+}
