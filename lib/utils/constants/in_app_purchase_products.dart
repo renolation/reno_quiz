@@ -5,10 +5,10 @@
 //
 const inAppPurchaseProducts = {
   //number of coins : it's respective consumable id
-  5: "5_consumable_coin",
-  100: "100_consumable_coins",
-  500: "500_consumable_coins",
-  1000: "1000_consumable_coins",
+  50: "50_coins",
+  100: "100_coins",
+  200: "200_coins",
+  // 1000: "1000_consumable_coins",
 };
 
 // class InAppPurchaseProduct {

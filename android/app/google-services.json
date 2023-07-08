@@ -14,7 +14,7 @@
       },
       "oauth_client": [
         {
-          "client_id": "676014903428-1ot8m7trn4ga2qn15spvdnrhs255c3fa.apps.googleusercontent.com",
+          "client_id": "676014903428-rb81c03kvq06038u237vd2ogkb7u4pbk.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
@@ -34,43 +34,7 @@
               "client_id": "676014903428-2ocnk81v2jim990ptpjcbmcfhkp8r3v2.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.wrteam.flutterquiz"
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:676014903428:android:962b00182575d27a8f72d1",
-        "android_client_info": {
-          "package_name": "com.wrteam.flutterquiz"
-        }
-      },
-      "oauth_client": [
-        {
-          "client_id": "676014903428-1ot8m7trn4ga2qn15spvdnrhs255c3fa.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
-      "api_key": [
-        {
-          "current_key": "AIzaSyBZoYlt7egwcS8mEa6avPxVDR3clTUIR1E"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "676014903428-1ot8m7trn4ga2qn15spvdnrhs255c3fa.apps.googleusercontent.com",
-              "client_type": 3
-            },
-            {
-              "client_id": "676014903428-2ocnk81v2jim990ptpjcbmcfhkp8r3v2.apps.googleusercontent.com",
-              "client_type": 2,
-              "ios_info": {
-                "bundle_id": "com.wrteam.flutterquiz"
+                "bundle_id": "com.renolation.quiz"
               }
             }
           ]

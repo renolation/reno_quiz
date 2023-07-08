@@ -59,11 +59,11 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyComPNjFHPblOwStdUrnoqJA_KdtxdWSZ8',
-    appId: '1:676014903428:ios:76e843cd31a1f4588f72d1',
+    appId: '1:676014903428:ios:18e72fe288fb53e28f72d1',
     messagingSenderId: '676014903428',
     projectId: 'quizapp-359910',
     storageBucket: 'quizapp-359910.appspot.com',
-    iosClientId: '676014903428-2ocnk81v2jim990ptpjcbmcfhkp8r3v2.apps.googleusercontent.com',
+    iosClientId: '676014903428-guvlqlnhqfq421q7q0avn2bh8beinb6n.apps.googleusercontent.com',
     iosBundleId: 'com.renolation.quiz',
   );
 }
