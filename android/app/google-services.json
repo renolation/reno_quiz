@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "676014903428-l8t96978dkobo7vfdtb47tdlrqi48lb8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.renolation.quiz",
+            "certificate_hash": "f7e4ccc3ee968ec212b3652e2bfffcf9efd8e24e"
+          }
+        },
+        {
           "client_id": "676014903428-rb81c03kvq06038u237vd2ogkb7u4pbk.apps.googleusercontent.com",
           "client_type": 3
         }
