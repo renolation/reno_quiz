@@ -1079,7 +1079,7 @@ class _MenuScreenState extends State<MenuScreen> {
                       .updateState(AudioQuestionBookmarkInitial());
 
                   context.read<AuthCubit>().signOut();
-                  Navigator.of(context).pushReplacementNamed(Routes.login);
+                  Navigator.of(context).pushReplacementNamed(Routes.home, arguments: true);
                 },
                 style: ButtonStyle(
                   backgroundColor:

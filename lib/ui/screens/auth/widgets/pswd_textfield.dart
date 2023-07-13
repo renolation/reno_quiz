@@ -50,10 +50,10 @@ class _PswdTextFieldState extends State<PswdTextField> {
       decoration: InputDecoration(
         fillColor: Theme.of(context).colorScheme.background,
         filled: true,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide.none,
-        ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide:  BorderSide(color: Theme.of(context).colorScheme.onBackground, width: 0.4),
+          ),
         contentPadding: const EdgeInsets.all(15),
         hintText: widget.hintText ??
             "${AppLocalization.of(context)!.getTranslatedValues('pwdLbl')!}*",

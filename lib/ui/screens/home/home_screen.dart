@@ -698,7 +698,7 @@ class _HomeScreenState extends State<HomeScreen>
       builder: (_) => GuestModeDialog(
         onTapYesButton: () {
           Navigator.of(context).pop();
-          Navigator.of(context).pushReplacementNamed(Routes.login);
+          Navigator.of(context).pushNamed(Routes.login);
         },
       ),
     );
@@ -1030,7 +1030,10 @@ class _HomeScreenState extends State<HomeScreen>
           index = categoryList.length <= maxIdx ? categoryList.length : maxIdx;
         }
 
-        return ListView.builder(
+        return ListView.separated(
+          separatorBuilder: (context, index) {
+            return Divider();
+          },
           padding: const EdgeInsets.only(bottom: 10),
           shrinkWrap: true,
           itemCount: index,

@@ -63,6 +63,7 @@ dependencies:
   encrypt:
   flutter_tex: ^4.0.3+4
   permission_handler: ^10.2.0
+  font_awesome_flutter: ^10.5.0
 
 dev_dependencies:
   flutter_lints: ^2.0.1

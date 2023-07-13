@@ -38,7 +38,7 @@ class QuizGridCard extends StatelessWidget {
       onTap: onTap,
       child: LayoutBuilder(
         builder: (_, constraints) {
-          final iconSize = MediaQuery.of(context).size.width * 0.121;
+          final iconSize = MediaQuery.of(context).size.width * 0.135;
           final iconColor = Theme.of(context).primaryColor;
 
           return Stack(
