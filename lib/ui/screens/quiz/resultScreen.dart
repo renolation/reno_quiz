@@ -1652,7 +1652,7 @@ class _ResultScreenState extends State<ResultScreen> {
         String referalCode =
             context.read<UserDetailsCubit>().getUserProfile().referCode ?? "";
 
-        String scoreText = "Elite Quiz"
+        String scoreText = "Reno Quiz"
             "\n${AppLocalization.of(context)!.getTranslatedValues('myScoreLbl')!}"
             "\nApp Link"
             "\n$appLink"

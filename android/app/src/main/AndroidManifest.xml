@@ -19,7 +19,7 @@
 
 
     <application
-        android:label="Elite Quiz"
+        android:label="Reno Quiz"
         android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true"
         android:allowBackup="false"
