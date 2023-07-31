@@ -102,9 +102,8 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<key>UIViewControllerBasedStatusBarAppearance</key>
-	<false/>
-	<array>
+	<key>SKAdNetworkItems</key>
+    	<array>
     		<dict>
     			<key>SKAdNetworkIdentifier</key>
     			<string>cstr6suwn9.skadnetwork</string>
@@ -306,5 +305,8 @@
     			<string>3qcr597p9d.skadnetwork</string>
     		</dict>
     	</array>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<false/>
+
 </dict>
 </plist>

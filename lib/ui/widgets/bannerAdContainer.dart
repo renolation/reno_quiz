@@ -14,7 +14,7 @@ class BannerAdContainer extends StatefulWidget {
   const BannerAdContainer({super.key});
 
   @override
-  _BannerAdContainer createState() => _BannerAdContainer();
+  _BannerAdContaine r createState() => _BannerAdContainer();
 }
 
 class _BannerAdContainer extends State<BannerAdContainer> {

@@ -15,6 +15,9 @@ import 'package:flutterquiz/utils/ui_utils.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:unity_ads_plugin/unity_ads_plugin.dart';
 
+import '../../features/ads/app_lifecycle_reactor.dart';
+import '../../features/ads/app_open_ad_manager.dart';
+
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -46,11 +49,22 @@ class _SplashScreenState extends State<SplashScreen>
 
   late bool loadedSystemConfigDetails = false;
 
+  late AppLifecycleReactor appLifecycleReactor;
+
+
   @override
   void initState() {
     initAnimations();
     loadSystemConfig();
     super.initState();
+    initAppOpenAd();
+  }
+
+  void initAppOpenAd(){
+    AppOpenAdManager appOpenAdManager = AppOpenAdManager()..loadAd();
+    appLifecycleReactor = AppLifecycleReactor(
+        appOpenAdManager: appOpenAdManager);
+
   }
 
   void loadSystemConfig() async {
