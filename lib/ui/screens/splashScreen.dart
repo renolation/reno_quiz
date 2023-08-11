@@ -212,21 +212,23 @@ class _SplashScreenState extends State<SplashScreen>
             ),
             child: Center(
               child: SvgPicture.asset(
+                //todo: splash logo
                 UiUtils.getImagePath("splash_logo.svg"),
                 color: Theme.of(context).colorScheme.background,
               ),
             ),
           ),
         ),
-        Align(
-          alignment: Alignment.bottomCenter,
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 22.0),
-            child: SvgPicture.asset(
-              UiUtils.getImagePath("wrteam_logo.svg"),
-            ),
-          ),
-        ),
+        // Align(
+        //   alignment: Alignment.bottomCenter,
+        //   child: Padding(
+        //     padding: const EdgeInsets.only(bottom: 22.0),
+        //     child: SvgPicture.asset(
+        //       //todo: update
+        //       UiUtils.getImagePath("wrteam_logo.svg"),
+        //     ),
+        //   ),
+        // ),
       ],
     );
   }

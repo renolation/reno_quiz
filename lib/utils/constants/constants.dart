@@ -65,7 +65,7 @@ const settingsThemeKey = "theme";
 //make sure to not add '/' at the end of url
 // make sure to check if admin panel is http or https
 
-const databaseUrl = "https://quiz-admin.renolation.com";
+const databaseUrl = "https://quiz.renolation.com";
 
 
 const baseUrl = '$databaseUrl/Api/';
