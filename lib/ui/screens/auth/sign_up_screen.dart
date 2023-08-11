@@ -113,7 +113,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       width: 168,
       child: SvgPicture.asset(
         UiUtils.getImagePath("splash_logo.svg"),
-        color: Theme.of(context).primaryColor,
+        // color: Theme.of(context).primaryColor,
       ),
     );
   }

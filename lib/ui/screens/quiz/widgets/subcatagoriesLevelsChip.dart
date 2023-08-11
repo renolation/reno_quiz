@@ -38,12 +38,12 @@ class _SubcategoriesLevelChipState extends State<SubcategoriesLevelChip> {
         icon = Icons.lock_open_rounded;
         iconColor = Theme.of(context).colorScheme.onTertiary;
         textColor = Theme.of(context).colorScheme.onTertiary;
-        backgroundColor = Theme.of(context).scaffoldBackgroundColor;
+        backgroundColor = Theme.of(context).colorScheme.background;
       } else {
         icon = Icons.lock_rounded;
-        iconColor = Theme.of(context).colorScheme.onTertiary.withOpacity(.3);
-        textColor = Theme.of(context).colorScheme.onTertiary.withOpacity(.3);
-        backgroundColor = Theme.of(context).colorScheme.onSurface;
+        iconColor = Theme.of(context).colorScheme.onTertiary;
+        textColor = Theme.of(context).colorScheme.onTertiary;
+        backgroundColor = Theme.of(context).colorScheme.tertiary.withOpacity(0.8);
       }
     }
     super.didChangeDependencies();

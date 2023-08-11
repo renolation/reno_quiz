@@ -214,7 +214,7 @@ class _SplashScreenState extends State<SplashScreen>
               child: SvgPicture.asset(
                 //todo: splash logo
                 UiUtils.getImagePath("splash_logo.svg"),
-                color: Theme.of(context).colorScheme.background,
+                // color: Theme.of(context).colorScheme.background,
               ),
             ),
           ),
