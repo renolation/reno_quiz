@@ -1463,7 +1463,7 @@ class _HomeScreenState extends State<HomeScreen>
                       )!,
                       style: _boldTextStyle.copyWith(
                         fontSize: 16,
-                        color: Theme.of(context).colorScheme.onBackground,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                       maxLines: 2,
                     ),

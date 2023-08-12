@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
@@ -68,6 +70,15 @@ class QuizGridCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(_borderRadius),
                   color: Theme.of(context).colorScheme.background,
+                    gradient: LinearGradient(
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
+                      transform: GradientRotation(pi / 4),
+                      colors: [
+                        Theme.of(context).colorScheme.primaryContainer.withOpacity(0.9),
+                        Theme.of(context).colorScheme.background
+                      ],
+                    )
                 ),
                 padding: _padding,
                 child: Column(
