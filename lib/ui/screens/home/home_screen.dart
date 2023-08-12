@@ -3,6 +3,7 @@ import 'dart:developer';
 import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -957,7 +958,7 @@ class _HomeScreenState extends State<HomeScreen>
                             !isCateListExpanded
                                 ? Icons.keyboard_arrow_down_rounded
                                 : Icons.keyboard_arrow_up_rounded,
-                            color: Theme.of(context).primaryColor,
+                            color: Theme.of(context).indicatorColor,
                             size: 32,
                           ),
                         ),
@@ -1041,7 +1042,7 @@ class _HomeScreenState extends State<HomeScreen>
           itemBuilder: (BuildContext context, int index) {
             return ListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-              onTap: () {
+              onTap: () async {
                 //noOf means how many subcategory it has
                 //if subcategory is 0 then check for level
                 if (widget.isGuest) {
@@ -1051,6 +1052,9 @@ class _HomeScreenState extends State<HomeScreen>
                     //means this category does not have level
                     if (categoryList[index].maxLevel == "0") {
                       //direct move to quiz screen pass level as 0
+
+
+
                       Navigator.of(context).pushNamed(Routes.quiz, arguments: {
                         "numberOfPlayer": 1,
                         "quizType": QuizTypes.quizZone,
@@ -1064,10 +1068,24 @@ class _HomeScreenState extends State<HomeScreen>
                         "quizName": "Quiz Zone",
                         'showRetryButton': categoryList[index].noOfQues! != '0'
                       });
+                      await FirebaseAnalytics.instance.logEvent(
+                        name: "select_category",
+                        parameters: {
+                          "category": categoryList[index].categoryName,
+                        },
+                      );
                     } else {
                       //navigate to level screen
+
+
                       Navigator.of(context).pushNamed(Routes.levels,
                           arguments: {"Category": categoryList[index]});
+                      await FirebaseAnalytics.instance.logEvent(
+                        name: "select_category",
+                        parameters: {
+                          "category": categoryList[index].categoryName,
+                        },
+                      );
                     }
                   } else {
                     Navigator.of(context).pushNamed(
@@ -1075,6 +1093,12 @@ class _HomeScreenState extends State<HomeScreen>
                       arguments: {
                         "category_id": categoryList[index].id,
                         "category_name": categoryList[index].categoryName
+                      },
+                    );
+                    await FirebaseAnalytics.instance.logEvent(
+                      name: "select_category",
+                      parameters: {
+                        "category": categoryList[index].categoryName,
                       },
                     );
                   }
@@ -1117,14 +1141,14 @@ class _HomeScreenState extends State<HomeScreen>
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
-                    color: Theme.of(context).scaffoldBackgroundColor,
+                    color: Theme.of(context).indicatorColor,
                   ),
                 ),
                 padding: const EdgeInsets.all(2),
                 child: Icon(
                   Icons.arrow_forward_ios_rounded,
                   size: 20,
-                  color: Theme.of(context).colorScheme.onTertiary,
+                  color: Theme.of(context).indicatorColor,
                 ),
               ),
               title: Text(
@@ -1439,7 +1463,7 @@ class _HomeScreenState extends State<HomeScreen>
                       )!,
                       style: _boldTextStyle.copyWith(
                         fontSize: 16,
-                        color: Theme.of(context).primaryColor,
+                        color: Theme.of(context).colorScheme.onBackground,
                       ),
                       maxLines: 2,
                     ),

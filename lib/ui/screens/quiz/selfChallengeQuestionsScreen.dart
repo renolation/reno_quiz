@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -211,7 +212,7 @@ class _SelfChallengeQuestionsScreenState
     }
   }
 
-  void navigateToResult() {
+  void navigateToResult() async {
     if (isBottomSheetOpen) {
       Navigator.of(context).pop();
     }
@@ -234,6 +235,16 @@ class _SelfChallengeQuestionsScreenState
       "entryFee": 0,
       "timeTakenToCompleteQuiz": totalSecondsToCompleteQuiz,
     });
+
+    await FirebaseAnalytics.instance.logEvent(
+      name: "Quiz_type_selfChallenge",
+      parameters: {
+        "categoryId": widget.categoryId,
+        "subcategoryId": widget.subcategoryId,
+        "minutes": widget.minutes,
+        "questions": context.read<QuestionsCubit>().questions().length,
+      },
+    );
   }
 
   Widget hasQuestionAttemptedContainer(int questionIndex, bool attempted) {

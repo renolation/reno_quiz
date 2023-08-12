@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -424,7 +425,7 @@ class _AnimatedSubcategoryContainerState
                       _showAllLevels ? maxLevels : 6,
                       (i) {
                         return GestureDetector(
-                          onTap: () {
+                          onTap: () async {
                             if ((i + 1) <= unlockedLevel) {
                               /// Start level
                               Navigator.of(context).pushNamed(
@@ -443,6 +444,14 @@ class _AnimatedSubcategoryContainerState
                                   "quizName": "Quiz Zone"
                                 },
                               ).then((value) => fetchUnlockedLevel());
+                              await FirebaseAnalytics.instance.logEvent(
+                                name: "select_level",
+                                parameters: {
+                                  "category": widget.category,
+                                  "level": i + 1,
+                                },
+                              );
+
                             } else {
                               UiUtils.setSnackbar(
                                 AppLocalization.of(context)!

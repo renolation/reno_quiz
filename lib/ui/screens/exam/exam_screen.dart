@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -192,7 +193,7 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
     }
   }
 
-  void navigateToResultScreen() {
+  void navigateToResultScreen() async {
     if (isExitDialogOpen) {
       Navigator.of(context).pop();
     }
@@ -216,6 +217,12 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
         "correctExamAnswers": examCubit.correctAnswers(userFirebaseId),
         "incorrectExamAnswers": examCubit.incorrectAnswers(userFirebaseId),
         "numberOfPlayer": 1,
+      },
+    );
+    await FirebaseAnalytics.instance.logEvent(
+      name: "Quiz_type_exam",
+      parameters: {
+        "examCompletedInMinutes": timerKey.currentState?.getCompletedExamDuration(),
       },
     );
   }

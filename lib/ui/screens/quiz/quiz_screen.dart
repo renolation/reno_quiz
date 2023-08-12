@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:developer';
 
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -253,7 +254,7 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
     isSettingDialogOpen = !isSettingDialogOpen;
   }
 
-  void navigateToResultScreen() {
+  void navigateToResultScreen() async {
     if (isSettingDialogOpen) {
       Navigator.of(context).pop();
     }
@@ -280,6 +281,15 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
       "hasUsedAnyLifeline": checkHasUsedAnyLifeline(),
       "entryFee": 0
     });
+    await FirebaseAnalytics.instance.logEvent(
+      name: "Quiz_type_${widget.quizType}",
+      parameters: {
+        "categoryId": widget.categoryId,
+        "level": widget.level,
+        "subcategoryId": widget.subcategoryId,
+        "questions": context.read<QuestionsCubit>().questions().length,
+      },
+    );
   }
 
   void updateSubmittedAnswerForBookmark(Question question) {

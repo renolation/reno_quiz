@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -369,7 +370,7 @@ class _BattleRoomQuizScreenState extends State<BattleRoomQuizScreen>
 
   //for changing ui and other trigger other actions based on realtime changes that occured in game
   void battleRoomListener(BuildContext context, BattleRoomState state,
-      BattleRoomCubit battleRoomCubit) {
+      BattleRoomCubit battleRoomCubit) async {
 
     Future.delayed(Duration.zero, () async {
       if(await InternetConnectivity.isUserOffline()){
@@ -466,6 +467,13 @@ class _BattleRoomQuizScreenState extends State<BattleRoomQuizScreen>
                 "numberOfPlayer": 2,
                 "quizType": QuizTypes.battle,
                 "entryFee": state.battleRoom.entryFee,
+              },
+            );
+            await FirebaseAnalytics.instance.logEvent(
+              name: "Quiz_type_battle",
+              parameters: {
+                "questions": state.questions.length,
+                "battleRoom": state.battleRoom.categoryId,
               },
             );
           }

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -172,7 +173,7 @@ class _GuessTheWordQuizScreenState extends State<GuessTheWordQuizScreen>
     }
   }
 
-  void navigateToResultScreen() {
+  void navigateToResultScreen() async {
     if (isSettingDialogOpen) {
       Navigator.of(context).pop();
     }
@@ -189,6 +190,12 @@ class _GuessTheWordQuizScreenState extends State<GuessTheWordQuizScreen>
       "guessTheWordQuestions":
           context.read<GuessTheWordQuizCubit>().getQuestions(),
     });
+    await FirebaseAnalytics.instance.logEvent(
+      name: "Quiz_type_guessTheWord",
+      parameters: {
+        "timeTakenToCompleteQuiz": timeTakenToCompleteQuiz,
+      },
+    );
   }
 
   void submitAnswer(List<String> submittedAnswer) async {

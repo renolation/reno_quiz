@@ -174,7 +174,7 @@ class _MenuScreenState extends State<MenuScreen> {
                               onTap: Navigator.of(context).pop,
                               child: Icon(
                                 Icons.arrow_back_rounded,
-                                color: Theme.of(context).colorScheme.background,
+                                color: Theme.of(context).colorScheme.onBackground,
                               ),
                             ),
                           ),
@@ -185,7 +185,7 @@ class _MenuScreenState extends State<MenuScreen> {
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                                color: Theme.of(context).colorScheme.background,
+                                color: Theme.of(context).colorScheme.onBackground,
                               ),
                             ),
                           ),
@@ -389,7 +389,7 @@ class _MenuScreenState extends State<MenuScreen> {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(
-                        color: Theme.of(context).scaffoldBackgroundColor,
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
                       ),
                     ),
                     child: Padding(
@@ -397,7 +397,7 @@ class _MenuScreenState extends State<MenuScreen> {
                       child: Icon(
                         Icons.edit_outlined,
                         size: 20,
-                        color: Theme.of(context).primaryColor,
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
                       ),
                     ),
                   ),
@@ -481,7 +481,7 @@ class _MenuScreenState extends State<MenuScreen> {
                                 decoration: BoxDecoration(
                                   border: Border.all(
                                     color: Theme.of(context)
-                                        .scaffoldBackgroundColor,
+                                        .colorScheme.primary,
                                   ),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
@@ -503,7 +503,7 @@ class _MenuScreenState extends State<MenuScreen> {
                                     fontSize: 14,
                                     color: Theme.of(context)
                                         .colorScheme
-                                        .onTertiary,
+                                        .onSurface,
                                   ),
                                 ),
                               ),
@@ -543,16 +543,21 @@ class _MenuScreenState extends State<MenuScreen> {
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(10),
                             color: Theme.of(context).colorScheme.background,
+                            border: Border.all(color: Theme.of(context).colorScheme.primary, width: 1),
                           ),
                           padding: const EdgeInsets.all(10),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              SvgPicture.asset(
-                                UiUtils.getImagePath(menuIcon[index]),
-                                color: Theme.of(context).primaryColor,
+                              SizedBox(
                                 width: 25,
                                 height: 25,
+                                child: SvgPicture.asset(
+                                  UiUtils.getImagePath(menuIcon[index]),
+                                  color: Theme.of(context).primaryColor,
+                                  width: 25,
+                                  height: 25,
+                                ),
                               ),
                               const SizedBox(width: 12),
                               Flexible(

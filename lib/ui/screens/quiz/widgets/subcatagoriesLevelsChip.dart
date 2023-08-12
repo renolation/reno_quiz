@@ -55,6 +55,7 @@ class _SubcategoriesLevelChipState extends State<SubcategoriesLevelChip> {
       decoration: BoxDecoration(
         color: backgroundColor,
         borderRadius: BorderRadius.circular(25),
+        border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.4))
       ),
       width: widget.width,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
