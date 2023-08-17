@@ -1510,7 +1510,7 @@ class _ResultScreenState extends State<ResultScreen> {
       showBorder: false,
       fontWeight: FontWeights.regular,
       height: 50.0,
-      titleColor: Theme.of(context).colorScheme.background,
+      titleColor: Theme.of(context).colorScheme.onBackground,
       onTap: onTap,
       textSize: 20.0,
     );
@@ -1743,7 +1743,7 @@ class _ResultScreenState extends State<ResultScreen> {
                       child: Text(
                         AppLocalization.of(context)!
                             .getTranslatedValues(continueLbl)!,
-                        style: TextStyle(color: Theme.of(context).primaryColor),
+                        style: TextStyle(color: Theme.of(context).colorScheme.onBackground),
                       ),
                     ),
                     TextButton(
@@ -1754,7 +1754,7 @@ class _ResultScreenState extends State<ResultScreen> {
                         AppLocalization.of(context)!
                             .getTranslatedValues(cancelButtonKey)!,
                         style: TextStyle(
-                          color: Theme.of(context).primaryColor,
+                          color: Theme.of(context).colorScheme.onBackground,
                         ),
                       ),
                     ),
@@ -1833,7 +1833,7 @@ class _ResultScreenState extends State<ResultScreen> {
                   child: Text(
                     AppLocalization.of(context)!
                         .getTranslatedValues(continueLbl)!,
-                    style: TextStyle(color: Theme.of(context).primaryColor),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onBackground),
                   ),
                 ),
                 TextButton(

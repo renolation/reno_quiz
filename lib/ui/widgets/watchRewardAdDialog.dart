@@ -19,6 +19,7 @@ class WatchRewardAdDialog extends StatelessWidget {
       backgroundColor: Theme.of(context).colorScheme.background,
       content: Text(
         AppLocalization.of(context)!.getTranslatedValues("showAdsLbl")!,
+        style: TextStyle(color: Theme.of(context).colorScheme.onBackground),
       ),
       actions: [
         CupertinoButton(
@@ -28,7 +29,7 @@ class WatchRewardAdDialog extends StatelessWidget {
           },
           child: Text(
             AppLocalization.of(context)!.getTranslatedValues("yesBtn")!,
-            style: TextStyle(color: Theme.of(context).primaryColor),
+            style: TextStyle(color: Theme.of(context).colorScheme.onBackground),
           ),
         ),
         CupertinoButton(
@@ -41,7 +42,7 @@ class WatchRewardAdDialog extends StatelessWidget {
           },
           child: Text(
             AppLocalization.of(context)!.getTranslatedValues("noBtn")!,
-            style: TextStyle(color: Theme.of(context).primaryColor),
+            style: TextStyle(color: Theme.of(context).colorScheme.onBackground),
           ),
         ),
       ],

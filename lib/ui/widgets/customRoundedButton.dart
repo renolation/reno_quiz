@@ -65,7 +65,7 @@ class CustomRoundedButton extends StatelessWidget {
             style: GoogleFonts.nunito(
               textStyle: TextStyle(
                 fontSize: textSize ?? 16.0,
-                color: titleColor ?? Theme.of(context).scaffoldBackgroundColor,
+                color: titleColor ?? Theme.of(context).colorScheme.onBackground,
                 fontWeight: fontWeight ?? FontWeight.normal,
               ),
             ),
