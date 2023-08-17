@@ -49,7 +49,6 @@ class _SplashScreenState extends State<SplashScreen>
 
   late bool loadedSystemConfigDetails = false;
 
-  late AppLifecycleReactor appLifecycleReactor;
 
 
   @override
@@ -57,15 +56,9 @@ class _SplashScreenState extends State<SplashScreen>
     initAnimations();
     loadSystemConfig();
     super.initState();
-    initAppOpenAd();
   }
 
-  void initAppOpenAd(){
-    AppOpenAdManager appOpenAdManager = AppOpenAdManager()..loadAd();
-    appLifecycleReactor = AppLifecycleReactor(
-        appOpenAdManager: appOpenAdManager);
 
-  }
 
   void loadSystemConfig() async {
     await MobileAds.instance.initialize();

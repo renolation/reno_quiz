@@ -9,6 +9,7 @@ class AppLifecycleReactor {
   AppLifecycleReactor({required this.appOpenAdManager});
 
   void listenToAppStateChanges() {
+    print('sadasdadad');
     AppStateEventNotifier.startListening();
     AppStateEventNotifier.appStateStream
         .forEach((state) => _onAppStateChanged(state));
@@ -18,7 +19,9 @@ class AppLifecycleReactor {
     // Try to show an app open ad if the app is being resumed and
     // we're not already showing an app open ad.
     print(appState.toString());
+    print('show adssss121212');
     if (appState == AppState.foreground) {
+      print('show adssss');
       appOpenAdManager.showAdIfAvailable();
     }
   }

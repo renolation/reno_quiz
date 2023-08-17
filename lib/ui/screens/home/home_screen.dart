@@ -53,6 +53,9 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../../../features/ads/app_lifecycle_reactor.dart';
+import '../../../features/ads/app_open_ad_manager.dart';
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, required this.isGuest});
 
@@ -160,6 +163,8 @@ class _HomeScreenState extends State<HomeScreen>
   late final String _userId;
   late final String _currLangId;
   late final SystemConfigCubit _sysConfigCubit;
+  late AppLifecycleReactor appLifecycleReactor;
+
 
   @override
   void initState() {
@@ -169,6 +174,8 @@ class _HomeScreenState extends State<HomeScreen>
     _initLocalNotification();
     checkForUpdates();
     setupInteractedMessage();
+    initAppOpenAd();
+
 
     /// Create Ads
     Future.delayed(Duration.zero, () {
@@ -212,6 +219,13 @@ class _HomeScreenState extends State<HomeScreen>
     }
 
     super.initState();
+  }
+
+  void initAppOpenAd(){
+    AppOpenAdManager appOpenAdManager = AppOpenAdManager()..loadAd();
+    appLifecycleReactor = AppLifecycleReactor(
+        appOpenAdManager: appOpenAdManager);
+
   }
 
   void initAnimations() {
