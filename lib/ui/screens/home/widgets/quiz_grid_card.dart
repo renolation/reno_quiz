@@ -69,16 +69,17 @@ class QuizGridCard extends StatelessWidget {
                 height: constraints.maxHeight,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(_borderRadius),
+                  border: Border.all(color: Theme.of(context).colorScheme.primary, width: 1),
                   color: Theme.of(context).colorScheme.background,
-                    gradient: LinearGradient(
-                      begin: Alignment.topRight,
-                      end: Alignment.bottomLeft,
-                      transform: GradientRotation(pi / 4),
-                      colors: [
-                        Theme.of(context).colorScheme.primaryContainer.withOpacity(0.9),
-                        Theme.of(context).colorScheme.background
-                      ],
-                    )
+                    // gradient: LinearGradient(
+                    //   begin: Alignment.topRight,
+                    //   end: Alignment.bottomLeft,
+                    //   transform: GradientRotation(pi / 4),
+                    //   colors: [
+                    //     Theme.of(context).colorScheme.primaryContainer.withOpacity(0.9),
+                    //     Theme.of(context).colorScheme.background
+                    //   ],
+                    // )
                 ),
                 padding: _padding,
                 child: Column(

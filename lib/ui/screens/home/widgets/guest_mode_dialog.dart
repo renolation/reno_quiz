@@ -14,10 +14,10 @@ class GuestModeDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textStyle = TextStyle(color: Theme.of(context).primaryColor);
+    final textStyle = TextStyle(color: Theme.of(context).colorScheme.onBackground);
     final appLocalization = AppLocalization.of(context);
     return AlertDialog(
-      content: Text(appLocalization!.getTranslatedValues("guestMode")!),
+      content: Text(appLocalization!.getTranslatedValues("guestMode")!, style: textStyle,),
       actions: [
         CupertinoButton(
           onPressed: () {

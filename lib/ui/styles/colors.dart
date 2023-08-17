@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 const Color primaryColor = Color(0xff006783);
 const Color secondaryColor = Color(0xffaa2c63);
 const Color backgroundColor = Color(0xfffbfcfe);
-const Color pageBackgroundColor = Color(0xfffbfcfe);
+const Color pageBackgroundColor = Color(0xffebeef3);
 const Color onBackgroundColor = Color(0xff191c1e);
 const Color primaryTxtColor = Color(0xff191c1e);
 const Color kBoxShadowColor = Color(0x40000000);
