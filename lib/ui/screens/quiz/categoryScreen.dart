@@ -43,6 +43,7 @@ class _CategoryScreen extends State<CategoryScreen> {
   @override
   void initState() {
     // preload ads
+    //todo: show ad when enter category page
     Future.delayed(Duration.zero, () {
       context.read<InterstitialAdCubit>().showAd(context);
     });

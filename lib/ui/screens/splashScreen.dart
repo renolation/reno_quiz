@@ -62,6 +62,7 @@ class _SplashScreenState extends State<SplashScreen>
 
   void loadSystemConfig() async {
     await MobileAds.instance.initialize();
+    await MobileAds.instance.updateRequestConfiguration(RequestConfiguration(testDeviceIds: ['A012CA3CEB7B56EA558DF669EBE7862C']));
     context.read<SystemConfigCubit>().getSystemConfig();
   }
 
