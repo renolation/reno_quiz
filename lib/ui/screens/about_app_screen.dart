@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:flutterquiz/app/app_localization.dart';
 import 'package:flutterquiz/app/routes.dart';
 import 'package:flutterquiz/ui/widgets/customAppbar.dart';
+import 'package:flutterquiz/utils/constants/assets_constants.dart';
 import 'package:flutterquiz/utils/constants/fonts.dart';
 import 'package:flutterquiz/utils/constants/string_labels.dart';
+import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
 
 class AboutAppScreen extends StatelessWidget {
@@ -18,10 +19,10 @@ class AboutAppScreen extends StatelessWidget {
   ];
 
   static const _leadingList = [
-    "contactus_icon.svg",
-    "aboutus_icon.svg",
-    "termscond_icon.svg",
-    "privacypolicy_icon.svg",
+    Assets.contactUsIcon,
+    Assets.aboutUsIcon,
+    Assets.termsAndCondIcon,
+    Assets.privacyPolicyIcon,
   ];
 
   @override
@@ -31,7 +32,8 @@ class AboutAppScreen extends StatelessWidget {
     return Scaffold(
       appBar: QAppBar(
         title: Text(
-            AppLocalization.of(context)!.getTranslatedValues(aboutQuizAppKey)!),
+          context.tr(aboutQuizAppKey)!,
+        ),
       ),
       body: Stack(
         children: [
@@ -52,14 +54,16 @@ class AboutAppScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 leading: SvgPicture.asset(
-                  UiUtils.getImagePath(_leadingList[i]),
+                  _leadingList[i],
                   width: 24,
                   height: 24,
-                  color: Theme.of(context).primaryColor,
+                  colorFilter: ColorFilter.mode(
+                    Theme.of(context).primaryColor,
+                    BlendMode.srcIn,
+                  ),
                 ),
                 title: Text(
-                  AppLocalization.of(context)!
-                      .getTranslatedValues(_titleList[i])!,
+                  context.tr(_titleList[i])!,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeights.medium,

@@ -1,16 +1,16 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutterquiz/app/app_localization.dart';
 import 'package:flutterquiz/ui/screens/auth/otp_screen.dart';
+import 'package:flutterquiz/utils/extensions.dart';
 
 class ResendOtpTimerContainer extends StatefulWidget {
-  final Function enableResendOtpButton;
-
   const ResendOtpTimerContainer({
-    super.key,
     required this.enableResendOtpButton,
+    super.key,
   });
+
+  final VoidCallback enableResendOtpButton;
 
   @override
   ResendOtpTimerContainerState createState() => ResendOtpTimerContainerState();
@@ -22,8 +22,6 @@ class ResendOtpTimerContainerState extends State<ResendOtpTimerContainer> {
 
   //
   void setResendOtpTimer() {
-    print("Start resend otp timer");
-    print("------------------------------------");
     setState(() {
       resendOtpTimeInSeconds = otpTimeOutSeconds - 1;
     });
@@ -50,16 +48,16 @@ class ResendOtpTimerContainerState extends State<ResendOtpTimerContainer> {
 
 //to get time to display in text widget
   String getTime() {
-    String secondsAsString = resendOtpTimeInSeconds < 10
-        ? " 0$resendOtpTimeInSeconds"
+    final secondsAsString = resendOtpTimeInSeconds < 10
+        ? ' 0$resendOtpTimeInSeconds'
         : resendOtpTimeInSeconds.toString();
-    return " $secondsAsString";
+    return ' $secondsAsString';
   }
 
   @override
   Widget build(BuildContext context) {
     return Text(
-      AppLocalization.of(context)!.getTranslatedValues('resetLbl')! + getTime(),
+      context.tr('resetLbl')! + getTime(),
       style: TextStyle(
         fontSize: 12,
         color: Theme.of(context).colorScheme.onTertiary.withOpacity(0.6),

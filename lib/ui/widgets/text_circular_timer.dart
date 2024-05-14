@@ -4,10 +4,10 @@ import 'package:google_fonts/google_fonts.dart';
 
 class TextCircularTimer extends StatelessWidget {
   const TextCircularTimer({
-    super.key,
     required this.animationController,
     required this.arcColor,
     required this.color,
+    super.key,
     this.size = 40,
     this.strokeWidth = 4,
   });
@@ -25,7 +25,7 @@ class TextCircularTimer extends StatelessWidget {
         ? (animationController.duration! -
                 animationController.duration! * animationController.value)
             .inSeconds
-        : 0;
+        : animationController.duration!.inSeconds;
 
     return remainingSeconds.toString();
   }
@@ -74,7 +74,7 @@ class TextCircularTimer extends StatelessWidget {
                   fontSize: 18,
                 ),
               ),
-            )
+            ),
           ],
         );
       },
@@ -83,10 +83,9 @@ class TextCircularTimer extends StatelessWidget {
 }
 
 class _CircleCustomPainter extends CustomPainter {
+  const _CircleCustomPainter({required this.color, required this.strokeWidth});
   final Color color;
   final double strokeWidth;
-
-  const _CircleCustomPainter({required this.color, required this.strokeWidth});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -104,15 +103,14 @@ class _CircleCustomPainter extends CustomPainter {
 }
 
 class _ArcCustomPainter extends CustomPainter {
-  final Color color;
-  final double strokeWidth;
-  final double sweepDegree;
-
   const _ArcCustomPainter({
     required this.color,
     required this.strokeWidth,
     required this.sweepDegree,
   });
+  final Color color;
+  final double strokeWidth;
+  final double sweepDegree;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -124,10 +122,10 @@ class _ArcCustomPainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
 
     /// The PI constant.
-    const double pi = 3.1415926535897932;
+    const pi = 3.1415926535897932;
 
-    const double startAngle = 3 * (pi / 2);
-    final double sweepAngle = -((360 - sweepDegree) * pi / 180);
+    const startAngle = 3 * (pi / 2);
+    final sweepAngle = -((360 - sweepDegree) * pi / 180);
 
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: size.width * 0.5),

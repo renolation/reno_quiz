@@ -1,7 +1,6 @@
 class AuthException implements Exception {
-  final String errorMessageCode;
-
   AuthException({required this.errorMessageCode});
+  final String errorMessageCode;
   @override
   String toString() => errorMessageCode;
 }

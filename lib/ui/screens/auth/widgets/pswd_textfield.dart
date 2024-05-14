@@ -1,13 +1,12 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutterquiz/app/app_localization.dart';
 import 'package:flutterquiz/utils/constants/fonts.dart';
-import 'package:flutterquiz/utils/ui_utils.dart';
+import 'package:flutterquiz/utils/extensions.dart';
 
 class PswdTextField extends StatefulWidget {
   const PswdTextField({
-    super.key,
     required this.controller,
+    super.key,
     this.validator,
     this.hintText,
   });
@@ -29,34 +28,32 @@ class _PswdTextFieldState extends State<PswdTextField> {
 
     return TextFormField(
       controller: widget.controller,
+      cursorColor: textColor,
       style: TextStyle(
         color: textColor.withOpacity(0.8),
         fontSize: 16,
         fontWeight: FontWeights.regular,
       ),
       obscureText: _obscureText,
-      obscuringCharacter: "*",
-      validator: widget.validator ??
-          (val) {
-            if (val!.isEmpty) {
-              return AppLocalization.of(context)!
-                  .getTranslatedValues('passwordRequired')!;
-            } else if (val.length < 6) {
-              return AppLocalization.of(context)!
-                  .getTranslatedValues('pwdLengthMsg')!;
-            }
-            return null;
-          },
+      obscuringCharacter: '*',
+      validator: (val) {
+        if (val!.isEmpty) {
+          return context.tr('passwordRequired');
+        } else if (val.length < 6) {
+          return context.tr('pwdLengthMsg');
+        }
+
+        return widget.validator?.call(val);
+      },
       decoration: InputDecoration(
         fillColor: Theme.of(context).colorScheme.background,
         filled: true,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide:  BorderSide(color: Theme.of(context).colorScheme.onBackground, width: 0.4),
-          ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide.none,
+        ),
         contentPadding: const EdgeInsets.all(15),
-        hintText: widget.hintText ??
-            "${AppLocalization.of(context)!.getTranslatedValues('pwdLbl')!}*",
+        hintText: widget.hintText ?? "${context.tr('pwdLbl')!}*",
         hintStyle: TextStyle(
           color: textColor.withOpacity(0.4),
           fontWeight: FontWeights.regular,

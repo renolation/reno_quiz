@@ -1,18 +1,4 @@
 class UserProfile {
-  final String? name;
-  final String? userId;
-  final String? firebaseId;
-  final String? profileUrl;
-  final String? email;
-  final String? mobileNumber;
-  final String? status;
-  final String? allTimeScore;
-  final String? allTimeRank;
-  final String? coins;
-  final String? registeredDate;
-  final String? referCode;
-  final String? fcmToken;
-
   UserProfile({
     this.email,
     this.fcmToken,
@@ -27,26 +13,42 @@ class UserProfile {
     this.coins,
     this.registeredDate,
     this.status,
+    this.adsRemovedForUser,
+    this.isDailyAdsAvailable,
   });
 
-  static UserProfile fromJson(Map<String, dynamic> jsonData) {
-    //torefer keys go profileMan.remoteRepo
-    return UserProfile(
-      allTimeRank: jsonData['all_time_rank'],
-      mobileNumber: jsonData['mobile'],
-      name: jsonData['name'],
-      profileUrl: jsonData['profile'],
-      registeredDate: jsonData['date_registered'],
-      status: jsonData['status'],
-      userId: jsonData['id'],
-      firebaseId: jsonData['firebase_id'],
-      allTimeScore: jsonData['all_time_score'],
-      coins: jsonData['coins'],
-      referCode: jsonData['refer_code'],
-      fcmToken: jsonData['fcm_id'],
-      email: jsonData['email'],
-    );
-  }
+  UserProfile.fromJson(Map<String, dynamic> json)
+      : allTimeRank = json['all_time_rank'] as String? ?? '',
+        mobileNumber = json['mobile'] as String? ?? '',
+        name = json['name'] as String? ?? '',
+        profileUrl = json['profile'] as String? ?? '',
+        registeredDate = json['date_registered'] as String? ?? '',
+        status = json['status'] as String? ?? '',
+        userId = json['id'] as String? ?? '',
+        firebaseId = json['firebase_id'] as String? ?? '',
+        allTimeScore = json['all_time_score'] as String? ?? '',
+        coins = json['coins'] as String? ?? '',
+        referCode = json['refer_code'] as String? ?? '',
+        fcmToken = json['fcm_id'] as String? ?? '',
+        email = json['email'] as String? ?? '',
+        isDailyAdsAvailable = (json['daily_ads_available'] as int? ?? 1) == 1,
+        adsRemovedForUser = json['remove_ads'] as String? ?? '0';
+
+  final String? name;
+  final String? userId;
+  final String? firebaseId;
+  final String? profileUrl;
+  final String? email;
+  final String? mobileNumber;
+  final String? status;
+  final String? allTimeScore;
+  final String? allTimeRank;
+  final String? coins;
+  final String? registeredDate;
+  final String? referCode;
+  final String? adsRemovedForUser;
+  final String? fcmToken;
+  final bool? isDailyAdsAvailable;
 
   UserProfile copyWith({
     String? profileUrl,
@@ -57,6 +59,7 @@ class UserProfile {
     String? status,
     String? mobile,
     String? email,
+    String? adsRemovedForUser,
   }) {
     return UserProfile(
       fcmToken: fcmToken,
@@ -72,6 +75,7 @@ class UserProfile {
       mobileNumber: mobile ?? mobileNumber,
       registeredDate: registeredDate,
       status: status ?? this.status,
+      adsRemovedForUser: adsRemovedForUser ?? this.adsRemovedForUser,
     );
   }
 
@@ -90,6 +94,11 @@ class UserProfile {
       mobileNumber: mobile,
       registeredDate: registeredDate,
       status: status,
+      adsRemovedForUser: adsRemovedForUser,
+      isDailyAdsAvailable: isDailyAdsAvailable,
     );
   }
+
+  @override
+  String toString() => 'RemoveAds: $adsRemovedForUser';
 }

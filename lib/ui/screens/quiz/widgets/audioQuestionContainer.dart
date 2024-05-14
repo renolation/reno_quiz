@@ -5,30 +5,31 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutterquiz/features/profileManagement/cubits/userDetailsCubit.dart';
 import 'package:flutterquiz/features/quiz/models/question.dart';
 import 'package:flutterquiz/features/quiz/models/quizType.dart';
+import 'package:flutterquiz/features/systemConfig/model/answer_mode.dart';
 import 'package:flutterquiz/ui/widgets/optionContainer.dart';
 import 'package:flutterquiz/utils/answer_encryption.dart';
 import 'package:just_audio/just_audio.dart';
 
 class AudioQuestionContainer extends StatefulWidget {
-  final BoxConstraints constraints;
-  final int currentQuestionIndex;
-  final List<Question> questions;
-  final Function submitAnswer;
-  final Function hasSubmittedAnswerForCurrentQuestion;
-  final bool showAnswerCorrectness;
-
-  final AnimationController timerAnimationController;
-
   const AudioQuestionContainer({
-    super.key,
     required this.constraints,
-    required this.showAnswerCorrectness,
+    required this.answerMode,
     required this.currentQuestionIndex,
     required this.questions,
     required this.submitAnswer,
     required this.timerAnimationController,
     required this.hasSubmittedAnswerForCurrentQuestion,
+    super.key,
   });
+
+  final BoxConstraints constraints;
+  final int currentQuestionIndex;
+  final List<Question> questions;
+  final void Function(String) submitAnswer;
+  final bool Function() hasSubmittedAnswerForCurrentQuestion;
+  final AnswerMode answerMode;
+
+  final AnimationController timerAnimationController;
 
   @override
   AudioQuestionContainerState createState() => AudioQuestionContainerState();
@@ -53,24 +54,22 @@ class AudioQuestionContainerState extends State<AudioQuestionContainer> {
     super.initState();
   }
 
-  void initializeAudio() async {
+  Future<void> initializeAudio() async {
     _audioPlayer = AudioPlayer();
 
     try {
-      var result = await _audioPlayer
+      final result = await _audioPlayer
           .setUrl(widget.questions[widget.currentQuestionIndex].audio!);
       _audioDuration = result ?? Duration.zero;
       _processingStateStreamSubscription =
           _audioPlayer.processingStateStream.listen(_processingStateListener);
     } catch (e) {
-      print(e.toString());
       _hasError = true;
     }
     setState(() {});
   }
 
   void _processingStateListener(ProcessingState event) {
-    print(event.toString());
     if (event == ProcessingState.ready) {
       if (_isLoading) {
         _isLoading = false;
@@ -85,7 +84,7 @@ class AudioQuestionContainerState extends State<AudioQuestionContainer> {
     } else if (event == ProcessingState.completed) {
       if (!_showOption) {
         _showOption = true;
-        widget.timerAnimationController.forward(from: 0.0);
+        widget.timerAnimationController.forward(from: 0);
       }
       _hasCompleted = true;
     }
@@ -101,7 +100,7 @@ class AudioQuestionContainerState extends State<AudioQuestionContainer> {
         },
         icon: Icon(
           Icons.error,
-          color: Theme.of(context).colorScheme.secondary,
+          color: Theme.of(context).primaryColor,
         ),
       );
     }
@@ -113,7 +112,7 @@ class AudioQuestionContainerState extends State<AudioQuestionContainer> {
           width: 20,
           child: Center(
             child: CircularProgressIndicator(
-              color: Theme.of(context).colorScheme.secondary,
+              color: Theme.of(context).primaryColor,
             ),
           ),
         ),
@@ -127,7 +126,7 @@ class AudioQuestionContainerState extends State<AudioQuestionContainer> {
         },
         icon: Icon(
           Icons.restart_alt,
-          color: Theme.of(context).colorScheme.secondary,
+          color: Theme.of(context).primaryColor,
         ),
       );
     }
@@ -140,7 +139,7 @@ class AudioQuestionContainerState extends State<AudioQuestionContainer> {
         },
         icon: Icon(
           Icons.pause,
-          color: Theme.of(context).colorScheme.secondary,
+          color: Theme.of(context).primaryColor,
         ),
       );
     }
@@ -164,7 +163,7 @@ class AudioQuestionContainerState extends State<AudioQuestionContainer> {
       },
       icon: Icon(
         Icons.play_arrow,
-        color: Theme.of(context).colorScheme.secondary,
+        color: Theme.of(context).primaryColor,
       ),
     );
   }
@@ -189,7 +188,7 @@ class AudioQuestionContainerState extends State<AudioQuestionContainer> {
         text: TextSpan(
           children: [
             TextSpan(
-              text: "${widget.currentQuestionIndex + 1} / ",
+              text: '${widget.currentQuestionIndex + 1} / ',
               style: TextStyle(
                 color:
                     Theme.of(context).colorScheme.onTertiary.withOpacity(0.5),
@@ -197,9 +196,9 @@ class AudioQuestionContainerState extends State<AudioQuestionContainer> {
               ),
             ),
             TextSpan(
-              text: "${widget.questions.length}",
+              text: '${widget.questions.length}',
               style: TextStyle(color: Theme.of(context).colorScheme.onTertiary),
-            )
+            ),
           ],
         ),
       ),
@@ -214,12 +213,12 @@ class AudioQuestionContainerState extends State<AudioQuestionContainer> {
         children: [
           const SizedBox(height: 17.5),
           _buildCurrentQuestionIndex(),
-          const SizedBox(height: 5.0),
+          const SizedBox(height: 5),
           Container(
             width: MediaQuery.of(context).size.width,
             alignment: Alignment.center,
             child: Text(
-              "${question.question}",
+              '${question.question}',
               style: TextStyle(
                 height: 1.125,
                 fontSize: questionTextSize,
@@ -236,7 +235,7 @@ class AudioQuestionContainerState extends State<AudioQuestionContainer> {
             ),
             padding: EdgeInsets.symmetric(
               horizontal: widget.constraints.maxWidth * (0.05),
-              vertical: 10.0,
+              vertical: 10,
             ),
             child: Column(
               children: [
@@ -272,9 +271,9 @@ class AudioQuestionContainerState extends State<AudioQuestionContainer> {
                       //decoration: BoxDecoration(border: Border.all()),
                       width: MediaQuery.of(context).size.width * (0.1),
                       child: Text(
-                        "${_audioDuration.inSeconds}s",
+                        '${_audioDuration.inSeconds}s',
                         style: TextStyle(
-                          color: Theme.of(context).colorScheme.secondary,
+                          color: Theme.of(context).primaryColor,
                         ),
                       ),
                     ),
@@ -284,52 +283,53 @@ class AudioQuestionContainerState extends State<AudioQuestionContainer> {
             ),
           ),
           SizedBox(height: widget.constraints.maxHeight * 0.04),
-          _showOption
-              ? Column(
-                  children: question.answerOptions!.map((option) {
-                    return OptionContainer(
-                      quizType: QuizTypes.audioQuestions,
-                      submittedAnswerId: question.submittedAnswerId,
-                      showAnswerCorrectness: widget.showAnswerCorrectness,
-                      showAudiencePoll: false,
-                      hasSubmittedAnswerForCurrentQuestion:
-                          widget.hasSubmittedAnswerForCurrentQuestion,
-                      constraints: widget.constraints,
-                      answerOption: option,
-                      correctOptionId: AnswerEncryption.decryptCorrectAnswer(
-                          rawKey: context
-                              .read<UserDetailsCubit>()
-                              .getUserFirebaseId(),
-                          correctAnswer: question.correctAnswer!),
-                      submitAnswer: widget.submitAnswer,
-                    );
-                  }).toList(),
-                )
-              : Column(
-                  children: question.answerOptions!
-                      .map(
-                        (e) => Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(10),
-                            color: Theme.of(context).colorScheme.background,
-                          ),
-                          margin: EdgeInsets.only(
-                            top: widget.constraints.maxHeight * (0.015),
-                          ),
-                          height: widget.constraints.maxHeight * (0.105),
-                          width: widget.constraints.maxWidth,
-                          child: Center(
-                            child: Text(
-                              "-",
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.onTertiary,
-                              ),
-                            ),
+          if (_showOption)
+            Column(
+              children: question.answerOptions!.map((option) {
+                return OptionContainer(
+                  quizType: QuizTypes.audioQuestions,
+                  submittedAnswerId: question.submittedAnswerId,
+                  answerMode: widget.answerMode,
+                  showAudiencePoll: false,
+                  hasSubmittedAnswerForCurrentQuestion:
+                      widget.hasSubmittedAnswerForCurrentQuestion,
+                  constraints: widget.constraints,
+                  answerOption: option,
+                  correctOptionId: AnswerEncryption.decryptCorrectAnswer(
+                    rawKey:
+                        context.read<UserDetailsCubit>().getUserFirebaseId(),
+                    correctAnswer: question.correctAnswer!,
+                  ),
+                  submitAnswer: widget.submitAnswer,
+                );
+              }).toList(),
+            )
+          else
+            Column(
+              children: question.answerOptions!
+                  .map(
+                    (e) => Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        color: Theme.of(context).colorScheme.background,
+                      ),
+                      margin: EdgeInsets.only(
+                        top: widget.constraints.maxHeight * (0.015),
+                      ),
+                      height: widget.constraints.maxHeight * (0.105),
+                      width: widget.constraints.maxWidth,
+                      child: Center(
+                        child: Text(
+                          '-',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onTertiary,
                           ),
                         ),
-                      )
-                      .toList(),
-                ),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
         ],
       ),
     );
@@ -337,20 +337,23 @@ class AudioQuestionContainerState extends State<AudioQuestionContainer> {
 }
 
 class CurrentDurationSliderContainer extends StatefulWidget {
+  const CurrentDurationSliderContainer({
+    required this.audioPlayer,
+    required this.duration,
+    super.key,
+  });
+
   final AudioPlayer audioPlayer;
   final Duration duration;
 
-  const CurrentDurationSliderContainer(
-      {super.key, required this.audioPlayer, required this.duration});
-
   @override
-  _CurrentDurationSliderContainerState createState() =>
+  State<CurrentDurationSliderContainer> createState() =>
       _CurrentDurationSliderContainerState();
 }
 
 class _CurrentDurationSliderContainerState
     extends State<CurrentDurationSliderContainer> {
-  double currentValue = 0.0;
+  double currentValue = 0;
 
   late StreamSubscription<Duration> streamSubscription;
 
@@ -376,44 +379,44 @@ class _CurrentDurationSliderContainerState
   Widget build(BuildContext context) {
     return SliderTheme(
       data: Theme.of(context).sliderTheme.copyWith(
-            overlayShape: const RoundSliderOverlayShape(overlayRadius: 0.0),
+            overlayShape: const RoundSliderOverlayShape(overlayRadius: 0),
             trackHeight: 5,
             trackShape: CustomTrackShape(),
             thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6.5),
           ),
       child: SizedBox(
-        height: 5.0,
+        height: 5,
         width: MediaQuery.of(context).size.width,
         child: Slider(
-            min: 0.0,
-            max: widget.duration.inSeconds.toDouble(),
-            activeColor: Theme.of(context).primaryColor.withOpacity(0.6),
-            inactiveColor: Theme.of(context).primaryColor.withOpacity(0.3),
-            value: currentValue,
-            thumbColor: Theme.of(context).colorScheme.secondary,
-            onChanged: (value) {
-              setState(() {
-                currentValue = value;
-              });
-              widget.audioPlayer.seek(Duration(seconds: value.toInt()));
-            }),
+          max: widget.duration.inSeconds.toDouble(),
+          activeColor: Theme.of(context).primaryColor.withOpacity(0.6),
+          inactiveColor: Theme.of(context).primaryColor.withOpacity(0.3),
+          value: currentValue,
+          thumbColor: Theme.of(context).primaryColor,
+          onChanged: (value) {
+            setState(() {
+              currentValue = value;
+            });
+            widget.audioPlayer.seek(Duration(seconds: value.toInt()));
+          },
+        ),
       ),
     );
   }
 }
 
 class BufferedDurationContainer extends StatefulWidget {
+  const BufferedDurationContainer({required this.audioPlayer, super.key});
+
   final AudioPlayer audioPlayer;
 
-  const BufferedDurationContainer({super.key, required this.audioPlayer});
-
   @override
-  _BufferedDurationContainerState createState() =>
+  State<BufferedDurationContainer> createState() =>
       _BufferedDurationContainerState();
 }
 
 class _BufferedDurationContainerState extends State<BufferedDurationContainer> {
-  late double bufferedPercentage = 0.0;
+  late double bufferedPercentage = 0;
 
   late StreamSubscription<Duration> streamSubscription;
 
@@ -425,7 +428,7 @@ class _BufferedDurationContainerState extends State<BufferedDurationContainer> {
   }
 
   void bufferedDurationListener(Duration duration) {
-    var audioDuration = widget.audioPlayer.duration ?? Duration.zero;
+    final audioDuration = widget.audioPlayer.duration ?? Duration.zero;
     bufferedPercentage = audioDuration.inSeconds == 0
         ? 0.0
         : (duration.inSeconds / audioDuration.inSeconds);
@@ -446,18 +449,18 @@ class _BufferedDurationContainerState extends State<BufferedDurationContainer> {
         color: Theme.of(context).primaryColor.withOpacity(0.6),
       ),
       width: MediaQuery.of(context).size.width * bufferedPercentage,
-      height: 5.0,
+      height: 5,
     );
   }
 }
 
 class CurrentDurationContainer extends StatefulWidget {
+  const CurrentDurationContainer({required this.audioPlayer, super.key});
+
   final AudioPlayer audioPlayer;
 
-  const CurrentDurationContainer({super.key, required this.audioPlayer});
-
   @override
-  _CurrentDurationContainerState createState() =>
+  State<CurrentDurationContainer> createState() =>
       _CurrentDurationContainerState();
 }
 
@@ -491,9 +494,9 @@ class _CurrentDurationContainerState extends State<CurrentDurationContainer> {
       //decoration: BoxDecoration(border: Border.all()),
       width: MediaQuery.of(context).size.width * (0.1),
       child: Text(
-        "${currentDuration.inSeconds}",
+        '${currentDuration.inSeconds}',
         style: TextStyle(
-          color: Theme.of(context).colorScheme.secondary,
+          color: Theme.of(context).primaryColor,
         ),
       ),
     );
@@ -504,8 +507,8 @@ class CustomTrackShape extends RoundedRectSliderTrackShape {
   @override
   Rect getPreferredRect({
     required RenderBox parentBox,
-    Offset offset = Offset.zero,
     required SliderThemeData sliderTheme,
+    Offset offset = Offset.zero,
     bool isEnabled = false,
     bool isDiscrete = false,
     double additionalActiveTrackHeight = 0,

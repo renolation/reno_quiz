@@ -2,31 +2,30 @@ import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:flutterquiz/app/app_localization.dart';
 import 'package:flutterquiz/features/profileManagement/cubits/userDetailsCubit.dart';
 import 'package:flutterquiz/features/systemConfig/cubits/systemConfigCubit.dart';
 import 'package:flutterquiz/ui/widgets/customBackButton.dart';
 import 'package:flutterquiz/ui/widgets/customRoundedButton.dart';
-import 'package:flutterquiz/utils/constants/fonts.dart';
-import 'package:flutterquiz/utils/constants/string_labels.dart';
+import 'package:flutterquiz/utils/constants/constants.dart';
+import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:share_plus/share_plus.dart';
 
 class ReferAndEarnScreen extends StatelessWidget {
   const ReferAndEarnScreen({super.key});
 
-  static const vtGap = 20.0;
-
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-
     final referCode =
         context.read<UserDetailsCubit>().getUserProfile().referCode!;
+    final sysConfig = context.read<SystemConfigCubit>();
 
-    var colorScheme = Theme.of(context).colorScheme;
+    final referText =
+        '${context.tr('referText1')} ${sysConfig.refereeEarnCoin} ${context.tr('referText2')} $referCode\n ${context.tr('referText3')} ${sysConfig.appUrl}';
+
+    final size = MediaQuery.of(context).size;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
@@ -55,8 +54,7 @@ class ReferAndEarnScreen extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        AppLocalization.of(context)!
-                            .getTranslatedValues(referAndEarn)!,
+                        context.tr(referAndEarn)!,
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: colorScheme.background,
@@ -68,7 +66,7 @@ class ReferAndEarnScreen extends StatelessWidget {
                       SizedBox(
                         height: size.height * (0.2),
                         child: SvgPicture.asset(
-                          UiUtils.getImagePath("refer friends.svg"),
+                          Assets.referFriends,
                         ),
                       ),
 
@@ -79,13 +77,13 @@ class ReferAndEarnScreen extends StatelessWidget {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               SvgPicture.asset(
-                                UiUtils.getImagePath("coin.svg"),
+                                Assets.coin,
                                 width: 28,
                                 height: 28,
                               ),
                               const SizedBox(width: 10),
                               Text(
-                                context.read<SystemConfigCubit>().getEarnCoin(),
+                                sysConfig.referrerEarnCoin,
                                 style: TextStyle(
                                   fontWeight: FontWeights.bold,
                                   fontSize: 32,
@@ -95,8 +93,7 @@ class ReferAndEarnScreen extends StatelessWidget {
                             ],
                           ),
                           Text(
-                            AppLocalization.of(context)!
-                                .getTranslatedValues("getFreeCoins")!,
+                            context.tr('getFreeCoins')!,
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeights.bold,
@@ -111,7 +108,10 @@ class ReferAndEarnScreen extends StatelessWidget {
                       SizedBox(
                         width: size.width * .8,
                         child: Text(
-                          "${AppLocalization.of(context)!.getTranslatedValues("referFrdLbl")!} ${AppLocalization.of(context)!.getTranslatedValues(youWillGetKey)!} ${context.read<SystemConfigCubit>().getEarnCoin()} ${AppLocalization.of(context)!.getTranslatedValues(coinsLbl)!.toLowerCase()}.\n${AppLocalization.of(context)!.getTranslatedValues(theyWillGetKey)!} ${context.read<SystemConfigCubit>().getReferCoin()} ${AppLocalization.of(context)!.getTranslatedValues(coinsLbl)!.toLowerCase()}.",
+                          "${context.tr("referFrdLbl")!} ${context.tr(youWillGetKey)!}"
+                          ' ${sysConfig.referrerEarnCoin} ${context.tr(coinsLbl)!.toLowerCase()}.'
+                          '\n${context.tr(theyWillGetKey)!} ${sysConfig.refereeEarnCoin} '
+                          '${context.tr(coinsLbl)!.toLowerCase()}.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 14,
@@ -129,10 +129,10 @@ class ReferAndEarnScreen extends StatelessWidget {
                         borderType: BorderType.RRect,
                         dashPattern: const [6, 4],
                         color: colorScheme.background.withOpacity(.5),
-                        radius: const Radius.circular(8.0),
+                        radius: const Radius.circular(8),
                         child: Container(
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8.0),
+                            borderRadius: BorderRadius.circular(8),
                             color: colorScheme.onTertiary.withOpacity(0.8),
                           ),
                           height: 60,
@@ -140,13 +140,12 @@ class ReferAndEarnScreen extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const SizedBox(width: 25.0),
+                              const SizedBox(width: 25),
                               Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Text(
-                                    AppLocalization.of(context)!
-                                        .getTranslatedValues("yourRefCOdeLbl")!,
+                                    context.tr('yourRefCOdeLbl')!,
                                     style: TextStyle(
                                       color: colorScheme.background
                                           .withOpacity(.8),
@@ -176,15 +175,15 @@ class ReferAndEarnScreen extends StatelessWidget {
                                   await Clipboard.setData(
                                     ClipboardData(text: referCode),
                                   );
-                                  UiUtils.setSnackbar(
-                                      AppLocalization.of(context)!
-                                          .getTranslatedValues(
-                                              "referCodeCopyMsg")!,
-                                      context,
-                                      false);
+                                  UiUtils.showSnackBar(
+                                    context.tr(
+                                      'referCodeCopyMsg',
+                                    )!,
+                                    context,
+                                  );
                                 },
                                 child: Text(
-                                  "Copy\nCode",
+                                  context.tr('copyCodeLbl')!,
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeights.semiBold,
@@ -206,16 +205,18 @@ class ReferAndEarnScreen extends StatelessWidget {
                             color: colorScheme.background.withOpacity(.8),
                           ),
                           children: [
-                            const TextSpan(text: 'How it works? '),
                             TextSpan(
-                              text: 'Steps',
+                              text: '${context.tr("howWorksLbl")!} ',
+                            ),
+                            TextSpan(
+                              text: context.tr('steps'),
                               style: TextStyle(
                                 color: colorScheme.background,
                                 decoration: TextDecoration.underline,
                               ),
                               recognizer: TapGestureRecognizer()
                                 ..onTap = () {
-                                  showModalBottomSheet(
+                                  showModalBottomSheet<void>(
                                     context: context,
                                     isScrollControlled: true,
                                     shape: const RoundedRectangleBorder(
@@ -223,17 +224,6 @@ class ReferAndEarnScreen extends StatelessWidget {
                                           UiUtils.bottomSheetTopRadius,
                                     ),
                                     builder: (_) {
-                                      final verticalDivider = Row(
-                                        children: [
-                                          const SizedBox(width: 22),
-                                          Container(
-                                            color: const Color(0xFF22C274),
-                                            width: 2,
-                                            height: 68,
-                                          ),
-                                          const Spacer(),
-                                        ],
-                                      );
                                       return Container(
                                         decoration: BoxDecoration(
                                           color: Theme.of(context)
@@ -260,14 +250,14 @@ class ReferAndEarnScreen extends StatelessWidget {
                                                     'step_1_title',
                                                     'step_1_desc',
                                                   ),
-                                                  verticalDivider,
+                                                  _vtDivider,
                                                   _buildStep(
                                                     context,
                                                     'step_2',
                                                     'step_2_title',
                                                     'step_2_desc',
                                                   ),
-                                                  verticalDivider,
+                                                  _vtDivider,
                                                   _buildStep(
                                                     context,
                                                     'step_3',
@@ -284,20 +274,26 @@ class ReferAndEarnScreen extends StatelessWidget {
                                                 padding: const EdgeInsets.only(
                                                   bottom: 32,
                                                 ),
-                                                child: CustomRoundedButton(
-                                                  onTap: () =>
-                                                      Share.share(referCode),
-                                                  widthPercentage: 1,
-                                                  backgroundColor:
-                                                      Theme.of(context)
-                                                          .primaryColor,
-                                                  buttonTitle: AppLocalization
-                                                          .of(context)!
-                                                      .getTranslatedValues(
-                                                          'inviteFriendsLbl')!,
-                                                  radius: 8.0,
-                                                  showBorder: false,
-                                                  height: 58,
+                                                child: Builder(
+                                                  builder: (context) {
+                                                    return CustomRoundedButton(
+                                                      onTap: () =>
+                                                          UiUtils.share(
+                                                        referCode,
+                                                        context: context,
+                                                      ),
+                                                      widthPercentage: 1,
+                                                      backgroundColor:
+                                                          Theme.of(context)
+                                                              .primaryColor,
+                                                      buttonTitle: context.tr(
+                                                        'inviteFriendsLbl',
+                                                      ),
+                                                      radius: 8,
+                                                      showBorder: false,
+                                                      height: 58,
+                                                    );
+                                                  },
                                                 ),
                                               ),
                                             ),
@@ -319,18 +315,21 @@ class ReferAndEarnScreen extends StatelessWidget {
               /// Share Now
               Align(
                 alignment: Alignment.bottomCenter,
-                child: CustomRoundedButton(
-                  onTap: () => Share.share(referCode),
-                  widthPercentage: .9,
-                  backgroundColor: Theme.of(context).primaryColor,
-                  titleColor: colorScheme.background,
-                  buttonTitle: AppLocalization.of(context)!
-                      .getTranslatedValues("shareNowLbl")!,
-                  radius: 8.0,
-                  textSize: 18.0,
-                  showBorder: false,
-                  fontWeight: FontWeights.semiBold,
-                  height: 60.0,
+                child: Builder(
+                  builder: (context) {
+                    return CustomRoundedButton(
+                      onTap: () => UiUtils.share(referText, context: context),
+                      widthPercentage: .9,
+                      backgroundColor: Theme.of(context).primaryColor,
+                      titleColor: colorScheme.background,
+                      buttonTitle: context.tr('shareNowLbl'),
+                      radius: 8,
+                      textSize: 18,
+                      showBorder: false,
+                      fontWeight: FontWeights.semiBold,
+                      height: 60,
+                    );
+                  },
                 ),
               ),
             ],
@@ -340,11 +339,23 @@ class ReferAndEarnScreen extends StatelessWidget {
     );
   }
 
+  static const _vtDivider = Row(
+    children: [
+      SizedBox(width: 22),
+      SizedBox(
+        width: 2,
+        height: 68,
+        child: ColoredBox(color: Color(0xFF22C274)),
+      ),
+      Spacer(),
+    ],
+  );
+
   Row _buildStep(BuildContext context, String step, String title, String desc) {
     final onTertiary = Theme.of(context).colorScheme.onTertiary;
-    final step0 = AppLocalization.of(context)!.getTranslatedValues(step)!;
-    final title0 = AppLocalization.of(context)!.getTranslatedValues(title)!;
-    final desc0 = AppLocalization.of(context)!.getTranslatedValues(desc)!;
+    final step0 = context.tr(step)!;
+    final title0 = context.tr(title)!;
+    final desc0 = context.tr(desc)!;
 
     return Row(
       children: [

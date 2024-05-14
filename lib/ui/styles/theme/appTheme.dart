@@ -9,89 +9,119 @@ enum AppTheme { light, dark }
 final appThemeData = {
   AppTheme.light: ThemeData(
     brightness: Brightness.light,
-    canvasColor: onBackgroundColor,
+    canvasColor: klCanvasColor,
     fontFamily: GoogleFonts.nunito().fontFamily,
-    primaryColor: primaryColor,
+    primaryColor: klPrimaryColor,
     primaryTextTheme: GoogleFonts.nunitoTextTheme(),
-    cupertinoOverrideTheme: NoDefaultCupertinoThemeData(
-      textTheme: CupertinoTextThemeData(
-        textStyle: GoogleFonts.nunito(),
-      ),
-    ),
-    scaffoldBackgroundColor: pageBackgroundColor,
-    shadowColor: primaryColor.withOpacity(0.25),
+    cupertinoOverrideTheme: _cupertinoOverrideTheme,
+    scaffoldBackgroundColor: klPageBackgroundColor,
+    dialogTheme: _dialogThemeData,
+    shadowColor: klPrimaryColor.withOpacity(0.25),
+    dividerTheme: _dividerThemeData,
     textTheme: GoogleFonts.nunitoTextTheme(),
-    tabBarTheme: TabBarTheme(
-      labelColor: backgroundColor,
-      labelStyle: GoogleFonts.nunito(
-        textStyle: const TextStyle(
-          fontWeight: FontWeights.regular,
-          fontSize: 14,
-        ),
-      ),
-      unselectedLabelColor: Colors.black26,
-      indicatorSize: TabBarIndicatorSize.tab,
-      indicator: BoxDecoration(
-        borderRadius: BorderRadius.circular(25),
-        color: primaryColor,
-      ),
-    ),
+    textButtonTheme: _textButtonTheme,
+    tabBarTheme: _tabBarTheme,
     highlightColor: Colors.transparent,
     splashColor: Colors.transparent,
-    colorScheme: ThemeData()
-        .colorScheme
-        .copyWith(
-          secondary: secondaryColor,
-          onPrimary: onPrimaryColor,
-          background: backgroundColor,
-          onSecondary: onSecondaryColor,
-          onTertiary: primaryTxtColor,
-          onSurface: levelLockedColor,
-        )
-        .copyWith(background: backgroundColor),
+    radioTheme: const RadioThemeData(
+      fillColor: MaterialStatePropertyAll<Color>(klPrimaryTextColor),
+    ),
+    colorScheme: ColorScheme.fromSeed(seedColor: klPrimaryColor).copyWith(
+      background: klBackgroundColor,
+      onTertiary: klPrimaryTextColor,
+      surfaceTint: Colors.transparent,
+    ),
   ),
   AppTheme.dark: ThemeData(
     primaryTextTheme: GoogleFonts.nunitoTextTheme(),
     textTheme: GoogleFonts.nunitoTextTheme(),
     fontFamily: GoogleFonts.nunito().fontFamily,
-    shadowColor: darkPrimaryColor.withOpacity(0.25),
+    shadowColor: kdPrimaryColor.withOpacity(0.25),
     brightness: Brightness.dark,
-    primaryColor: darkPrimaryColor,
-    scaffoldBackgroundColor: darkPageBackgroundColor,
-    canvasColor: darkCanvasColor,
-    tabBarTheme: TabBarTheme(
-      labelColor: darkCanvasColor,
-      labelStyle: GoogleFonts.nunito(
-        textStyle: const TextStyle(
-          fontWeight: FontWeights.regular,
-          fontSize: 14,
-        ),
+    primaryColor: kdPrimaryColor,
+    scaffoldBackgroundColor: kdPageBackgroundColor,
+    dialogTheme: _dialogThemeData.copyWith(
+      backgroundColor: kdPageBackgroundColor,
+      surfaceTintColor: kdPageBackgroundColor,
+      titleTextStyle: _dialogThemeData.titleTextStyle?.copyWith(
+        color: kdPrimaryTextColor,
       ),
-      unselectedLabelColor: Colors.black26,
-      indicatorSize: TabBarIndicatorSize.tab,
+    ),
+    canvasColor: kdCanvasColor,
+    tabBarTheme: _tabBarTheme.copyWith(
+      unselectedLabelColor: Colors.grey[400],
+      labelColor: kdCanvasColor,
       indicator: BoxDecoration(
         borderRadius: BorderRadius.circular(25),
-        color: primaryColor,
+        color: klPrimaryColor,
       ),
     ),
-    cupertinoOverrideTheme: NoDefaultCupertinoThemeData(
-      textTheme: CupertinoTextThemeData(
-        textStyle: GoogleFonts.nunito(),
-      ),
-    ),
+    textButtonTheme: _textButtonTheme,
+    dividerTheme: _dividerThemeData,
+    cupertinoOverrideTheme: _cupertinoOverrideTheme,
     highlightColor: Colors.transparent,
     splashColor: Colors.transparent,
-    colorScheme: ThemeData()
-        .colorScheme
-        .copyWith(
-          brightness: Brightness.dark,
-          secondary: darkSecondaryColor,
-          onPrimary: darkOnPrimaryColor,
-          background: darkBackgroundColor,
-          onSecondary: darkOnSecondaryColor,
-          onTertiary: darkPrimaryTxtColor,
-          onSurface: darkLevelLockedColor,
-        )
-        .copyWith(background: darkBackgroundColor),
+    radioTheme: const RadioThemeData(
+      fillColor: MaterialStatePropertyAll<Color>(kdPrimaryTextColor),
+    ),
+    colorScheme: ColorScheme.fromSeed(seedColor: kdPrimaryColor).copyWith(
+      brightness: Brightness.dark,
+      background: kdBackgroundColor,
+      onTertiary: kdPrimaryTextColor,
+      surfaceTint: Colors.transparent,
+    ),
   ),
 };
+
+final _textButtonTheme = TextButtonThemeData(
+  style: TextButton.styleFrom(
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.all(Radius.circular(8)),
+    ),
+  ),
+);
+
+const _dividerThemeData = DividerThemeData(
+  color: Colors.black12,
+  thickness: .5,
+);
+
+final _dialogThemeData = DialogTheme(
+  alignment: Alignment.center,
+  shape: const RoundedRectangleBorder(
+    borderRadius: BorderRadius.all(Radius.circular(20)),
+  ),
+  titleTextStyle: GoogleFonts.nunito(
+    textStyle: const TextStyle(
+      fontSize: 18,
+      fontWeight: FontWeights.regular,
+      color: klPrimaryTextColor,
+    ),
+  ),
+  shadowColor: Colors.transparent,
+  surfaceTintColor: klPageBackgroundColor,
+  backgroundColor: klPageBackgroundColor,
+);
+
+final _cupertinoOverrideTheme = NoDefaultCupertinoThemeData(
+  textTheme: CupertinoTextThemeData(textStyle: GoogleFonts.nunito()),
+);
+
+final _tabBarTheme = TabBarTheme(
+  tabAlignment: TabAlignment.center,
+  overlayColor: const MaterialStatePropertyAll(Colors.transparent),
+  dividerHeight: 0,
+  labelColor: klBackgroundColor,
+  labelStyle: GoogleFonts.nunito(
+    textStyle: const TextStyle(
+      fontWeight: FontWeights.regular,
+      fontSize: 14,
+    ),
+  ),
+  unselectedLabelColor: Colors.black45,
+  indicatorSize: TabBarIndicatorSize.tab,
+  indicator: BoxDecoration(
+    borderRadius: BorderRadius.circular(25),
+    color: klPrimaryColor,
+  ),
+);

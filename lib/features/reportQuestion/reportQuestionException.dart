@@ -1,7 +1,6 @@
 class ReportQuestionException implements Exception {
-  final String errorMessageCode;
-
   ReportQuestionException({required this.errorMessageCode});
+  final String errorMessageCode;
 
   @override
   String toString() => errorMessageCode;

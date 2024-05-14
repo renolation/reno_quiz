@@ -9,20 +9,22 @@ import 'package:flutterquiz/ui/screens/auth/sign_in_screen.dart';
 import 'package:flutterquiz/ui/screens/auth/sign_up_screen.dart';
 import 'package:flutterquiz/ui/screens/badgesScreen.dart';
 import 'package:flutterquiz/ui/screens/battle/battleRoomFindOpponentScreen.dart';
+import 'package:flutterquiz/ui/screens/battle/battleRoomQuizScreen.dart';
+import 'package:flutterquiz/ui/screens/battle/multiUserBattleRoomQuizScreen.dart';
+import 'package:flutterquiz/ui/screens/battle/multiUserBattleRoomResultScreen.dart';
 import 'package:flutterquiz/ui/screens/battle/random_battle_screen.dart';
 import 'package:flutterquiz/ui/screens/bookmarkScreen.dart';
 import 'package:flutterquiz/ui/screens/coinHistoryScreen.dart';
-import 'package:flutterquiz/ui/screens/coinStoreScreen.dart';
 import 'package:flutterquiz/ui/screens/exam/exam_screen.dart';
 import 'package:flutterquiz/ui/screens/exam/exams_screen.dart';
 import 'package:flutterquiz/ui/screens/home/home_screen.dart';
-import 'package:flutterquiz/ui/screens/home/setting_screen.dart';
-import 'package:flutterquiz/ui/screens/menuScreen.dart';
-import 'package:flutterquiz/ui/screens/introSliderScreen.dart';
 import 'package:flutterquiz/ui/screens/home/leaderboard_screen.dart';
-import 'package:flutterquiz/ui/screens/notificationScreen.dart';
-import 'package:flutterquiz/ui/screens/battle/battleRoomQuizScreen.dart';
-
+import 'package:flutterquiz/ui/screens/home/setting_screen.dart';
+import 'package:flutterquiz/ui/screens/inapp_coin_store_screen.dart';
+import 'package:flutterquiz/ui/screens/menu/menu_screen.dart';
+import 'package:flutterquiz/ui/screens/notifications_screen.dart';
+import 'package:flutterquiz/ui/screens/onboarding_screen.dart';
+import 'package:flutterquiz/ui/screens/profile/create_or_edit_profile_screen.dart';
 import 'package:flutterquiz/ui/screens/quiz/bookmarkQuizScreen.dart';
 import 'package:flutterquiz/ui/screens/quiz/categoryScreen.dart';
 import 'package:flutterquiz/ui/screens/quiz/contestLeaderboardScreen.dart';
@@ -30,87 +32,79 @@ import 'package:flutterquiz/ui/screens/quiz/contest_screen.dart';
 import 'package:flutterquiz/ui/screens/quiz/funAndLearnScreen.dart';
 import 'package:flutterquiz/ui/screens/quiz/funAndLearnTitleScreen.dart';
 import 'package:flutterquiz/ui/screens/quiz/guess_the_word_quiz_screen.dart';
-import 'package:flutterquiz/ui/screens/battle/multiUserBattleRoomQuizScreen.dart';
-import 'package:flutterquiz/ui/screens/battle/multiUserBattleRoomResultScreen.dart';
 import 'package:flutterquiz/ui/screens/quiz/levels_screen.dart';
+import 'package:flutterquiz/ui/screens/quiz/quiz_screen.dart';
+import 'package:flutterquiz/ui/screens/quiz/resultScreen.dart';
 import 'package:flutterquiz/ui/screens/quiz/reviewAnswersScreen.dart';
 import 'package:flutterquiz/ui/screens/quiz/selfChallengeQuestionsScreen.dart';
 import 'package:flutterquiz/ui/screens/quiz/selfChallengeScreen.dart';
-
 import 'package:flutterquiz/ui/screens/quiz/subCategoryAndLevelScreen.dart';
-import 'package:flutterquiz/ui/screens/quiz/quiz_screen.dart';
-import 'package:flutterquiz/ui/screens/quiz/resultScreen.dart';
 import 'package:flutterquiz/ui/screens/quiz/subCategoryScreen.dart';
-
 import 'package:flutterquiz/ui/screens/refer_and_earn_screen.dart';
 import 'package:flutterquiz/ui/screens/rewards/rewardsScreen.dart';
-import 'package:flutterquiz/ui/screens/profile/selectProfilePictureScreen.dart';
-
-import 'package:flutterquiz/ui/screens/splashScreen.dart';
+import 'package:flutterquiz/ui/screens/splash_screen.dart';
 import 'package:flutterquiz/ui/screens/statisticsScreen.dart';
 import 'package:flutterquiz/ui/screens/wallet/walletScreen.dart';
 
 class Routes {
-  static const home = "/";
-  static const login = "login";
+  static const home = '/';
+  static const login = 'login';
   static const splash = 'splash';
-  static const signUp = "signUp";
-  static const introSlider = "introSlider";
-  static const selectProfile = "selectProfile";
-  static const quiz = "/quiz";
-  static const subcategoryAndLevel = "/subcategoryAndLevel";
-  static const subCategory = "/subCategory";
+  static const signUp = 'signUp';
+  static const introSlider = 'introSlider';
+  static const selectProfile = 'selectProfile';
+  static const quiz = '/quiz';
+  static const subcategoryAndLevel = '/subcategoryAndLevel';
+  static const subCategory = '/subCategory';
 
-  static const referAndEarn = "/referAndEarn";
-  static const notification = "/notification";
-  static const bookmark = "/bookmark";
-  static const bookmarkQuiz = "/bookmarkQuiz";
-  static const coinStore = "/coinStore";
-  static const rewards = "/rewards";
-  static const result = "/result";
-  static const selectRoom = "/selectRoom";
-  static const category = "/category";
-  static const profile = "/profile";
-  static const editProfile = "/editProfile";
-  static const leaderBoard = "/leaderBoard";
-  static const settings = "/settings";
-  static const reviewAnswers = "/reviewAnswers";
-  static const selfChallenge = "/selfChallenge";
-  static const selfChallengeQuestions = "/selfChallengeQuestions";
-  static const battleRoomQuiz = "/battleRoomQuiz";
-  static const battleRoomFindOpponent = "/battleRoomFindOpponent";
+  static const referAndEarn = '/referAndEarn';
+  static const notification = '/notification';
+  static const bookmark = '/bookmark';
+  static const bookmarkQuiz = '/bookmarkQuiz';
+  static const coinStore = '/coinStore';
+  static const rewards = '/rewards';
+  static const result = '/result';
+  static const selectRoom = '/selectRoom';
+  static const category = '/category';
+  static const profile = '/profile';
+  static const editProfile = '/editProfile';
+  static const leaderBoard = '/leaderBoard';
+  static const settings = '/settings';
+  static const reviewAnswers = '/reviewAnswers';
+  static const selfChallenge = '/selfChallenge';
+  static const selfChallengeQuestions = '/selfChallengeQuestions';
+  static const battleRoomQuiz = '/battleRoomQuiz';
+  static const battleRoomFindOpponent = '/battleRoomFindOpponent';
 
-  static const logOut = "/logOut";
-  static const trueFalse = "/trueFalse";
-  static const multiUserBattleRoomQuiz = "/multiUserBattleRoomQuiz";
-  static const multiUserBattleRoomQuizResult = "/multiUserBattleRoomQuizResult";
+  static const logOut = '/logOut';
+  static const trueFalse = '/trueFalse';
+  static const multiUserBattleRoomQuiz = '/multiUserBattleRoomQuiz';
+  static const multiUserBattleRoomQuizResult = '/multiUserBattleRoomQuizResult';
 
-  static const contest = "/contest";
-  static const contestLeaderboard = "/contestLeaderboard";
-  static const funAndLearnTitle = "/funAndLearnTitle";
-  static const funAndLearn = "funAndLearn";
-  static const guessTheWord = "/guessTheWord";
-  static const appSettings = "/appSettings";
-  static const levels = "/levels";
-  static const aboutApp = "/aboutApp";
-  static const badges = "/badges";
-  static const exams = "/exams";
-  static const exam = "/exam";
-  static const tournament = "/tournament";
-  static const tournamentDetails = "/tournamentDetails";
-  static const otpScreen = "/otpScreen";
-  static const statistics = "/statistics";
-  static const coinHistory = "/coinHistory";
-  static const wallet = "/wallet";
-  static const menuScreen = "/menuScreen";
-  static const randomBattle = "/randomBattle";
+  static const contest = '/contest';
+  static const contestLeaderboard = '/contestLeaderboard';
+  static const funAndLearnTitle = '/funAndLearnTitle';
+  static const funAndLearn = 'funAndLearn';
+  static const guessTheWord = '/guessTheWord';
+  static const appSettings = '/appSettings';
+  static const levels = '/levels';
+  static const aboutApp = '/aboutApp';
+  static const badges = '/badges';
+  static const exams = '/exams';
+  static const exam = '/exam';
+  static const otpScreen = '/otpScreen';
+  static const statistics = '/statistics';
+  static const coinHistory = '/coinHistory';
+  static const wallet = '/wallet';
+  static const menuScreen = '/menuScreen';
+  static const randomBattle = '/randomBattle';
 
   static String currentRoute = splash;
 
-  static Route onGenerateRouted(RouteSettings routeSettings) {
+  static Route<dynamic>? onGenerateRouted(RouteSettings routeSettings) {
     //to track current route
     //this will only track pushed route on top of previous route
-    currentRoute = routeSettings.name ?? "";
+    currentRoute = routeSettings.name ?? '';
 
     log(name: 'Current Route', currentRoute);
 
@@ -130,7 +124,7 @@ class Routes {
       case subcategoryAndLevel:
         return SubCategoryAndLevelScreen.route(routeSettings);
       case selectProfile:
-        return SelectProfilePictureScreen.route(routeSettings);
+        return CreateOrEditProfileScreen.route(routeSettings);
       case quiz:
         return QuizScreen.route(routeSettings);
       case wallet:
@@ -194,11 +188,11 @@ class Routes {
       case badges:
         return BadgesScreen.route(routeSettings);
       case exams:
-        return ExamsScreen.route(routeSettings);
+        return ExamsScreen.route();
       case exam:
         return ExamScreen.route(routeSettings);
       case statistics:
-        return StatisticsScreen.route(routeSettings);
+        return StatisticsScreen.route();
       case randomBattle:
         return RandomBattleScreen.route(routeSettings);
       default:

@@ -1,32 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:flutterquiz/app/app_localization.dart';
 import 'package:flutterquiz/features/battleRoom/cubits/messageCubit.dart';
 import 'package:flutterquiz/features/battleRoom/cubits/multiUserBattleRoomCubit.dart';
 import 'package:flutterquiz/features/battleRoom/models/message.dart';
 import 'package:flutterquiz/features/profileManagement/cubits/userDetailsCubit.dart';
 import 'package:flutterquiz/features/quiz/models/quizType.dart';
 import 'package:flutterquiz/features/systemConfig/cubits/systemConfigCubit.dart';
-import 'package:flutterquiz/ui/widgets/customRoundedButton.dart';
 import 'package:flutterquiz/utils/constants/constants.dart';
-import 'package:flutterquiz/utils/constants/fonts.dart';
-import 'package:flutterquiz/utils/constants/string_labels.dart';
+import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 
 class MessageBoxContainer extends StatefulWidget {
+  const MessageBoxContainer({
+    required this.closeMessageBox,
+    required this.battleRoomId,
+    required this.quizType,
+    super.key,
+    this.topPadding,
+  });
+
   final VoidCallback closeMessageBox;
   final double? topPadding;
   final String battleRoomId;
   final QuizTypes quizType;
-
-  const MessageBoxContainer({
-    super.key,
-    required this.closeMessageBox,
-    this.topPadding,
-    required this.battleRoomId,
-    required this.quizType,
-  });
 
   @override
   State<MessageBoxContainer> createState() => _MessageBoxContainerState();
@@ -92,13 +89,13 @@ class _MessageBoxContainerState extends State<MessageBoxContainer> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          //_buildTabbarTextContainer(AppLocalization.of(context)!.getTranslatedValues(chatKey)!, 0),
+          //_buildTabbarTextContainer(context.tr(chatKey)!, 0),
           _buildTabbarTextContainer(
-            AppLocalization.of(context)!.getTranslatedValues(messagesKey)!,
+            context.tr(messagesKey)!,
             1,
           ),
           _buildTabbarTextContainer(
-            AppLocalization.of(context)!.getTranslatedValues(emojisKey)!,
+            context.tr(emojisKey)!,
             2,
           ),
         ],
@@ -131,19 +128,20 @@ class _MessageBoxContainerState extends State<MessageBoxContainer> {
                 MediaQuery.of(context).size.height * (0.01)),
       ),
       width: MediaQuery.of(context).size.width * messageBoxWidthPercentage,
-      height: MediaQuery.of(context).size.height * (messageBoxHeightPercentage),
+      height: MediaQuery.of(context).size.height * messageBoxHeightPercentage,
       child: Stack(
-        clipBehavior: Clip.none,
         children: [
           Align(
             alignment: Alignment.topCenter,
             child: Container(
               margin: EdgeInsets.only(
-                  top: MediaQuery.of(context).size.height * (0.085) * 0.25),
+                top: MediaQuery.of(context).size.height * (0.085) * 0.25,
+              ),
               width:
                   MediaQuery.of(context).size.width * messageBoxWidthPercentage,
+              padding: const EdgeInsets.only(bottom: 15),
               height: MediaQuery.of(context).size.height *
-                  (messageBoxDetailsHeightPercentage),
+                  messageBoxDetailsHeightPercentage,
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.background,
                 borderRadius: BorderRadius.circular(25),
@@ -162,7 +160,17 @@ class _MessageBoxContainerState extends State<MessageBoxContainer> {
               ),
             ),
           ),
-          Align(alignment: Alignment.topCenter, child: _buildTabBar(context)),
+          Align(
+            alignment: Alignment.topCenter,
+            child: Container(
+              width: double.maxFinite,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.background,
+                borderRadius: BorderRadius.circular(25),
+              ),
+              child: _buildTabBar(context),
+            ),
+          ),
         ],
       ),
     );
@@ -197,15 +205,14 @@ class _MessageBoxContainerState extends State<MessageBoxContainer> {
 }*/
 
 class ChatContainer extends StatelessWidget {
+  const ChatContainer({required this.quizType, super.key});
+
   final QuizTypes quizType;
 
-  const ChatContainer({super.key, required this.quizType});
-
   Widget _buildMessage(BuildContext context, Message message) {
-    bool messageByCurrentUser =
-        message.by == context.read<UserDetailsCubit>().getUserId();
-    MultiUserBattleRoomCubit battleRoomCubit =
-        context.read<MultiUserBattleRoomCubit>();
+    final messageByCurrentUser =
+        message.by == context.read<UserDetailsCubit>().userId();
+    final battleRoomCubit = context.read<MultiUserBattleRoomCubit>();
 
     return Align(
       alignment: messageByCurrentUser
@@ -217,48 +224,53 @@ class ChatContainer extends StatelessWidget {
           maxWidth: MediaQuery.of(context).size.width * (0.5),
         ),
         margin: messageByCurrentUser
-            ? const EdgeInsets.only(bottom: 20.0, right: 15.0)
-            : const EdgeInsets.only(bottom: 20.0, left: 15.0),
+            ? const EdgeInsets.only(bottom: 20, right: 15)
+            : const EdgeInsets.only(bottom: 20, left: 15),
         child: Column(
           crossAxisAlignment: messageByCurrentUser
               ? CrossAxisAlignment.end
               : CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
                 //
-                messageByCurrentUser
-                    ? const SizedBox()
-                    : Padding(
-                        padding: const EdgeInsetsDirectional.only(
-                            bottom: 5.0, start: 10.0),
-                        child: Text(
-                          "${battleRoomCubit.getUser(message.by)!.name}  ",
-                          style: TextStyle(
-                              fontSize: 11.0,
-                              color: Theme.of(context).colorScheme.background),
-                        ),
+                if (messageByCurrentUser)
+                  const SizedBox()
+                else
+                  Padding(
+                    padding: const EdgeInsetsDirectional.only(
+                      bottom: 5,
+                      start: 10,
+                    ),
+                    child: Text(
+                      '${battleRoomCubit.getUser(message.by)!.name}  ',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Theme.of(context).colorScheme.background,
                       ),
+                    ),
+                  ),
 
                 Padding(
                   padding: messageByCurrentUser
-                      ? const EdgeInsets.only(bottom: 5.0, right: 10.0)
-                      : const EdgeInsets.only(bottom: 5.0, left: 10.0),
+                      ? const EdgeInsets.only(bottom: 5, right: 10)
+                      : const EdgeInsets.only(bottom: 5, left: 10),
                   child: Text(
-                    "${message.timestamp.toDate().hour}:${message.timestamp.toDate().minute}",
+                    '${message.timestamp.toDate().hour}:${message.timestamp.toDate().minute}',
                     style: TextStyle(
-                        fontSize: 11.0,
-                        color: Theme.of(context).colorScheme.background),
+                      fontSize: 11,
+                      color: Theme.of(context).colorScheme.background,
+                    ),
                   ),
                 ),
               ],
             ),
             CustomPaint(
               painter: ChatMessagePainter(
-                  isLeft: !messageByCurrentUser,
-                  color: Theme.of(context).colorScheme.background),
+                isLeft: !messageByCurrentUser,
+                color: Theme.of(context).colorScheme.background,
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(10),
                 child: message.isTextMessage
@@ -277,15 +289,18 @@ class ChatContainer extends StatelessWidget {
                         height: 30,
                         width: MediaQuery.of(context).size.width * (0.2),
                         child: SvgPicture.asset(
-                          UiUtils.getEmojiPath(message.message),
-                          color: Theme.of(context)
-                              .colorScheme
-                              .secondary
-                              .withOpacity(0.85),
+                          Assets.emoji(message.message),
+                          colorFilter: ColorFilter.mode(
+                            Theme.of(context)
+                                .colorScheme
+                                .secondary
+                                .withOpacity(0.85),
+                            BlendMode.srcIn,
+                          ),
                         ),
                       ),
               ),
-            )
+            ),
           ],
         ),
       ),
@@ -298,7 +313,7 @@ class ChatContainer extends StatelessWidget {
       bloc: context.read<MessageCubit>(),
       builder: (context, state) {
         if (state is MessageFetchedSuccess) {
-          List<Message> messages = state.messages;
+          var messages = state.messages;
           messages = messages.reversed.toList();
           return messages.isEmpty
               ? const SizedBox()
@@ -312,7 +327,8 @@ class ChatContainer extends StatelessWidget {
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
                     return _buildMessage(context, messages[index]);
-                  });
+                  },
+                );
         }
         return const SizedBox();
       },
@@ -321,14 +337,14 @@ class ChatContainer extends StatelessWidget {
 }
 
 class MessagesContainer extends StatefulWidget {
-  final String battleRoomId;
-  final VoidCallback closeMessageBox;
-
   const MessagesContainer({
-    super.key,
     required this.closeMessageBox,
     required this.battleRoomId,
+    super.key,
   });
+
+  final String battleRoomId;
+  final VoidCallback closeMessageBox;
 
   @override
   State<MessagesContainer> createState() => _MessagesContainerState();
@@ -352,13 +368,12 @@ class _MessagesContainerState extends State<MessagesContainer> {
           ),
           child: InkWell(
             onTap: () {
-              MessageCubit messageCubit = context.read<MessageCubit>();
+              final messageCubit = context.read<MessageCubit>();
 
-              UserDetailsCubit userDetailsCubit =
-                  context.read<UserDetailsCubit>();
+              final userDetailsCubit = context.read<UserDetailsCubit>();
               messageCubit.addMessage(
                 message: predefinedMessages[index],
-                by: userDetailsCubit.getUserId(),
+                by: userDetailsCubit.userId(),
                 roomId: widget.battleRoomId,
                 isTextMessage: true,
               );
@@ -394,7 +409,7 @@ class _MessagesContainerState extends State<MessagesContainer> {
           //   buttonTitle: predefinedMessages[index],
           //   titleColor: currentlySelectedMessageIndex == index
           //       ? Theme.of(context).colorScheme.background
-          //       : Theme.of(context).colorScheme.secondary.withOpacity(0.8),
+          //       : Theme.of(context).primaryColor.withOpacity(0.8),
           //   radius: 10,
           //   showBorder: false,
           //   height: 40,
@@ -434,14 +449,14 @@ class _MessagesContainerState extends State<MessagesContainer> {
 }
 
 class EmojisContainer extends StatefulWidget {
-  final VoidCallback closeMessageBox;
-  final String battleRoomId;
-
   const EmojisContainer({
-    super.key,
     required this.closeMessageBox,
     required this.battleRoomId,
+    super.key,
   });
+
+  final VoidCallback closeMessageBox;
+  final String battleRoomId;
 
   @override
   State<EmojisContainer> createState() => _EmojisContainerState();
@@ -461,20 +476,18 @@ class _EmojisContainerState extends State<EmojisContainer> {
       itemCount: emojis.length,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
-        childAspectRatio: 1.0,
-        crossAxisSpacing: 15.0,
-        mainAxisSpacing: 15.0,
+        crossAxisSpacing: 15,
+        mainAxisSpacing: 15,
       ),
       itemBuilder: (context, index) {
         return InkWell(
           onTap: () {
-            MessageCubit messageCubit = context.read<MessageCubit>();
+            final messageCubit = context.read<MessageCubit>();
 
-            UserDetailsCubit userDetailsCubit =
-                context.read<UserDetailsCubit>();
+            final userDetailsCubit = context.read<UserDetailsCubit>();
             messageCubit.addMessage(
               message: emojis[index],
-              by: userDetailsCubit.getUserId(),
+              by: userDetailsCubit.userId(),
               roomId: widget.battleRoomId,
               isTextMessage: false,
             );
@@ -490,13 +503,13 @@ class _EmojisContainerState extends State<EmojisContainer> {
             alignment: Alignment.center,
             padding: const EdgeInsets.symmetric(
               horizontal: 12.5,
-              vertical: 15.0,
+              vertical: 15,
             ),
             child: SvgPicture.asset(
-              UiUtils.getEmojiPath(emojis[index]),
+              Assets.emoji(emojis[index]),
               // color: index == currentlySelectedEmojiIndex
               //     ? Theme.of(context).colorScheme.background
-              //     : Theme.of(context).colorScheme.secondary,
+              //     : Theme.of(context).primaryColor,
             ),
           ),
         );
@@ -536,60 +549,71 @@ class _EmojisContainerState extends State<EmojisContainer> {
 }
 
 class ChatMessagePainter extends CustomPainter {
+  ChatMessagePainter({required this.isLeft, required this.color});
+
   bool isLeft;
   Color color;
 
-  ChatMessagePainter({required this.isLeft, required this.color});
-
   @override
   void paint(Canvas canvas, Size size) {
-    Path path = Path();
+    final path = Path();
 
-    Paint paint = Paint()
+    final paint = Paint()
       ..color = color
       ..style = PaintingStyle.fill;
 
     if (isLeft) {
-      path.moveTo(size.width * (0.1), 0);
-      path.lineTo(size.width * (0.9), 0);
+      path
+        ..moveTo(size.width * (0.1), 0)
+        ..lineTo(size.width * (0.9), 0)
 
-      //add top-right curve effect
-      path.quadraticBezierTo(size.width, 0, size.width, size.height * 0.2);
+        //add top-right curve effect
+        ..quadraticBezierTo(size.width, 0, size.width, size.height * 0.2)
+        ..lineTo(size.width, size.height * (0.8))
+        //add bottom-right curve
+        ..quadraticBezierTo(
+          size.width,
+          size.height,
+          size.width * (0.9),
+          size.height,
+        )
+        ..lineTo(size.width * (0.125), size.height)
 
-      path.lineTo(size.width, size.height * (0.8));
-      //add bottom-right curve
-      path.quadraticBezierTo(
-          size.width, size.height, size.width * (0.9), size.height);
-      path.lineTo(size.width * (0.125), size.height);
+        //add botom left shape
+        ..lineTo(size.width * (0.025), size.height * (1.175))
+        ..quadraticBezierTo(
+          -10,
+          size.height * (1.275),
+          0,
+          size.height * (0.8),
+        )
 
-      //add botom left shape
-      path.lineTo(size.width * (0.025), size.height * (1.175));
-      path.quadraticBezierTo(
-          -10, size.height * (1.275), 0, size.height * (0.8));
-
-      //add left-top curve
-      path.lineTo(0, size.height * (0.2));
-      path.quadraticBezierTo(0, 0, size.width * (0.1), 0);
+        //add left-top curve
+        ..lineTo(0, size.height * (0.2))
+        ..quadraticBezierTo(0, 0, size.width * (0.1), 0);
       canvas.drawPath(path, paint);
     } else {
       //
 
-      path.moveTo(size.width * (0.1), 0);
-      path.quadraticBezierTo(0, 0, 0, size.height * (0.2));
-      path.lineTo(0, size.height * (0.8));
+      path
+        ..moveTo(size.width * (0.1), 0)
+        ..quadraticBezierTo(0, 0, 0, size.height * (0.2))
+        ..lineTo(0, size.height * (0.8))
+        ..quadraticBezierTo(0, size.height, size.width * (0.1), size.height)
+        ..lineTo(size.width * (0.875), size.height)
 
-      path.quadraticBezierTo(0, size.height, size.width * (0.1), size.height);
-      path.lineTo(size.width * (0.875), size.height);
-
-      //add bottom right shape
-      //path.quadraticBezierTo(x1, y1, x2, y2);
-      path.lineTo(size.width * (0.975), size.height * (1.175));
-      path.quadraticBezierTo(size.width + 10, size.height * (1.275), size.width,
-          size.height * (0.8));
-
-      path.lineTo(size.width, size.height * (0.2));
-      path.quadraticBezierTo(size.width, 0, size.width * (0.9), 0);
-      path.close();
+        //add bottom right shape
+        //path.quadraticBezierTo(x1, y1, x2, y2);
+        ..lineTo(size.width * (0.975), size.height * (1.175))
+        ..quadraticBezierTo(
+          size.width + 10,
+          size.height * (1.275),
+          size.width,
+          size.height * (0.8),
+        )
+        ..lineTo(size.width, size.height * (0.2))
+        ..quadraticBezierTo(size.width, 0, size.width * (0.9), 0)
+        ..close();
 
       canvas.drawPath(path, paint);
     }

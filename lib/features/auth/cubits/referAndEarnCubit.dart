@@ -13,42 +13,45 @@ class ReferAndEarnInitial extends ReferAndEarnState {}
 class ReferAndEarnProgress extends ReferAndEarnState {}
 
 class ReferAndEarnSuccess extends ReferAndEarnState {
-  final UserProfile userProfile;
-
   ReferAndEarnSuccess({required this.userProfile});
+
+  final UserProfile userProfile;
 }
 
 class ReferAndEarnFailure extends ReferAndEarnState {
-  final String errorMessage;
   ReferAndEarnFailure(this.errorMessage);
+
+  final String errorMessage;
 }
 
 class ReferAndEarnCubit extends Cubit<ReferAndEarnState> {
-  final AuthRepository _authRepository;
   ReferAndEarnCubit(this._authRepository) : super(ReferAndEarnInitial());
+  final AuthRepository _authRepository;
 
-  void getReward(
-      {required UserProfile userProfile,
-      required String name,
-      required String friendReferralCode,
-      required AuthProvider authType}) {
+  void getReward({
+    required UserProfile userProfile,
+    required String name,
+    required String friendReferralCode,
+    required AuthProviders authType,
+  }) {
     //emitting signInProgress state
     emit(ReferAndEarnProgress());
 
     //signIn user with given provider and also add user detials in api
     _authRepository
         .addUserData(
-            email: userProfile.email,
-            firebaseId: userProfile.firebaseId,
-            friendCode: friendReferralCode,
-            mobile: userProfile.mobileNumber,
-            name: name,
-            type: _authRepository.getAuthTypeString(authType),
-            profile: userProfile.profileUrl)
+      email: userProfile.email,
+      firebaseId: userProfile.firebaseId!,
+      friendCode: friendReferralCode,
+      mobile: userProfile.mobileNumber,
+      name: name,
+      type: authType.name,
+      profile: userProfile.profileUrl,
+    )
         .then((result) {
       emit(ReferAndEarnSuccess(userProfile: UserProfile.fromJson(result)));
-    }).catchError((e) {
-      //failure
+    }).catchError((dynamic e) {
+      /// FIXME: closed before emit issue in some case.
       emit(ReferAndEarnFailure(e.toString()));
     });
   }

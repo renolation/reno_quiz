@@ -1,7 +1,3 @@
-import 'dart:convert';
-
-import 'dart:developer' as dev;
-
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutterquiz/features/wallet/models/paymentRequest.dart';
 import 'package:flutterquiz/features/wallet/walletRepository.dart';
@@ -13,51 +9,48 @@ class TransactionsFetchInitial extends TransactionsState {}
 class TransactionsFetchInProgress extends TransactionsState {}
 
 class TransactionsFetchSuccess extends TransactionsState {
-  final List<PaymentRequest> paymentRequests;
-  final int totalTransactionsCount;
-  final bool hasMoreFetchError;
-  final bool hasMore;
-
   TransactionsFetchSuccess({
     required this.paymentRequests,
     required this.totalTransactionsCount,
     required this.hasMoreFetchError,
     required this.hasMore,
   });
+
+  final List<PaymentRequest> paymentRequests;
+  final int totalTransactionsCount;
+  final bool hasMoreFetchError;
+  final bool hasMore;
 }
 
 class TransactionsFetchFailure extends TransactionsState {
-  final String errorMessage;
-
   TransactionsFetchFailure(this.errorMessage);
+
+  final String errorMessage;
 }
 
 class TransactionsCubit extends Cubit<TransactionsState> {
-  final WalletRepository _walletRepository;
-
   TransactionsCubit(this._walletRepository) : super(TransactionsFetchInitial());
+  final WalletRepository _walletRepository;
 
   final int limit = 15;
 
-  void getTransactions({required String userId}) async {
+  Future<void> getTransactions() async {
     try {
-      final result = await _walletRepository.getTransactions(
-        userId: userId,
+      final (:total, :data) = await _walletRepository.getTransactions(
         limit: limit.toString(),
-        offset: "0",
+        offset: '0',
       );
 
       if (isClosed) return;
 
-      dev.log(name: 'Payout Transactions', jsonEncode(result));
-
-      emit(TransactionsFetchSuccess(
-        paymentRequests: result['transactions'],
-        totalTransactionsCount: int.parse(result['total']),
-        hasMoreFetchError: false,
-        hasMore: (result['transactions'] as List<PaymentRequest>).length <
-            int.parse(result['total']),
-      ));
+      emit(
+        TransactionsFetchSuccess(
+          paymentRequests: data,
+          totalTransactionsCount: total,
+          hasMoreFetchError: false,
+          hasMore: data.length < total,
+        ),
+      );
     } catch (e) {
       if (isClosed) return;
 
@@ -69,36 +62,38 @@ class TransactionsCubit extends Cubit<TransactionsState> {
       ? (state as TransactionsFetchSuccess).hasMore
       : false;
 
-  void getMoreTransactions({required String userId}) async {
+  Future<void> getMoreTransactions() async {
     if (state is TransactionsFetchSuccess) {
+      final successState = state as TransactionsFetchSuccess;
+
       try {
         //
-        final result = await _walletRepository.getTransactions(
-            userId: userId,
-            limit: limit.toString(),
-            offset: (state as TransactionsFetchSuccess)
-                .paymentRequests
-                .length
-                .toString());
-        List<PaymentRequest> updatedResults =
-            (state as TransactionsFetchSuccess).paymentRequests;
-        updatedResults.addAll(result['transactions'] as List<PaymentRequest>);
-        emit(TransactionsFetchSuccess(
-          paymentRequests: updatedResults,
-          totalTransactionsCount: int.parse(result['total']),
-          hasMoreFetchError: false,
-          hasMore: updatedResults.length < int.parse(result['total']),
-        ));
+        final (:total, :data) = await _walletRepository.getTransactions(
+          limit: limit.toString(),
+          offset: successState.paymentRequests.length.toString(),
+        );
+
+        final updatedResults = successState.paymentRequests..addAll(data);
+
+        emit(
+          TransactionsFetchSuccess(
+            paymentRequests: updatedResults,
+            totalTransactionsCount: total,
+            hasMoreFetchError: false,
+            hasMore: updatedResults.length < total,
+          ),
+        );
         //
       } catch (e) {
         //in case of any error
-        emit(TransactionsFetchSuccess(
-          paymentRequests: (state as TransactionsFetchSuccess).paymentRequests,
-          hasMoreFetchError: true,
-          totalTransactionsCount:
-              (state as TransactionsFetchSuccess).totalTransactionsCount,
-          hasMore: (state as TransactionsFetchSuccess).hasMore,
-        ));
+        emit(
+          TransactionsFetchSuccess(
+            paymentRequests: successState.paymentRequests,
+            hasMoreFetchError: true,
+            totalTransactionsCount: successState.totalTransactionsCount,
+            hasMore: successState.hasMore,
+          ),
+        );
       }
     }
   }
@@ -107,10 +102,10 @@ class TransactionsCubit extends Cubit<TransactionsState> {
     if (state is TransactionsFetchSuccess) {
       final successfulRequests = (state as TransactionsFetchSuccess)
           .paymentRequests
-          .where((element) => element.status == "1");
-      double totalEarnings = 0;
+          .where((element) => element.status == '1');
+      var totalEarnings = 0.0;
 
-      for (var element in successfulRequests) {
+      for (final element in successfulRequests) {
         totalEarnings = totalEarnings + double.parse(element.paymentAmount);
       }
       return totalEarnings;

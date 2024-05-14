@@ -1,98 +1,103 @@
 import 'package:flutter/material.dart';
-import 'package:flutterquiz/app/app_localization.dart';
 import 'package:flutterquiz/utils/constants/fonts.dart';
+import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
+import 'package:intl/intl.dart';
 
 class UserAchievements extends StatelessWidget {
   const UserAchievements({
     super.key,
-    this.userRank = "0",
-    this.userCoins = "0",
-    this.userScore = "0",
-    required this.animation,
+    this.userRank = '0',
+    this.userCoins = '0',
+    this.userScore = '0',
   });
 
   final String userRank;
   final String userCoins;
   final String userScore;
-  final Animation<Offset> animation;
+
+  static const _verticalDivider = VerticalDivider(
+    color: Color(0x99FFFFFF),
+    indent: 12,
+    endIndent: 14,
+    thickness: 2,
+  );
 
   @override
   Widget build(BuildContext context) {
-    final rank = AppLocalization.of(context)!.getTranslatedValues("rankLbl")!;
-    final coins = AppLocalization.of(context)!.getTranslatedValues("coinsLbl")!;
-    final score = AppLocalization.of(context)!.getTranslatedValues("scoreLbl")!;
+    final rank = context.tr('rankLbl')!;
+    final coins = context.tr('coinsLbl')!;
+    final score = context.tr('scoreLbl')!;
 
-    return SlideTransition(
-      position: animation,
-      child: LayoutBuilder(
-        builder: (_, constraints) {
-          return Stack(
-            children: [
-              Positioned(
-                top: 0,
-                left: constraints.maxWidth * (0.05),
-                right: constraints.maxWidth * (0.05),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.transparent,
-                    boxShadow: [
-                      BoxShadow(
-                        offset: const Offset(0, 25),
-                        blurRadius: 30,
-                        spreadRadius: 3,
-                        color: Theme.of(context).primaryColor.withOpacity(0.5),
-                      )
-                    ],
-                    borderRadius: BorderRadius.vertical(
-                      bottom: Radius.circular(constraints.maxWidth * (0.525)),
+    return LayoutBuilder(
+      builder: (_, constraints) {
+        final size = MediaQuery.of(context).size;
+        final numberFormat = NumberFormat.compact();
+
+        return Stack(
+          children: [
+            Positioned(
+              top: 0,
+              left: constraints.maxWidth * (0.05),
+              right: constraints.maxWidth * (0.05),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.transparent,
+                  boxShadow: [
+                    BoxShadow(
+                      offset: const Offset(0, 25),
+                      blurRadius: 30,
+                      spreadRadius: 3,
+                      color: Theme.of(context).primaryColor.withOpacity(0.5),
                     ),
-                  ),
-                  width: constraints.maxWidth,
-                  height: 100,
-                ),
-              ),
-              Positioned(
-                child: Container(
-                  height: 100,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor,
-                    borderRadius: BorderRadius.circular(10.0),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                      vertical: 12.5, horizontal: 20),
-                  margin: EdgeInsets.symmetric(
-                    vertical: MediaQuery.of(context).size.height *
-                        UiUtils.vtMarginPct,
-                    horizontal:
-                        MediaQuery.of(context).size.width * UiUtils.hzMarginPct,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _Achievement(title: rank, value: userRank),
-                      VerticalDivider(
-                        color: Colors.white.withOpacity(0.6),
-                        indent: 12,
-                        endIndent: 14,
-                        thickness: 2,
-                      ),
-                      _Achievement(title: coins, value: userCoins),
-                      VerticalDivider(
-                        color: Colors.white.withOpacity(0.6),
-                        indent: 12,
-                        endIndent: 14,
-                        thickness: 2,
-                      ),
-                      _Achievement(title: score, value: userScore),
-                    ],
+                  ],
+                  borderRadius: BorderRadius.vertical(
+                    bottom: Radius.circular(constraints.maxWidth * (0.525)),
                   ),
                 ),
+                width: constraints.maxWidth,
+                height: 100,
               ),
-            ],
-          );
-        },
-      ),
+            ),
+            Positioned(
+              child: Container(
+                height: 100,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).primaryColor,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 12.5,
+                  horizontal: 20,
+                ),
+                margin: EdgeInsets.symmetric(
+                  vertical: size.height * UiUtils.vtMarginPct,
+                  horizontal: size.width * UiUtils.hzMarginPct,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _Achievement(
+                      title: rank,
+                      value: numberFormat.format(double.parse(userRank)),
+                    ),
+                    _verticalDivider,
+                    _Achievement(
+                      title: coins,
+                      value: numberFormat.format(double.parse(userCoins)),
+                    ),
+                    _verticalDivider,
+                    _Achievement(
+                      title: score,
+                      value: numberFormat.format(double.parse(userScore)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -112,7 +117,7 @@ class _Achievement extends StatelessWidget {
         Text(
           title,
           style: TextStyle(
-            fontSize: 18.0,
+            fontSize: 18,
             fontWeight: FontWeights.bold,
             color: Colors.white.withOpacity(0.7),
           ),
@@ -120,7 +125,7 @@ class _Achievement extends StatelessWidget {
         Text(
           value,
           style: const TextStyle(
-            fontSize: 24.0,
+            fontSize: 24,
             fontWeight: FontWeights.bold,
             color: Colors.white,
           ),

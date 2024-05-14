@@ -1,20 +1,21 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutterquiz/features/musicPlayer/musicPlayerCubit.dart';
 import 'package:just_audio/just_audio.dart';
 
 class MusicPlayerContainer extends StatefulWidget {
-  final String url;
-  final int index;
-  final int currentIndex;
-
   const MusicPlayerContainer({
-    super.key,
     required this.currentIndex,
     required this.index,
     required this.url,
+    super.key,
   });
+
+  final String url;
+  final int index;
+  final int currentIndex;
 
   @override
   State<MusicPlayerContainer> createState() => MusicPlayerContainerState();
@@ -24,7 +25,7 @@ class MusicPlayerContainerState extends State<MusicPlayerContainer> {
   @override
   void initState() {
     super.initState();
-    print("Question index is ${widget.url}");
+
     Future.delayed(Duration.zero, () {
       context.read<MusicPlayerCubit>().initPlayer(widget.url);
     });
@@ -43,10 +44,10 @@ class MusicPlayerContainerState extends State<MusicPlayerContainer> {
     return Container(
       width: MediaQuery.of(context).size.width * (0.8),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(15.0),
+        borderRadius: BorderRadius.circular(15),
         color: Theme.of(context).primaryColor.withOpacity(0.1),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 20.0),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -65,39 +66,39 @@ class MusicPlayerContainerState extends State<MusicPlayerContainer> {
                 bloc: context.read<MusicPlayerCubit>(),
                 builder: (context, state) {
                   if (state is MusicPlayerLoaded) {
-                    String time = "";
+                    var time = '';
 
                     final audioDuration = state.audioDuration;
                     if (audioDuration.inHours != 0) {
-                      time = "${audioDuration.inHours}:";
+                      time = '${audioDuration.inHours}:';
                     }
                     if (audioDuration.inMinutes != 0) {
                       time =
-                          "$time${audioDuration.inMinutes - (24 * audioDuration.inHours)}:";
+                          '$time${audioDuration.inMinutes - (24 * audioDuration.inHours)}:';
                     }
                     if (audioDuration.inSeconds != 0) {
                       time =
-                          "$time${audioDuration.inSeconds - (60 * audioDuration.inMinutes)}";
+                          '$time${audioDuration.inSeconds - (60 * audioDuration.inMinutes)}';
                     }
                     return Text(
                       time,
                       style: TextStyle(
-                        color: Theme.of(context).colorScheme.secondary,
+                        color: Theme.of(context).primaryColor,
                       ),
                     );
                   }
                   return Text(
-                    "0:0",
+                    '0:0',
                     style: TextStyle(
-                      color: Theme.of(context).colorScheme.secondary,
+                      color: Theme.of(context).primaryColor,
                     ),
                   );
                 },
               ),
             ],
           ),
-          Stack(
-            children: const [
+          const Stack(
+            children: [
               Align(
                 alignment: Alignment.centerLeft,
                 child: BufferedDurationContainer(),
@@ -116,14 +117,14 @@ class MusicPlayerContainerState extends State<MusicPlayerContainer> {
 }
 
 class PlayerControlContainer extends StatefulWidget {
-  final int index;
-  final int currentIndex;
-
   const PlayerControlContainer({
-    super.key,
     required this.currentIndex,
     required this.index,
+    super.key,
   });
+
+  final int index;
+  final int currentIndex;
 
   @override
   State<PlayerControlContainer> createState() => _PlayerControlContainerState();
@@ -151,7 +152,6 @@ class _PlayerControlContainerState extends State<PlayerControlContainer> {
       }
 
       if (widget.index == widget.currentIndex) {
-        print("index is ${widget.index} and isPlaying to true");
         _isPlaying = true;
         context.read<MusicPlayerCubit>().audioPlayer.play();
       }
@@ -168,92 +168,95 @@ class _PlayerControlContainerState extends State<PlayerControlContainer> {
     setState(() {});
   }
 
-  Widget _buildButton({required Function onPressed, required IconData icon}) {
+  Widget _buildButton({
+    required VoidCallback onPressed,
+    required IconData icon,
+  }) {
     return IconButton(
-        color: Theme.of(context).colorScheme.secondary,
-        onPressed: () {
-          onPressed();
-        },
-        icon: Icon(icon));
+      color: Theme.of(context).primaryColor,
+      onPressed: onPressed,
+      icon: Icon(icon),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final musicPlayerCubit = context.read<MusicPlayerCubit>();
     return BlocConsumer<MusicPlayerCubit, MusicPlayerState>(
-        bloc: musicPlayerCubit,
-        builder: (context, state) {
-          if (state is MusicPlayerInitial || state is MusicPlayerLoading) {
-            return Padding(
-              padding: const EdgeInsets.all(10.0),
-              child: SizedBox(
-                height: 24,
-                width: 24,
-                child: CircularProgressIndicator(
-                  color: Theme.of(context).colorScheme.secondary,
-                ),
+      bloc: musicPlayerCubit,
+      builder: (context, state) {
+        if (state is MusicPlayerInitial || state is MusicPlayerLoading) {
+          return Padding(
+            padding: const EdgeInsets.all(10),
+            child: SizedBox(
+              height: 24,
+              width: 24,
+              child: CircularProgressIndicator(
+                color: Theme.of(context).primaryColor,
               ),
-            );
-          }
-          if (state is MusicPlayerFailure) {
-            return _buildButton(onPressed: () {}, icon: Icons.error);
-          }
+            ),
+          );
+        }
+        if (state is MusicPlayerFailure) {
+          return _buildButton(onPressed: () {}, icon: Icons.error);
+        }
 
-          if (_isLoading || _isBuffering) {
-            return Padding(
-              padding: const EdgeInsets.all(10.0),
-              child: SizedBox(
-                height: 24,
-                width: 24,
-                child: CircularProgressIndicator(
-                  color: Theme.of(context).colorScheme.secondary,
-                ),
+        if (_isLoading || _isBuffering) {
+          return Padding(
+            padding: const EdgeInsets.all(10),
+            child: SizedBox(
+              height: 24,
+              width: 24,
+              child: CircularProgressIndicator(
+                color: Theme.of(context).primaryColor,
               ),
-            );
-          }
-          if (_hasCompleted) {
-            return _buildButton(
-                onPressed: () {
-                  context
-                      .read<MusicPlayerCubit>()
-                      .audioPlayer
-                      .seek(Duration.zero);
-                },
-                icon: Icons.restart_alt);
-          }
-
-          if (_isPlaying) {
-            return _buildButton(
-                onPressed: () {
-                  musicPlayerCubit.audioPlayer.pause();
-                  setState(() {
-                    _isPlaying = false;
-                  });
-                },
-                icon: Icons.pause);
-          }
-
+            ),
+          );
+        }
+        if (_hasCompleted) {
           return _buildButton(
-              onPressed: () {
-                musicPlayerCubit.audioPlayer.play();
-                setState(() {
-                  _isPlaying = true;
-                });
-              },
-              icon: Icons.play_arrow);
-        },
-        listener: (context, state) {
-          if (state is MusicPlayerLoaded) {
-            if (!_isLoading) {
-              _isLoading = true;
-              setState(() {});
-            }
-            _processingStateStreamSubscription?.cancel();
-            _processingStateStreamSubscription = musicPlayerCubit
-                .audioPlayer.processingStateStream
-                .listen(processingStateListener);
+            onPressed: () {
+              context.read<MusicPlayerCubit>().audioPlayer.seek(Duration.zero);
+            },
+            icon: Icons.restart_alt,
+          );
+        }
+
+        if (_isPlaying) {
+          return _buildButton(
+            onPressed: () {
+              musicPlayerCubit.audioPlayer.pause();
+              setState(() {
+                _isPlaying = false;
+              });
+            },
+            icon: Icons.pause,
+          );
+        }
+
+        return _buildButton(
+          onPressed: () {
+            musicPlayerCubit.audioPlayer.play();
+            setState(() {
+              _isPlaying = true;
+            });
+          },
+          icon: Icons.play_arrow,
+        );
+      },
+      listener: (context, state) {
+        if (state is MusicPlayerLoaded) {
+          if (!_isLoading) {
+            _isLoading = true;
+            setState(() {});
           }
-        });
+          _processingStateStreamSubscription?.cancel();
+          _processingStateStreamSubscription = musicPlayerCubit
+              .audioPlayer.processingStateStream
+              .listen(processingStateListener);
+        }
+      },
+    );
   }
 }
 
@@ -261,14 +264,14 @@ class CurrentDurationSliderContainer extends StatefulWidget {
   const CurrentDurationSliderContainer({super.key});
 
   @override
-  _CurrentDurationSliderContainerState createState() =>
+  State<CurrentDurationSliderContainer> createState() =>
       _CurrentDurationSliderContainerState();
 }
 
 class _CurrentDurationSliderContainerState
     extends State<CurrentDurationSliderContainer> {
-  double currentValue = 0.0;
-  double max = 0.0;
+  double currentValue = 0;
+  double max = 0;
 
   StreamSubscription<Duration>? streamSubscription;
 
@@ -302,7 +305,7 @@ class _CurrentDurationSliderContainerState
       },
       child: SliderTheme(
         data: Theme.of(context).sliderTheme.copyWith(
-              overlayShape: const RoundSliderOverlayShape(overlayRadius: 0.0),
+              overlayShape: const RoundSliderOverlayShape(overlayRadius: 0),
               trackHeight: 5,
               trackShape: CustomTrackShape(),
               thumbShape: const RoundSliderThumbShape(
@@ -310,27 +313,26 @@ class _CurrentDurationSliderContainerState
               ),
             ),
         child: SizedBox(
-          height: 5.0,
+          height: 5,
           width: MediaQuery.of(context).size.width,
           child: Slider(
-              min: 0.0,
-              max: max,
-              activeColor: Theme.of(context).primaryColor.withOpacity(0.6),
-              inactiveColor: Theme.of(context).primaryColor.withOpacity(0.3),
-              value: currentValue,
-              thumbColor: Theme.of(context).colorScheme.secondary,
-              onChanged: (value) {
-                if (context.read<MusicPlayerCubit>().state
-                    is MusicPlayerLoaded) {
-                  setState(() {
-                    currentValue = value;
-                  });
-                  context
-                      .read<MusicPlayerCubit>()
-                      .audioPlayer
-                      .seek(Duration(seconds: value.toInt()));
-                }
-              }),
+            max: max,
+            activeColor: Theme.of(context).primaryColor.withOpacity(0.6),
+            inactiveColor: Theme.of(context).primaryColor.withOpacity(0.3),
+            value: currentValue,
+            thumbColor: Theme.of(context).primaryColor,
+            onChanged: (value) {
+              if (context.read<MusicPlayerCubit>().state is MusicPlayerLoaded) {
+                setState(() {
+                  currentValue = value;
+                });
+                context
+                    .read<MusicPlayerCubit>()
+                    .audioPlayer
+                    .seek(Duration(seconds: value.toInt()));
+              }
+            },
+          ),
         ),
       ),
     );
@@ -341,21 +343,21 @@ class BufferedDurationContainer extends StatefulWidget {
   const BufferedDurationContainer({super.key});
 
   @override
-  _BufferedDurationContainerState createState() =>
+  State<BufferedDurationContainer> createState() =>
       _BufferedDurationContainerState();
 }
 
 class _BufferedDurationContainerState extends State<BufferedDurationContainer> {
-  late double bufferedPercentage = 0.0;
+  late double bufferedPercentage = 0;
 
   StreamSubscription<Duration>? streamSubscription;
 
   void bufferedDurationListener(Duration duration) {
     if (context.read<MusicPlayerCubit>().state is MusicPlayerLoaded) {
-      bufferedPercentage = (duration.inSeconds /
+      bufferedPercentage = duration.inSeconds /
           ((context.read<MusicPlayerCubit>().state as MusicPlayerLoaded)
               .audioDuration
-              .inSeconds));
+              .inSeconds);
       setState(() {});
     }
   }
@@ -387,7 +389,7 @@ class _BufferedDurationContainerState extends State<BufferedDurationContainer> {
       },
       child: Container(
         width: MediaQuery.of(context).size.width * bufferedPercentage,
-        height: 5.0,
+        height: 5,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(2.5),
           color: Theme.of(context).primaryColor.withOpacity(0.6),
@@ -401,7 +403,7 @@ class CurrentDurationContainer extends StatefulWidget {
   const CurrentDurationContainer({super.key});
 
   @override
-  _CurrentDurationContainerState createState() =>
+  State<CurrentDurationContainer> createState() =>
       _CurrentDurationContainerState();
 }
 
@@ -440,9 +442,9 @@ class _CurrentDurationContainerState extends State<CurrentDurationContainer> {
         }
       },
       child: Text(
-        "${currentDuration.inSeconds}",
+        '${currentDuration.inSeconds}',
         style: TextStyle(
-          color: Theme.of(context).colorScheme.secondary,
+          color: Theme.of(context).primaryColor,
         ),
       ),
     );
@@ -450,10 +452,11 @@ class _CurrentDurationContainerState extends State<CurrentDurationContainer> {
 }
 
 class CustomTrackShape extends RoundedRectSliderTrackShape {
+  @override
   Rect getPreferredRect({
     required RenderBox parentBox,
-    Offset offset = Offset.zero,
     required SliderThemeData sliderTheme,
+    Offset offset = Offset.zero,
     bool isEnabled = false,
     bool isDiscrete = false,
     double additionalActiveTrackHeight = 0,

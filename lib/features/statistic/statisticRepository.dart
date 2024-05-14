@@ -1,12 +1,8 @@
-import 'package:flutterquiz/features/statistic/statisticException.dart';
 import 'package:flutterquiz/features/statistic/models/statisticModel.dart';
+import 'package:flutterquiz/features/statistic/statisticException.dart';
 import 'package:flutterquiz/features/statistic/statisticRemoteDataSource.dart';
 
 class StatisticRepository {
-  static final StatisticRepository _statisticRepository =
-      StatisticRepository._internal();
-  late StatisticRemoteDataSource _statisticRemoteDataSource;
-
   factory StatisticRepository() {
     _statisticRepository._statisticRemoteDataSource =
         StatisticRemoteDataSource();
@@ -16,43 +12,49 @@ class StatisticRepository {
 
   StatisticRepository._internal();
 
-  Future<StatisticModel> getStatistic(
-      {required String userId, required bool getBattleStatistics}) async {
+  static final StatisticRepository _statisticRepository =
+      StatisticRepository._internal();
+  late StatisticRemoteDataSource _statisticRemoteDataSource;
+
+  Future<StatisticModel> getStatistic({
+    required bool getBattleStatistics,
+  }) async {
     try {
-      final result = await _statisticRemoteDataSource.getStatistic(userId);
+      final result = await _statisticRemoteDataSource.getStatistic();
       if (getBattleStatistics) {
         final battleResult =
-            await _statisticRemoteDataSource.getBattleStatistic(userId: userId);
-        Map<String, dynamic> battleStatistics = {};
-        Map<String, dynamic> myReports =
-            Map.from((battleResult['myreport'] as List).first);
-        for (var element in myReports.keys) {
-          battleStatistics.addAll({
-            element: myReports[element],
-          });
+            await _statisticRemoteDataSource.getBattleStatistic();
+        final battleStatistics = <String, dynamic>{};
+        final myReports = (battleResult['myreport'] as List)
+            .cast<Map<String, dynamic>>()
+            .first;
+
+        for (final element in myReports.keys) {
+          battleStatistics.addAll({element: myReports[element]});
         }
+
         battleStatistics['playedBattles'] =
-            battleResult['data'] == null ? [] : (battleResult['data'] as List);
-        return StatisticModel.fromJson(Map.from(result), battleStatistics);
+            (battleResult['data'] as List? ?? []).cast<Map<String, dynamic>>();
+
+        return StatisticModel.fromJson(result, battleStatistics);
       }
-      return StatisticModel.fromJson(Map.from(result), {});
+      return StatisticModel.fromJson(result, {});
     } catch (e) {
       throw StatisticException(errorMessageCode: e.toString());
     }
   }
 
-  Future<void> updateStatistic(
-      {String? userId,
-      int? answeredQuestion,
-      int? correctAnswers,
-      double? winPercentage,
-      String? categoryId}) async {
+  Future<void> updateStatistic({
+    int? answeredQuestion,
+    int? correctAnswers,
+    double? winPercentage,
+    String? categoryId,
+  }) async {
     try {
       await _statisticRemoteDataSource.updateStatistic(
         answeredQuestion: answeredQuestion.toString(),
         categoryId: categoryId,
         correctAnswers: correctAnswers.toString(),
-        userId: userId,
         winPercentage: winPercentage!.toInt().toString(),
       );
     } catch (e) {
@@ -69,9 +71,8 @@ class StatisticRepository {
       await _statisticRemoteDataSource.updateBattleStatistic(
         userId1: userId1,
         userId2: userId2,
-        isDrawn: winnerId.isEmpty ? "1" : "0",
-        winnerId: winnerId.isEmpty ? "0" : winnerId,
-
+        isDrawn: winnerId.isEmpty ? '1' : '0',
+        winnerId: winnerId.isEmpty ? '0' : winnerId,
       );
     } catch (e) {
       throw StatisticException(errorMessageCode: e.toString());

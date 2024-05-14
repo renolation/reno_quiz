@@ -1,42 +1,39 @@
+import 'dart:math' as math;
+
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutterquiz/app/app_localization.dart';
 import 'package:flutterquiz/app/routes.dart';
-import 'package:flutterquiz/features/profileManagement/cubits/userDetailsCubit.dart';
-import 'dart:math' as math;
 import 'package:flutterquiz/features/quiz/cubits/unlockedLevelCubit.dart';
 import 'package:flutterquiz/features/quiz/models/category.dart';
 import 'package:flutterquiz/features/quiz/models/quizType.dart';
-import 'package:flutterquiz/features/quiz/quizRepository.dart';
-import 'package:flutterquiz/ui/screens/quiz/widgets/subcatagoriesLevelsChip.dart';
+import 'package:flutterquiz/ui/screens/quiz/widgets/subcategoriesLevelsChip.dart';
+import 'package:flutterquiz/ui/widgets/alreadyLoggedInDialog.dart';
 import 'package:flutterquiz/ui/widgets/bannerAdContainer.dart';
 import 'package:flutterquiz/ui/widgets/circularProgressContainer.dart';
 import 'package:flutterquiz/ui/widgets/customBackButton.dart';
 import 'package:flutterquiz/ui/widgets/errorContainer.dart';
 import 'package:flutterquiz/utils/constants/error_message_keys.dart';
 import 'package:flutterquiz/utils/constants/fonts.dart';
+import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+/// Category Levels Screen
 class LevelsScreen extends StatefulWidget {
+  const LevelsScreen({required this.category, super.key});
+
   final Category category;
 
-  const LevelsScreen({
-    super.key,
-    required this.category,
-  });
-
   @override
-  _LevelsScreenState createState() => _LevelsScreenState();
+  State<LevelsScreen> createState() => _LevelsScreenState();
 
   static Route<dynamic> route(RouteSettings routeSettings) {
-    Map arguments = routeSettings.arguments as Map;
+    final arguments = routeSettings.arguments! as Map;
     return CupertinoPageRoute(
       builder: (_) => LevelsScreen(
-        category: arguments['Category'],
+        category: arguments['Category'] as Category,
       ),
     );
   }
@@ -51,6 +48,7 @@ class _LevelsScreenState extends State<LevelsScreen>
   late AnimationController expandController;
   late final Animation<double> _rotationAnimation;
   late final Animation<double> _fadeAnimation;
+
   @override
   void initState() {
     super.initState();
@@ -63,7 +61,7 @@ class _LevelsScreenState extends State<LevelsScreen>
 
   void setRotation(int degrees) {
     final angle = degrees * math.pi / 90;
-    _rotationAnimation = Tween(begin: 0.0, end: angle).animate(
+    _rotationAnimation = Tween<double>(begin: 0, end: angle).animate(
       CurvedAnimation(
         parent: expandController,
         curve: const Interval(0, 0.5, curve: Curves.easeInOut),
@@ -76,13 +74,13 @@ class _LevelsScreenState extends State<LevelsScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1300),
     );
-    animation = Tween(begin: 0.0, end: 1.0).animate(
+    animation = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
         parent: expandController,
-        curve: const Interval(0.0, 0.4, curve: Curves.easeInOutCubic),
+        curve: const Interval(0, 0.4, curve: Curves.easeInOutCubic),
       ),
     );
-    _fadeAnimation = Tween(begin: 0.0, end: 1.0).animate(
+    _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
         parent: expandController,
         curve: const Interval(0.4, 0.7, curve: Curves.easeInOutCubic),
@@ -94,24 +92,13 @@ class _LevelsScreenState extends State<LevelsScreen>
     Future.delayed(
       Duration.zero,
       () => context.read<UnlockedLevelCubit>().fetchUnlockLevel(
-            context.read<UserDetailsCubit>().getUserId(),
-            widget.category.id,
-            "0",
+            widget.category.id!,
+            '',
           ),
     );
   }
 
-  Widget _buildBackButton() {
-    return Padding(
-      padding: const EdgeInsetsDirectional.only(top: 30, start: 20, end: 20),
-      child: QBackButton(
-        removeSnackBars: true,
-        color: Theme.of(context).primaryColor,
-      ),
-    );
-  }
-
-  Widget _buildLevelsss() {
+  Widget _buildLevels() {
     final colorScheme = Theme.of(context).colorScheme;
     return Align(
       alignment: Alignment.topCenter,
@@ -225,7 +212,7 @@ class _LevelsScreenState extends State<LevelsScreen>
                                   const TextSpan(text: ' Questions'),
                                 ],
                               ),
-                            )
+                            ),
                           ],
                         ),
                       ),
@@ -250,7 +237,7 @@ class _LevelsScreenState extends State<LevelsScreen>
                             child: child,
                           ),
                         ),
-                      )
+                      ),
                     ],
                   ),
                 ),
@@ -270,10 +257,9 @@ class _LevelsScreenState extends State<LevelsScreen>
     return BlocConsumer<UnlockedLevelCubit, UnlockedLevelState>(
       bloc: context.read<UnlockedLevelCubit>(),
       listener: (context, state) {
-        print("cureent unlock state ${state.toString()}");
         if (state is UnlockedLevelFetchFailure) {
-          if (state.errorMessage == unauthorizedAccessCode) {
-            UiUtils.showAlreadyLoggedInDialog(context: context);
+          if (state.errorMessage == errorCodeUnauthorizedAccess) {
+            showAlreadyLoggedInDialog(context);
           }
         }
       },
@@ -286,9 +272,8 @@ class _LevelsScreenState extends State<LevelsScreen>
         if (state is UnlockedLevelFetchFailure) {
           return Center(
             child: ErrorContainer(
-              errorMessage: AppLocalization.of(context)!.getTranslatedValues(
-                  convertErrorCodeToLanguageKey(state.errorMessage)),
-              topMargin: 0.0,
+              errorMessage: convertErrorCodeToLanguageKey(state.errorMessage),
+              topMargin: 0,
               onTapRetry: getUnlockedLevelData,
               showErrorImage: false,
             ),
@@ -297,7 +282,7 @@ class _LevelsScreenState extends State<LevelsScreen>
 
         if (state is UnlockedLevelFetchSuccess) {
           return SizeTransition(
-            axisAlignment: 1.0,
+            axisAlignment: 1,
             sizeFactor: animation,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -312,40 +297,33 @@ class _LevelsScreenState extends State<LevelsScreen>
                       _showAllLevels ? maxLevels : 6,
                       (i) {
                         return GestureDetector(
-                          onTap: () async {
+                          onTap: () {
                             if ((i + 1) <= state.unlockedLevel) {
                               /// Start level
                               Navigator.of(context).pushNamed(
                                 Routes.quiz,
                                 arguments: {
-                                  "numberOfPlayer": 1,
-                                  "quizType": QuizTypes.quizZone,
-                                  "categoryId": widget.category.id,
-                                  "subcategoryId": "",
-                                  "level": (i + 1).toString(),
-                                  "subcategoryMaxLevel":
+                                  'numberOfPlayer': 1,
+                                  'quizType': QuizTypes.quizZone,
+                                  'categoryId': widget.category.id,
+                                  'subcategoryId': '',
+                                  'level': (i + 1).toString(),
+                                  'subcategoryMaxLevel':
                                       widget.category.maxLevel,
-                                  "unlockedLevel": state.unlockedLevel,
-                                  "contestId": "",
-                                  "comprehensionId": "",
-                                  "quizName": "Quiz Zone"
-                                },
-                              );
-                              await FirebaseAnalytics.instance.logEvent(
-                                name: "select_level",
-                                parameters: {
-                                  "category": widget.category.categoryName,
-                                  "level": i + 1,
+                                  'unlockedLevel': state.unlockedLevel,
+                                  'contestId': '',
+                                  'comprehensionId': '',
+                                  'quizName': 'Quiz Zone',
                                 },
                               );
                             } else {
-                              UiUtils.setSnackbar(
-                                AppLocalization.of(context)!
-                                    .getTranslatedValues(
-                                        convertErrorCodeToLanguageKey(
-                                            levelLockedCode))!,
+                              UiUtils.showSnackBar(
+                                context.tr(
+                                  convertErrorCodeToLanguageKey(
+                                    errorCodeLevelLocked,
+                                  ),
+                                )!,
                                 context,
-                                false,
                               );
                             }
                           },
@@ -371,10 +349,12 @@ class _LevelsScreenState extends State<LevelsScreen>
                       alignment: Alignment.center,
                       width: double.maxFinite,
                       child: Text(
-                        AppLocalization.of(context)!.getTranslatedValues(
-                            !_showAllLevels ? 'viewMore' : 'showLess')!,
+                        context.tr(
+                          !_showAllLevels ? 'viewMore' : 'showLess',
+                        )!,
                         style: Theme.of(context).textTheme.titleSmall!.copyWith(
-                            color: Theme.of(context).colorScheme.onTertiary),
+                              color: Theme.of(context).colorScheme.onTertiary,
+                            ),
                       ),
                     ),
                   ),
@@ -384,112 +364,8 @@ class _LevelsScreenState extends State<LevelsScreen>
           );
         }
 
-        return const Text("no levels");
+        return Text(context.tr('noLevelsLbl')!);
       },
-    );
-  }
-
-  Widget _buildLevels() {
-    return Align(
-      alignment: Alignment.topCenter,
-      child: Padding(
-        padding: const EdgeInsetsDirectional.only(top: 75, start: 20, end: 20),
-        child: BlocConsumer<UnlockedLevelCubit, UnlockedLevelState>(
-          bloc: context.read<UnlockedLevelCubit>(),
-          listener: (context, state) {
-            if (state is UnlockedLevelFetchFailure) {
-              if (state.errorMessage == unauthorizedAccessCode) {
-                UiUtils.showAlreadyLoggedInDialog(context: context);
-              }
-            }
-          },
-          builder: (context, state) {
-            if (state is UnlockedLevelInitial ||
-                state is UnlockedLevelFetchInProgress) {
-              return const Center(
-                child: CircularProgressContainer(whiteLoader: false),
-              );
-            }
-            if (state is UnlockedLevelFetchFailure) {
-              return Center(
-                child: ErrorContainer(
-                  errorMessage:
-                      AppLocalization.of(context)!.getTranslatedValues(
-                    convertErrorCodeToLanguageKey(state.errorMessage),
-                  )!,
-                  onTapRetry: () => getUnlockedLevelData(),
-                  showErrorImage: true,
-                ),
-              );
-            }
-            int unlockedLevel =
-                (state as UnlockedLevelFetchSuccess).unlockedLevel;
-            return ListView.builder(
-              padding: const EdgeInsets.only(bottom: 100),
-              itemCount: int.parse(widget.category.maxLevel!),
-              itemBuilder: (context, index) {
-                return GestureDetector(
-                  onTap: () {
-                    //index start with 0 so we comparing (index + 1)
-                    if ((index + 1) <= unlockedLevel) {
-                      //replacing this page
-                      Navigator.of(context).pushReplacementNamed(
-                        Routes.quiz,
-                        arguments: {
-                          "numberOfPlayer": 1,
-                          "quizType": QuizTypes.quizZone,
-                          "categoryId": widget.category.id,
-                          "subcategoryId": "0",
-                          "level": (index + 1).toString(),
-                          "subcategoryMaxLevel": widget.category.maxLevel,
-                          "unlockedLevel": unlockedLevel,
-                          "contestId": "",
-                          "comprehensionId": "",
-                          "quizName": "Quiz Zone"
-                        },
-                      );
-                    } else {
-                      UiUtils.setSnackbar(
-                        AppLocalization.of(context)!.getTranslatedValues(
-                            convertErrorCodeToLanguageKey(levelLockedCode))!,
-                        context,
-                        false,
-                      );
-                    }
-                  },
-                  child: Opacity(
-                    opacity: (index + 1) <= unlockedLevel ? 1.0 : 0.55,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20.0),
-                        color: Theme.of(context).primaryColor,
-                      ),
-                      alignment: Alignment.center,
-                      height: 75.0,
-                      margin: const EdgeInsets.only(bottom: 20.0),
-                      child: Text(
-                        "${AppLocalization.of(context)!.getTranslatedValues("levelLbl")!} ${index + 1}",
-                        style: TextStyle(
-                          fontSize: 20.0,
-                          color: Theme.of(context).colorScheme.background,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBannerAd() {
-    return const Align(
-      alignment: Alignment.bottomCenter,
-      child: BannerAdContainer(),
     );
   }
 
@@ -507,11 +383,22 @@ class _LevelsScreenState extends State<LevelsScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
-        children: <Widget>[
-          //_buildLevels(),
-          _buildLevelsss(),
-          _buildBannerAd(),
-          _buildBackButton(),
+        children: [
+          Padding(
+            padding:
+                const EdgeInsetsDirectional.only(top: 30, start: 20, end: 20),
+            child: QBackButton(
+              color: Theme.of(context).primaryColor,
+            ),
+          ),
+
+          ///
+          _buildLevels(),
+
+          const Align(
+            alignment: Alignment.bottomCenter,
+            child: BannerAdContainer(),
+          ),
         ],
       ),
     );

@@ -13,63 +13,73 @@ class UserDetailsInitial extends UserDetailsState {}
 class UserDetailsFetchInProgress extends UserDetailsState {}
 
 class UserDetailsFetchSuccess extends UserDetailsState {
-  final UserProfile userProfile;
-
   UserDetailsFetchSuccess(this.userProfile);
+
+  final UserProfile userProfile;
 }
 
 class UserDetailsFetchFailure extends UserDetailsState {
-  final String errorMessage;
-
   UserDetailsFetchFailure(this.errorMessage);
+
+  final String errorMessage;
 }
 
 class UserDetailsCubit extends Cubit<UserDetailsState> {
-  final ProfileManagementRepository _profileManagementRepository;
-
   UserDetailsCubit(this._profileManagementRepository)
       : super(UserDetailsInitial());
+  final ProfileManagementRepository _profileManagementRepository;
 
   //to fetch user details form remote
-  void fetchUserDetails(String firebaseId) async {
+  Future<void> fetchUserDetails() async {
     emit(UserDetailsFetchInProgress());
 
     try {
-      UserProfile userProfile =
-          await _profileManagementRepository.getUserDetailsById(firebaseId);
+      final userProfile =
+          await _profileManagementRepository.getUserDetailsById();
       emit(UserDetailsFetchSuccess(userProfile));
     } catch (e) {
       emit(UserDetailsFetchFailure(e.toString()));
     }
   }
 
+  bool get isDailyAdAvailable => (state is UserDetailsFetchSuccess)
+      ? (state as UserDetailsFetchSuccess).userProfile.isDailyAdsAvailable ??
+          false
+      : false;
+
+  Future<bool> watchedDailyAd() async {
+    return _profileManagementRepository.watchedDailyAd();
+  }
+
   String getUserName() => state is UserDetailsFetchSuccess
       ? (state as UserDetailsFetchSuccess).userProfile.name!
-      : "";
+      : '';
 
-  String getUserId() => state is UserDetailsFetchSuccess
+  String userId() => state is UserDetailsFetchSuccess
       ? (state as UserDetailsFetchSuccess).userProfile.userId!
-      : "";
+      : '';
 
   String getUserFirebaseId() => state is UserDetailsFetchSuccess
       ? (state as UserDetailsFetchSuccess).userProfile.firebaseId!
-      : "";
+      : '';
 
   String? getUserMobile() => state is UserDetailsFetchSuccess
       ? (state as UserDetailsFetchSuccess).userProfile.mobileNumber
-      : "";
+      : '';
 
   String? getUserEmail() => state is UserDetailsFetchSuccess
       ? (state as UserDetailsFetchSuccess).userProfile.email
-      : "";
+      : '';
 
   void updateUserProfileUrl(String profileUrl) {
     if (state is UserDetailsFetchSuccess) {
       final oldUserDetails = (state as UserDetailsFetchSuccess).userProfile;
 
-      emit((UserDetailsFetchSuccess(
-        oldUserDetails.copyWith(profileUrl: profileUrl),
-      )));
+      emit(
+        UserDetailsFetchSuccess(
+          oldUserDetails.copyWith(profileUrl: profileUrl),
+        ),
+      );
     }
   }
 
@@ -82,6 +92,7 @@ class UserDetailsCubit extends Cubit<UserDetailsState> {
     String? status,
     String? mobile,
     String? email,
+    String? adsRemovedForUser,
   }) {
     if (state is UserDetailsFetchSuccess) {
       final oldUserDetails = (state as UserDetailsFetchSuccess).userProfile;
@@ -94,9 +105,10 @@ class UserDetailsCubit extends Cubit<UserDetailsState> {
         name: name,
         profileUrl: profileUrl,
         status: status,
+        adsRemovedForUser: adsRemovedForUser,
       );
 
-      emit((UserDetailsFetchSuccess(userDetails)));
+      emit(UserDetailsFetchSuccess(userDetails));
     }
   }
 
@@ -107,14 +119,14 @@ class UserDetailsCubit extends Cubit<UserDetailsState> {
       final oldUserDetails = (state as UserDetailsFetchSuccess).userProfile;
 
       final currentCoins = int.parse(oldUserDetails.coins!);
-      log("Coins : $currentCoins");
+      log('Coins : $currentCoins');
       final updatedCoins =
           addCoin! ? (currentCoins + coins!) : (currentCoins - coins!);
-      log("After Update Coins: $updatedCoins");
+      log('After Update Coins: $updatedCoins');
       final userDetails = oldUserDetails.copyWith(
         coins: updatedCoins.toString(),
       );
-      emit((UserDetailsFetchSuccess(userDetails)));
+      emit(UserDetailsFetchSuccess(userDetails));
     }
   }
 
@@ -126,24 +138,19 @@ class UserDetailsCubit extends Cubit<UserDetailsState> {
       final userDetails = oldUserDetails.copyWith(
         allTimeScore: (currentScore + score!).toString(),
       );
-      emit((UserDetailsFetchSuccess(userDetails)));
+      emit(UserDetailsFetchSuccess(userDetails));
     }
   }
 
-  // //update all time rank
-  // void updateRank(String rank) {
-  //   if (state is UserDetailsFetchSuccess) {
-  //     final oldUserDetails = (state as UserDetailsFetchSuccess).userProfile;
-  //     final userDetails = oldUserDetails.copyWith(allTimeScore: (rank));
-  //     emit((UserDetailsFetchSuccess(userDetails)));
-  //   }
-  // }
-
   String? getCoins() => state is UserDetailsFetchSuccess
       ? (state as UserDetailsFetchSuccess).userProfile.coins
-      : "";
+      : '0';
 
   UserProfile getUserProfile() => state is UserDetailsFetchSuccess
       ? (state as UserDetailsFetchSuccess).userProfile
       : UserProfile();
+
+  bool removeAds() => state is UserDetailsFetchSuccess
+      ? (state as UserDetailsFetchSuccess).userProfile.adsRemovedForUser == '1'
+      : false;
 }

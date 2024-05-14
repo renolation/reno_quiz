@@ -1,14 +1,13 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutterquiz/ui/widgets/custom_image.dart';
+import 'package:flutterquiz/utils/constants/fonts.dart';
 
 class QuizGridCard extends StatelessWidget {
   const QuizGridCard({
-    super.key,
     required this.title,
     required this.desc,
     required this.img,
+    super.key,
     this.onTap,
     this.iconOnRight = true,
   });
@@ -21,9 +20,9 @@ class QuizGridCard extends StatelessWidget {
 
   ///
   static const _borderRadius = 10.0;
-  static const _padding = EdgeInsets.all(12.0);
+  static const _padding = EdgeInsets.all(12);
   static const _iconBorderRadius = 6.0;
-  static const _iconMargin = EdgeInsets.all(5.0);
+  static const _iconMargin = EdgeInsets.all(5);
 
   static const _boxShadow = [
     BoxShadow(
@@ -31,7 +30,7 @@ class QuizGridCard extends StatelessWidget {
       blurRadius: 30,
       spreadRadius: 5,
       color: Color(0xff45536d),
-    )
+    ),
   ];
 
   @override
@@ -40,7 +39,8 @@ class QuizGridCard extends StatelessWidget {
       onTap: onTap,
       child: LayoutBuilder(
         builder: (_, constraints) {
-          final iconSize = MediaQuery.of(context).size.width * 0.135;
+          final cSize = constraints.maxWidth;
+          final iconSize = cSize * .28;
           final iconColor = Theme.of(context).primaryColor;
 
           return Stack(
@@ -48,38 +48,28 @@ class QuizGridCard extends StatelessWidget {
               /// Box Shadow
               Positioned(
                 top: 0,
-                left: constraints.maxWidth * 0.2,
-                right: constraints.maxWidth * 0.2,
+                left: cSize * 0.2,
+                right: cSize * 0.2,
                 child: Container(
                   decoration: BoxDecoration(
                     color: Colors.transparent,
                     boxShadow: _boxShadow,
                     borderRadius: BorderRadius.vertical(
-                      bottom: Radius.circular(constraints.maxWidth * 0.525),
+                      bottom: Radius.circular(cSize * .525),
                     ),
                   ),
-                  width: constraints.maxWidth,
-                  height: constraints.maxHeight * 0.6,
+                  width: cSize,
+                  height: cSize * .6,
                 ),
               ),
 
               /// Card
               Container(
-                width: constraints.maxWidth,
-                height: constraints.maxHeight,
+                width: cSize,
+                height: cSize,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(_borderRadius),
-                  border: Border.all(color: Theme.of(context).colorScheme.primary, width: 1),
                   color: Theme.of(context).colorScheme.background,
-                    // gradient: LinearGradient(
-                    //   begin: Alignment.topRight,
-                    //   end: Alignment.bottomLeft,
-                    //   transform: GradientRotation(pi / 4),
-                    //   colors: [
-                    //     Theme.of(context).colorScheme.primaryContainer.withOpacity(0.9),
-                    //     Theme.of(context).colorScheme.background
-                    //   ],
-                    // )
                 ),
                 padding: _padding,
                 child: Column(
@@ -91,8 +81,8 @@ class QuizGridCard extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.clip,
                       style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 18.0,
+                        fontWeight: FontWeights.semiBold,
+                        fontSize: 18,
                         color: Theme.of(context).colorScheme.onTertiary,
                       ),
                     ),
@@ -105,6 +95,7 @@ class QuizGridCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 14,
+                          fontWeight: FontWeights.regular,
                           color: Theme.of(context)
                               .colorScheme
                               .onTertiary
@@ -112,7 +103,6 @@ class QuizGridCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    //Spacer(),
 
                     /// Svg Icon
                     Align(
@@ -131,9 +121,13 @@ class QuizGridCard extends StatelessWidget {
                         padding: _iconMargin,
                         width: iconSize,
                         height: iconSize,
-                        child: SvgPicture.asset(img, color: iconColor),
+                        child: QImage(
+                          imageUrl: img,
+                          color: iconColor,
+                          fit: BoxFit.contain,
+                        ),
                       ),
-                    )
+                    ),
                   ],
                 ),
               ),

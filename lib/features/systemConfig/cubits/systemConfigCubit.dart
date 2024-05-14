@@ -1,12 +1,13 @@
 //State
-import 'dart:developer';
 import 'dart:io';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutterquiz/features/quiz/models/quizType.dart';
+import 'package:flutterquiz/features/systemConfig/model/answer_mode.dart';
+import 'package:flutterquiz/features/systemConfig/model/room_code_char_type.dart';
 import 'package:flutterquiz/features/systemConfig/model/supportedQuestionLanguage.dart';
 import 'package:flutterquiz/features/systemConfig/model/systemConfigModel.dart';
 import 'package:flutterquiz/features/systemConfig/system_config_repository.dart';
-import 'package:flutterquiz/utils/constants/constants.dart';
 
 abstract class SystemConfigState {}
 
@@ -15,73 +16,58 @@ class SystemConfigInitial extends SystemConfigState {}
 class SystemConfigFetchInProgress extends SystemConfigState {}
 
 class SystemConfigFetchSuccess extends SystemConfigState {
-  final List<String> introSliderImages;
+  SystemConfigFetchSuccess({
+    required this.systemConfigModel,
+    required this.defaultProfileImages,
+    required this.supportedLanguages,
+    required this.emojis,
+  });
+
   final SystemConfigModel systemConfigModel;
   final List<SupportedLanguage> supportedLanguages;
   final List<String> emojis;
 
   final List<String> defaultProfileImages;
-
-  SystemConfigFetchSuccess({
-    required this.systemConfigModel,
-    required this.defaultProfileImages,
-    required this.introSliderImages,
-    required this.supportedLanguages,
-    required this.emojis,
-  });
 }
 
 class SystemConfigFetchFailure extends SystemConfigState {
-  final String errorCode;
-
   SystemConfigFetchFailure(this.errorCode);
+
+  final String errorCode;
 }
 
 class SystemConfigCubit extends Cubit<SystemConfigState> {
-  final SystemConfigRepository _systemConfigRepository;
-
   SystemConfigCubit(this._systemConfigRepository)
       : super(SystemConfigInitial());
+  final SystemConfigRepository _systemConfigRepository;
 
-  void getSystemConfig() async {
+  Future<void> getSystemConfig() async {
     emit(SystemConfigFetchInProgress());
     try {
-      List<SupportedLanguage> supportedLanguages = [];
+      var supportedLanguages = <SupportedLanguage>[];
       final systemConfig = await _systemConfigRepository.getSystemConfig();
-      final introSliderImages = await _systemConfigRepository
-          .getImagesFromFile("assets/files/introSliderImages.json");
       final defaultProfileImages = await _systemConfigRepository
-          .getImagesFromFile("assets/files/defaultProfileImages.json");
-
-      reviewAnswersDeductCoins =
-          int.parse(systemConfig.reviewAnswersDeductCoins);
-      guessTheWordMaxWinningCoins =
-          int.parse(systemConfig.guessTheWordMaxWinningCoins);
-      randomBattleEntryCoins = int.parse(systemConfig.randomBattleEntryCoins);
-      lifeLineDeductCoins = int.parse(systemConfig.lifelineDeductCoins);
+          .getImagesFromFile('assets/files/defaultProfileImages.json');
 
       final emojis = await _systemConfigRepository
-          .getImagesFromFile("assets/files/emojis.json");
+          .getImagesFromFile('assets/files/emojis.json');
 
-      if (systemConfig.languageMode == "1") {
+      if (systemConfig.languageMode) {
         supportedLanguages =
             await _systemConfigRepository.getSupportedQuestionLanguages();
       }
-      emit(SystemConfigFetchSuccess(
-        systemConfigModel: systemConfig,
-        defaultProfileImages: defaultProfileImages,
-        introSliderImages: introSliderImages,
-        supportedLanguages: supportedLanguages,
-        emojis: emojis,
-      ));
+      emit(
+        SystemConfigFetchSuccess(
+          systemConfigModel: systemConfig,
+          defaultProfileImages: defaultProfileImages,
+          supportedLanguages: supportedLanguages,
+          emojis: emojis,
+        ),
+      );
     } catch (e) {
       emit(SystemConfigFetchFailure(e.toString()));
     }
   }
-
-  String getLanguageMode() => state is SystemConfigFetchSuccess
-      ? (state as SystemConfigFetchSuccess).systemConfigModel.languageMode
-      : defaultQuestionLanguageId;
 
   List<SupportedLanguage> getSupportedLanguages() =>
       state is SystemConfigFetchSuccess
@@ -92,356 +78,247 @@ class SystemConfigCubit extends Cubit<SystemConfigState> {
       ? (state as SystemConfigFetchSuccess).emojis
       : [];
 
-  SystemConfigModel getSystemDetails() => state is SystemConfigFetchSuccess
+  SystemConfigModel? get systemConfigModel => state is SystemConfigFetchSuccess
       ? (state as SystemConfigFetchSuccess).systemConfigModel
-      : SystemConfigModel.fromJson({});
+      : null;
 
-  String? getIsCategoryEnableForBattle() => state is SystemConfigFetchSuccess
-      ? (state as SystemConfigFetchSuccess)
-          .systemConfigModel
-          .battleRandomCategoryMode
-      : "0";
+  String get shareAppText => systemConfigModel?.shareAppText ?? '';
 
-  String? getIsCategoryEnableForGroupBattle() =>
-      state is SystemConfigFetchSuccess
-          ? (state as SystemConfigFetchSuccess)
-              .systemConfigModel
-              .battleGroupCategoryMode
-          : "0";
+  bool get isLanguageModeEnabled => systemConfigModel?.languageMode ?? false;
 
-  bool getShowCorrectAnswerMode() => state is SystemConfigFetchSuccess
-      ? (state as SystemConfigFetchSuccess).systemConfigModel.answerMode == "1"
-      : true;
+  bool get isCategoryEnabledForRandomBattle =>
+      systemConfigModel?.randomBattleCategoryMode ?? false;
 
-  String? getIsDailyQuizAvailable() => state is SystemConfigFetchSuccess
-      ? (state as SystemConfigFetchSuccess).systemConfigModel.dailyQuizMode
-      : "0";
+  bool get isCategoryEnabledForOneVsOneBattle =>
+      systemConfigModel?.oneVsOneBattleCategoryMode ?? false;
 
-  String? getIsTrueFalseAvailable() => state is SystemConfigFetchSuccess
-      ? (state as SystemConfigFetchSuccess).systemConfigModel.truefalseMode
-      : "0";
+  bool get isCategoryEnabledForGroupBattle =>
+      systemConfigModel?.battleGroupCategoryMode ?? false;
 
-  String? getIsContestAvailable() => state is SystemConfigFetchSuccess
-      ? (state as SystemConfigFetchSuccess).systemConfigModel.contestMode
-      : "0";
+  int get oneVsOneBattleMinimumEntryFee =>
+      systemConfigModel?.oneVsOneBattleMinimumEntryFee ?? 0;
 
-  String? getIsFunNLearnAvailable() => state is SystemConfigFetchSuccess
-      ? (state as SystemConfigFetchSuccess).systemConfigModel.funNLearnMode
-      : "0";
+  int get groupBattleMinimumEntryFee =>
+      systemConfigModel?.groupBattleMinimumEntryFee ?? 0;
 
-  String? getIsBattleModeOneAvailable() => state is SystemConfigFetchSuccess
-      ? (state as SystemConfigFetchSuccess).systemConfigModel.battleModeOne
-      : "0";
+  AnswerMode get answerMode =>
+      systemConfigModel?.answerMode ?? AnswerMode.showAnswerCorrectness;
 
-  String? getIsBattleModeGroupAvailable() => state is SystemConfigFetchSuccess
-      ? (state as SystemConfigFetchSuccess).systemConfigModel.battleModeGroup
-      : "0";
+  bool get isDailyQuizEnabled => systemConfigModel?.dailyQuizMode ?? false;
 
-  String? getIsExamAvailable() => state is SystemConfigFetchSuccess
-      ? (state as SystemConfigFetchSuccess).systemConfigModel.examMode
-      : "0";
+  bool get isTrueFalseQuizEnabled => systemConfigModel?.truefalseMode ?? false;
 
-  bool getIsGuessTheWordAvailable() {
-    print(
-        "getIsGuessTheWordAvailable ${(state as SystemConfigFetchSuccess).systemConfigModel.guessTheWordMode == "1"}");
-    return state is SystemConfigFetchSuccess
-        ? (state as SystemConfigFetchSuccess)
-                .systemConfigModel
-                .guessTheWordMode ==
-            "1"
-        : false;
+  bool get isContestEnabled => systemConfigModel?.contestMode ?? false;
+
+  bool get isFunNLearnEnabled => systemConfigModel?.funNLearnMode ?? false;
+
+  bool get isOneVsOneBattleEnabled =>
+      systemConfigModel?.oneVsOneBattleMode ?? false;
+
+  bool get isRandomBattleEnabled =>
+      systemConfigModel?.randomBattleMode ?? false;
+
+  bool get isGroupBattleEnabled => systemConfigModel?.groupBattleMode ?? false;
+
+  bool get isExamQuizEnabled => systemConfigModel?.examMode ?? false;
+
+  bool get isGuessTheWordEnabled =>
+      systemConfigModel?.guessTheWordMode ?? false;
+
+  bool get isAudioQuizEnabled => systemConfigModel?.audioQuestionMode ?? false;
+
+  bool get isQuizZoneEnabled => systemConfigModel?.quizZoneMode ?? false;
+
+  int get selfChallengeMaxMinutes =>
+      systemConfigModel?.selfChallengeMaxMinutes ?? 0;
+
+  int get selfChallengeMaxQuestions =>
+      systemConfigModel?.selfChallengeMaxQuestions ?? 0;
+
+  String get appVersion => Platform.isIOS
+      ? systemConfigModel?.appVersionIos ?? '1.0.0+1'
+      : systemConfigModel?.appVersion ?? '1.0.0+1';
+
+  String get appUrl => Platform.isIOS
+      ? systemConfigModel?.iosAppLink ?? ''
+      : systemConfigModel?.appLink ?? '';
+
+  String get googleBannerId => Platform.isIOS
+      ? systemConfigModel?.iosBannerId ?? ''
+      : systemConfigModel?.androidBannerId ?? '';
+
+  String get googleInterstitialAdId => Platform.isIOS
+      ? systemConfigModel?.iosInterstitialId ?? ''
+      : systemConfigModel?.androidInterstitialId ?? '';
+
+  String get googleRewardedAdId => Platform.isIOS
+      ? systemConfigModel?.iosRewardedId ?? ''
+      : systemConfigModel?.androidRewardedId ?? '';
+
+  bool get isForceUpdateEnable => systemConfigModel?.forceUpdate ?? false;
+
+  bool get isAppUnderMaintenance => systemConfigModel?.appMaintenance ?? false;
+
+  String get referrerEarnCoin => systemConfigModel?.earnCoin ?? '0';
+
+  String get refereeEarnCoin => systemConfigModel?.referCoin ?? '0';
+
+  bool get isAdsEnable => systemConfigModel?.adsEnabled ?? false;
+
+  bool get isDailyAdsEnabled => systemConfigModel?.isDailyAdsEnabled ?? false;
+
+  String get coinsPerDailyAdView =>
+      systemConfigModel?.coinsPerDailyAdView ?? '0';
+
+  bool get isPaymentRequestEnabled => systemConfigModel?.paymentMode ?? false;
+
+  bool get isSelfChallengeQuizEnabled =>
+      systemConfigModel?.selfChallengeMode ?? false;
+
+  // bool isQuizEnabled(QuizTypes type) {
+  //   final m = systemConfigModel;
+  //   return switch (type) {
+  //         QuizTypes.dailyQuiz => m?.dailyQuizMode,
+  //         QuizTypes.contest => m?.contestMode,
+  //         QuizTypes.groupPlay => m?.groupBattleMode,
+  //         QuizTypes.oneVsOneBattle => m?.oneVsOneBattleMode,
+  //         QuizTypes.funAndLearn => m?.funNLearnMode,
+  //         QuizTypes.trueAndFalse => m?.truefalseMode,
+  //         QuizTypes.selfChallenge => m?.selfChallengeMode,
+  //         QuizTypes.guessTheWord => m?.guessTheWordMode,
+  //         QuizTypes.quizZone => m?.quizZoneMode,
+  //         QuizTypes.mathMania => m?.mathQuizMode,
+  //         QuizTypes.audioQuestions => m?.audioQuestionMode,
+  //         QuizTypes.exam => m?.examMode,
+  //         QuizTypes.randomBattle => m?.randomBattleMode,
+  //         _ => false,
+  //       } ??
+  //       false;
+  // }
+
+  RoomCodeCharType get oneVsOneBattleRoomCodeCharType =>
+      systemConfigModel?.oneVsOneBattleRoomCodeCharType ??
+      RoomCodeCharType.onlyNumbers;
+
+  RoomCodeCharType get groupBattleRoomCodeCharType =>
+      systemConfigModel?.groupBattleRoomCodeCharType ??
+      RoomCodeCharType.onlyNumbers;
+
+  bool get isCoinStoreEnabled => systemConfigModel?.inAppPurchaseMode ?? false;
+
+  bool get isMathQuizEnabled => systemConfigModel?.mathQuizMode ?? false;
+
+  int get perCoin => systemConfigModel?.perCoin ?? 0;
+
+  int get coinAmount => systemConfigModel?.coinAmount ?? 0;
+
+  int get minimumCoinLimit => systemConfigModel?.coinLimit ?? 0;
+
+  int get adsType => systemConfigModel?.adsType ?? 0;
+
+  String get unityGameId => Platform.isIOS
+      ? systemConfigModel?.iosGameID ?? ''
+      : systemConfigModel?.androidGameID ?? '';
+
+  double get maxCoinsWinningPercentage =>
+      systemConfigModel?.minWinningPercentage ?? 0;
+
+  double get quizWinningPercentage =>
+      systemConfigModel?.quizWinningPercentage ?? 0;
+
+  int get maxWinningCoins => systemConfigModel?.maxWinningCoins ?? 0;
+
+  int get guessTheWordMaxWinningCoins =>
+      systemConfigModel?.guessTheWordMaxWinningCoins ?? 0;
+
+  int get randomBattleEntryCoins =>
+      systemConfigModel?.randomBattleEntryCoins ?? 0;
+
+  int get reviewAnswersDeductCoins =>
+      systemConfigModel?.reviewAnswersDeductCoins ?? 0;
+
+  int get lifelinesDeductCoins => systemConfigModel?.lifelineDeductCoins ?? 0;
+
+  List<String> get defaultAvatarImages => state is SystemConfigFetchSuccess
+      ? (state as SystemConfigFetchSuccess).defaultProfileImages
+      : [];
+
+  String get botImage => systemConfigModel?.botImage ?? '';
+
+  String get payoutRequestCurrency => systemConfigModel?.currencySymbol ?? '';
+
+  int get rewardAdsCoins => systemConfigModel?.rewardAdsCoin ?? 0;
+
+  int get randomBattleOpponentSearchDuration =>
+      systemConfigModel?.randomBattleOpponentSearchDuration ?? 0;
+
+  int get guessTheWordHintsPerQuiz =>
+      systemConfigModel?.guessTheWordHintsPerQuiz ?? 0;
+
+  int get oneVsOneBattleQuickestCorrectAnswerExtraScore =>
+      systemConfigModel?.oneVsOneBattleQuickestCorrectAnswerExtraScore ?? 0;
+
+  int get oneVsOneBattleSecondQuickestCorrectAnswerExtraScore =>
+      systemConfigModel?.oneVsOneBattleSecondQuickestCorrectAnswerExtraScore ??
+      0;
+
+  int get randomBattleQuickestCorrectAnswerExtraScore =>
+      systemConfigModel?.randomBattleQuickestCorrectAnswerExtraScore ?? 0;
+
+  int get randomBattleSecondQuickestCorrectAnswerExtraScore =>
+      systemConfigModel?.randomBattleSecondQuickestCorrectAnswerExtraScore ?? 0;
+
+  int get resumeExamAfterCloseTimeout =>
+      systemConfigModel?.resumeExamAfterCloseTimeout ?? 0;
+
+  int quizTimer(QuizTypes type) {
+    final m = systemConfigModel;
+    return switch (type) {
+          QuizTypes.groupPlay => m?.groupBattleTimer,
+          QuizTypes.oneVsOneBattle => m?.oneVsOneBattleTimer,
+          QuizTypes.funAndLearn => m?.funAndLearnTimer,
+          QuizTypes.trueAndFalse => m?.trueAndFalseTimer,
+          QuizTypes.guessTheWord => m?.guessTheWordTimer,
+          QuizTypes.quizZone => m?.quizTimer,
+          QuizTypes.mathMania => m?.mathsQuizTimer,
+          QuizTypes.audioQuestions => m?.audioTimer,
+          QuizTypes.randomBattle => m?.randomBattleTimer,
+          _ => m?.quizTimer,
+        } ??
+        0;
   }
 
-  bool getIsAudioQuestionAvailable() => state is SystemConfigFetchSuccess
-      ? (state as SystemConfigFetchSuccess)
-              .systemConfigModel
-              .audioQuestionMode ==
-          "1"
-      : false;
-
-  String getAppVersion() {
-    if (state is SystemConfigFetchSuccess) {
-      if (Platform.isIOS) {
-        return (state as SystemConfigFetchSuccess)
-            .systemConfigModel
-            .appVersionIos;
-      }
-
-      return (state as SystemConfigFetchSuccess).systemConfigModel.appVersion;
-    }
-
-    return "1.0.0+1";
+  int quizCorrectAnswerCreditScore(QuizTypes type) {
+    final m = systemConfigModel;
+    return switch (type) {
+          QuizTypes.oneVsOneBattle => m?.oneVsOneBattleCorrectAnswerCreditScore,
+          QuizTypes.funAndLearn => m?.funAndLearnCorrectAnswerCreditScore,
+          QuizTypes.trueAndFalse => m?.trueAndFalseCorrectAnswerCreditScore,
+          QuizTypes.guessTheWord => m?.guessTheWordCorrectAnswerCreditScore,
+          QuizTypes.quizZone => m?.quizZoneCorrectAnswerCreditScore,
+          QuizTypes.mathMania => m?.mathsQuizCorrectAnswerCreditScore,
+          QuizTypes.audioQuestions => m?.audioQuizCorrectAnswerCreditScore,
+          QuizTypes.randomBattle => m?.randomBattleCorrectAnswerCreditScore,
+          QuizTypes.contest => m?.contestCorrectAnswerCreditScore,
+          _ => m?.score,
+        } ??
+        0;
   }
 
-  String getAppUrl() {
-    if (state is SystemConfigFetchSuccess) {
-      if (Platform.isAndroid) {
-        log(
-          name: 'App Link (Android)',
-          (state as SystemConfigFetchSuccess).systemConfigModel.appLink,
-        );
-
-        return (state as SystemConfigFetchSuccess).systemConfigModel.appLink;
-      }
-      if (Platform.isIOS) {
-        log(
-          name: 'App Link (IOS)',
-          (state as SystemConfigFetchSuccess).systemConfigModel.iosAppLink,
-        );
-
-        return (state as SystemConfigFetchSuccess).systemConfigModel.iosAppLink;
-      }
-    }
-
-    return "";
+  int quizWrongAnswerDeductScore(QuizTypes type) {
+    final m = systemConfigModel;
+    return switch (type) {
+          QuizTypes.oneVsOneBattle => m?.oneVsOneBattleWrongAnswerDeductScore,
+          QuizTypes.funAndLearn => m?.funAndLearnWrongAnswerDeductScore,
+          QuizTypes.trueAndFalse => m?.trueAndFalseWrongAnswerDeductScore,
+          QuizTypes.guessTheWord => m?.guessTheWordWrongAnswerDeductScore,
+          QuizTypes.quizZone => m?.quizZoneWrongAnswerDeductScore,
+          QuizTypes.mathMania => m?.mathsQuizWrongAnswerDeductScore,
+          QuizTypes.audioQuestions => m?.audioQuizWrongAnswerDeductScore,
+          QuizTypes.randomBattle => m?.randomBattleWrongAnswerDeductScore,
+          QuizTypes.contest => m?.contestWrongAnswerDeductScore,
+          _ => m?.score,
+        } ??
+        0;
   }
-
-  String faceBookBannerId() {
-    if (state is SystemConfigFetchSuccess) {
-      if (Platform.isAndroid) {
-        return (state as SystemConfigFetchSuccess)
-            .systemConfigModel
-            .androidFbBannerId;
-      }
-      if (Platform.isIOS) {
-        return (state as SystemConfigFetchSuccess)
-            .systemConfigModel
-            .iosFbBannerId;
-      }
-    }
-
-    return "";
-  }
-
-  String faceBookInterstitialAdId() {
-    if (state is SystemConfigFetchSuccess) {
-      if (Platform.isAndroid) {
-        return (state as SystemConfigFetchSuccess)
-            .systemConfigModel
-            .androidFbInterstitialId;
-      }
-      if (Platform.isIOS) {
-        return (state as SystemConfigFetchSuccess)
-            .systemConfigModel
-            .iosFbInterstitialId;
-      }
-    }
-
-    return "";
-  }
-
-  String faceBookRewardedAdId() {
-    if (state is SystemConfigFetchSuccess) {
-      if (Platform.isAndroid) {
-        return (state as SystemConfigFetchSuccess)
-            .systemConfigModel
-            .androidFbRewardedId;
-      }
-      if (Platform.isIOS) {
-        return (state as SystemConfigFetchSuccess)
-            .systemConfigModel
-            .iosFbRewardedId;
-      }
-    }
-
-    return "";
-  }
-
-  String googleBannerId() {
-    if (state is SystemConfigFetchSuccess) {
-      if (Platform.isAndroid) {
-        return (state as SystemConfigFetchSuccess)
-            .systemConfigModel
-            .androidBannerId;
-      }
-      if (Platform.isIOS) {
-        return (state as SystemConfigFetchSuccess)
-            .systemConfigModel
-            .iosBannerId;
-      }
-    }
-
-    return "";
-  }
-
-  String googleInterstitialAdId() {
-    if (state is SystemConfigFetchSuccess) {
-      if (Platform.isAndroid) {
-        return (state as SystemConfigFetchSuccess)
-            .systemConfigModel
-            .androidInterstitialId;
-      }
-      if (Platform.isIOS) {
-        return (state as SystemConfigFetchSuccess)
-            .systemConfigModel
-            .iosInterstitialId;
-      }
-    }
-
-    return "";
-  }
-
-  String googleRewardedAdId() {
-    if (state is SystemConfigFetchSuccess) {
-      if (Platform.isAndroid) {
-        return (state as SystemConfigFetchSuccess)
-            .systemConfigModel
-            .androidRewardedId;
-      }
-      if (Platform.isIOS) {
-        return (state as SystemConfigFetchSuccess)
-            .systemConfigModel
-            .iosRewardedId;
-      }
-    }
-
-    return "";
-  }
-
-  bool isForceUpdateEnable() => state is SystemConfigFetchSuccess
-      ? (state as SystemConfigFetchSuccess).systemConfigModel.forceUpdate == "1"
-      : false;
-
-  bool appUnderMaintenance() => state is SystemConfigFetchSuccess
-      ? (state as SystemConfigFetchSuccess).systemConfigModel.appMaintenance ==
-          "1"
-      : false;
-
-  String getEarnCoin() => state is SystemConfigFetchSuccess
-      ? (state as SystemConfigFetchSuccess).systemConfigModel.earnCoin
-      : "0";
-
-  String getReferCoin() => state is SystemConfigFetchSuccess
-      ? (state as SystemConfigFetchSuccess).systemConfigModel.referCoin
-      : "0";
-
-  bool isAdsEnable() => state is SystemConfigFetchSuccess
-      ? (state as SystemConfigFetchSuccess).systemConfigModel.adsEnabled == "1"
-      : false;
-
-  bool isPaymentRequestEnable() => state is SystemConfigFetchSuccess
-      ? (state as SystemConfigFetchSuccess).systemConfigModel.paymentMode == "1"
-      : false;
-
-  bool isSelfChallengeEnable() => state is SystemConfigFetchSuccess
-      ? (state as SystemConfigFetchSuccess)
-              .systemConfigModel
-              .selfChallengeMode ==
-          "1"
-      : false;
-
-  bool isInAppPurchaseEnable() => state is SystemConfigFetchSuccess
-      ? (state as SystemConfigFetchSuccess)
-              .systemConfigModel
-              .inAppPurchaseMode ==
-          "1"
-      : false;
-
-  bool isMathQuizAvailable() => state is SystemConfigFetchSuccess
-      ? (state as SystemConfigFetchSuccess).systemConfigModel.mathQuizMode ==
-          "1"
-      : false;
-
-  int perCoin() => state is SystemConfigFetchSuccess
-      ? int.parse((state as SystemConfigFetchSuccess).systemConfigModel.perCoin)
-      : 0;
-
-  int coinAmount() => state is SystemConfigFetchSuccess
-      ? int.parse(
-          (state as SystemConfigFetchSuccess).systemConfigModel.coinAmount)
-      : 0;
-
-  int minimumCoinLimit() => state is SystemConfigFetchSuccess
-      ? int.parse(
-          (state as SystemConfigFetchSuccess).systemConfigModel.coinLimit)
-      : 0;
-
-  int adsType() => state is SystemConfigFetchSuccess
-      ? int.parse((state as SystemConfigFetchSuccess).systemConfigModel.adsType)
-      : 0;
-
-  String androidGameID() => state is SystemConfigFetchSuccess
-      ? (state as SystemConfigFetchSuccess).systemConfigModel.androidGameID
-      : "";
-
-  String iosGameID() => state is SystemConfigFetchSuccess
-      ? (state as SystemConfigFetchSuccess).systemConfigModel.iosGameID
-      : "";
-
-  String getPlayCoin() => state is SystemConfigFetchSuccess
-      ? (state as SystemConfigFetchSuccess).systemConfigModel.playCoins
-      : "0";
-
-  int getPlayScore() => state is SystemConfigFetchSuccess
-      ? int.parse(
-          (state as SystemConfigFetchSuccess).systemConfigModel.playScore)
-      : 0;
-
-  int getQuizTime() => state is SystemConfigFetchSuccess
-      ? int.parse(
-          (state as SystemConfigFetchSuccess).systemConfigModel.quizTimer)
-      : 0;
-
-  int getSelfChallengeTime() => state is SystemConfigFetchSuccess
-      ? int.parse((state as SystemConfigFetchSuccess)
-          .systemConfigModel
-          .selfChallengeTimer)
-      : 0;
-
-  int getGuessTheWordTime() => state is SystemConfigFetchSuccess
-      ? int.parse((state as SystemConfigFetchSuccess)
-          .systemConfigModel
-          .guessTheWordTimer)
-      : 0;
-
-  int getMathsQuizTime() => state is SystemConfigFetchSuccess
-      ? int.parse(
-          (state as SystemConfigFetchSuccess).systemConfigModel.mathsQuizTimer)
-      : 0;
-
-  int getFunAndLearnTime() => state is SystemConfigFetchSuccess
-      ? int.parse((state as SystemConfigFetchSuccess)
-          .systemConfigModel
-          .funAndLearnTimer)
-      : 0;
-
-  int getAudioTimer() => state is SystemConfigFetchSuccess
-      ? int.parse(
-          (state as SystemConfigFetchSuccess).systemConfigModel.audioTimer)
-      : 0;
-
-  double getMaxPercentageWinning() => state is SystemConfigFetchSuccess
-      ? double.parse((state as SystemConfigFetchSuccess)
-          .systemConfigModel
-          .maxWinningPercentage)
-      : 0;
-
-  int getMaxWinningCoins() => state is SystemConfigFetchSuccess
-      ? int.parse(
-          (state as SystemConfigFetchSuccess).systemConfigModel.maxWinningCoins)
-      : 0;
-
-  int getGuessTheWordMaxWinningCoins() => state is SystemConfigFetchSuccess
-      ? int.parse((state as SystemConfigFetchSuccess)
-          .systemConfigModel
-          .guessTheWordMaxWinningCoins)
-      : 0;
-
-  int getRandomBattleEntryCoins() => state is SystemConfigFetchSuccess
-      ? int.parse((state as SystemConfigFetchSuccess)
-          .systemConfigModel
-          .randomBattleEntryCoins)
-      : 0;
-
-  int getReviewAnswersDeductCoins() => state is SystemConfigFetchSuccess
-      ? int.parse((state as SystemConfigFetchSuccess)
-          .systemConfigModel
-          .reviewAnswersDeductCoins)
-      : 0;
-
-  int getLifeLineDeductCoins() => state is SystemConfigFetchSuccess
-      ? int.parse((state as SystemConfigFetchSuccess)
-          .systemConfigModel
-          .lifelineDeductCoins)
-      : 0;
 }

@@ -2,52 +2,50 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutterquiz/features/coinHistory/coinHistoryException.dart';
-import 'package:flutterquiz/utils/constants/api_body_parameter_labels.dart';
 import 'package:flutterquiz/utils/api_utils.dart';
 import 'package:flutterquiz/utils/constants/constants.dart';
-import 'package:flutterquiz/utils/constants/error_message_keys.dart';
 import 'package:http/http.dart' as http;
 
 class CoinHistoryRemoteDataSource {
-  Future<dynamic> getCoinHistory(
-      {required String userId,
-      required String limit,
-      required String offset}) async {
+  Future<({int total, List<Map<String, dynamic>> data})> getCoinHistory({
+    required String limit,
+    required String offset,
+  }) async {
     try {
       //body of post request
-      final body = {
-        accessValueKey: accessValue,
-        userIdKey: userId,
+      final body = <String, String>{
         limitKey: limit,
         offsetKey: offset,
       };
 
-      if (limit.isEmpty) {
-        body.remove(limitKey);
-      }
+      if (limit.isEmpty) body.remove(limitKey);
 
-      if (offset.isEmpty) {
-        body.remove(offsetKey);
-      }
+      if (offset.isEmpty) body.remove(offsetKey);
 
-      final response = await http.post(Uri.parse(getCoinHistoryUrl),
-          body: body, headers: await ApiUtils.getHeaders());
+      final response = await http.post(
+        Uri.parse(getCoinHistoryUrl),
+        body: body,
+        headers: await ApiUtils.getHeaders(),
+      );
 
-      final responseJson = jsonDecode(response.body);
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
 
-      if (responseJson['error']) {
+      if (responseJson['error'] as bool) {
         throw CoinHistoryException(
-          errorMessageCode: responseJson['message'],
+          errorMessageCode: responseJson['message'].toString(),
         );
       }
 
-      return responseJson;
+      return (
+        total: int.parse(responseJson['total'] as String? ?? '0'),
+        data: (responseJson['data'] as List).cast<Map<String, dynamic>>()
+      );
     } on SocketException catch (_) {
-      throw CoinHistoryException(errorMessageCode: noInternetCode);
+      throw CoinHistoryException(errorMessageCode: errorCodeNoInternet);
     } on CoinHistoryException catch (e) {
       throw CoinHistoryException(errorMessageCode: e.toString());
     } catch (e) {
-      throw CoinHistoryException(errorMessageCode: defaultErrorMessageCode);
+      throw CoinHistoryException(errorMessageCode: errorCodeDefaultMessage);
     }
   }
 }

@@ -1,13 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Message {
-  final String messageId;
-  final String message;
-  final String roomId;
-  final String by;
-  final Timestamp timestamp;
-  final bool isTextMessage;
-
   Message({
     required this.by,
     required this.isTextMessage,
@@ -17,31 +10,34 @@ class Message {
     required this.timestamp,
   });
 
-  static Message buildEmptyMessage() {
-    return Message(
-      by: "",
-      isTextMessage: false,
-      message: "",
-      messageId: "",
-      roomId: "",
-      timestamp: Timestamp.now(),
-    );
+  Message.empty()
+      : by = '',
+        isTextMessage = false,
+        message = '',
+        messageId = '',
+        roomId = '',
+        timestamp = Timestamp.now();
+
+  Message.fromDocumentSnapshot(DocumentSnapshot documentSnapshot) {
+    final json = documentSnapshot.data()! as Map<String, dynamic>;
+
+    by = json['by'] as String? ?? '';
+    isTextMessage = json['isTextMessage'] as bool? ?? false;
+    message = json['message'] as String? ?? '';
+    messageId = documentSnapshot.id;
+    roomId = json['roomId'] as String? ?? '';
+    timestamp = json['timestamp'] as Timestamp? ?? Timestamp.now();
   }
 
-  static Message fromDocumentSnapshot(DocumentSnapshot documentSnapshot) {
-    Map<String, dynamic> json = Map.from(documentSnapshot.data() as Map);
-    return Message(
-      by: json['by'] ?? "",
-      isTextMessage: json['isTextMessage'] ?? false,
-      message: json['message'] ?? "",
-      messageId: documentSnapshot.id,
-      roomId: json['roomId'] ?? "",
-      timestamp: json['timestamp'] ?? Timestamp.now(),
-    );
-  }
+  late final String messageId;
+  late final String message;
+  late final String roomId;
+  late final String by;
+  late final Timestamp timestamp;
+  late final bool isTextMessage;
 
   Map<String, dynamic> toJson() {
-    Map<String, dynamic> json = {};
+    final json = <String, dynamic>{};
 
     json['by'] = by;
     json['roomId'] = roomId;

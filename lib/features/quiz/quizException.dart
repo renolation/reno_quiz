@@ -1,7 +1,6 @@
 class QuizException implements Exception {
+  QuizException({required this.errorMessageCode});
   final String errorMessageCode;
-
-  QuizException({required this.errorMessageCode, errorMessageKey});
 
   @override
   String toString() => errorMessageCode;

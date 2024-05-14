@@ -2,11 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutterquiz/features/statistic/statisticException.dart';
-import 'package:flutterquiz/utils/constants/api_body_parameter_labels.dart';
 import 'package:flutterquiz/utils/api_utils.dart';
 import 'package:flutterquiz/utils/constants/constants.dart';
-import 'package:flutterquiz/utils/constants/error_message_keys.dart';
-
 import 'package:http/http.dart' as http;
 
 class StatisticRemoteDataSource {
@@ -28,26 +25,27 @@ class StatisticRemoteDataSource {
   
    */
 
-  Future<dynamic> getStatistic(String userId) async {
+  Future<Map<String, dynamic>> getStatistic() async {
     try {
       //body of post request
-      final body = {accessValueKey: accessValue, userIdKey: userId};
-      print(body);
-      final response = await http.post(Uri.parse(getStatisticUrl),
-          body: body, headers: await ApiUtils.getHeaders());
-      final responseJson = jsonDecode(response.body);
-      print("response of statistic $responseJson");
+      final response = await http.post(
+        Uri.parse(getStatisticUrl),
+        headers: await ApiUtils.getHeaders(),
+      );
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
 
-      if (responseJson['error']) {
-        throw StatisticException(errorMessageCode: responseJson['message']);
+      if (responseJson['error'] as bool) {
+        throw StatisticException(
+          errorMessageCode: responseJson['message'].toString(),
+        );
       }
-      return responseJson['data'];
+      return responseJson['data'] as Map<String, dynamic>;
     } on SocketException catch (_) {
-      throw StatisticException(errorMessageCode: noInternetCode);
+      throw StatisticException(errorMessageCode: errorCodeNoInternet);
     } on StatisticException catch (e) {
       throw StatisticException(errorMessageCode: e.toString());
     } catch (e) {
-      throw StatisticException(errorMessageCode: defaultErrorMessageCode);
+      throw StatisticException(errorMessageCode: errorCodeDefaultMessage);
     }
   }
 
@@ -55,44 +53,46 @@ class StatisticRemoteDataSource {
   user_id:10
 	questions_answered:100
 	correct_answers:10
-	category_id:1 //(id of category which user played) 
+	category_id:1 //(id of category which user played)
 	ratio:50 // (In percenatge)
    */
 
-  Future<dynamic> updateStatistic(
-      {String? userId,
-      String? answeredQuestion,
-      String? correctAnswers,
-      String? winPercentage,
-      String? categoryId}) async {
+  Future<dynamic> updateStatistic({
+    String? answeredQuestion,
+    String? correctAnswers,
+    String? winPercentage,
+    String? categoryId,
+  }) async {
     try {
       //body of post request
       final body = {
-        accessValueKey: accessValue,
-        userIdKey: userId,
-        "questions_answered": answeredQuestion,
+        'questions_answered': answeredQuestion,
         correctAnswersKey: correctAnswers,
-        "category_id": categoryId,
-        "ratio": winPercentage
+        'category_id': categoryId,
+        'ratio': winPercentage,
       };
 
-      print(body);
-      final response = await http.post(Uri.parse(updateStatisticUrl),
-          body: body, headers: await ApiUtils.getHeaders());
-      final responseJson = jsonDecode(response.body);
-      print("Update statistics response");
-      print("Response : $responseJson");
-      if (responseJson['error']) {
-        throw StatisticException(errorMessageCode: responseJson['message']);
+      final response = await http.post(
+        Uri.parse(updateStatisticUrl),
+        body: body,
+        headers: await ApiUtils.getHeaders(),
+      );
+
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
+
+      if (responseJson['error'] as bool) {
+        throw StatisticException(
+          errorMessageCode: responseJson['message'].toString(),
+        );
       }
 
       return responseJson['data'];
     } on SocketException catch (_) {
-      throw StatisticException(errorMessageCode: noInternetCode);
+      throw StatisticException(errorMessageCode: errorCodeNoInternet);
     } on StatisticException catch (e) {
       throw StatisticException(errorMessageCode: e.toString());
     } catch (e) {
-      throw StatisticException(errorMessageCode: defaultErrorMessageCode);
+      throw StatisticException(errorMessageCode: errorCodeDefaultMessage);
     }
   }
 
@@ -110,51 +110,49 @@ class StatisticRemoteDataSource {
       // is_drawn:0 / 1 (0->no_drawn,1->drawn)
       //body of post request
       final body = {
-        accessValueKey: accessValue,
         userId1Key: userId1,
         userId2Key: userId2,
         winnerIdKey: winnerId,
         isDrawnKey: isDrawn,
-
-
       };
-      print("Statics:- $body");
-      print("--------------");
-      final response = await http.post(Uri.parse(setBattleStatisticsUrl),
-          body: body, headers: await ApiUtils.getHeaders());
-      final responseJson = jsonDecode(response.body);
+      final response = await http.post(
+        Uri.parse(setBattleStatisticsUrl),
+        body: body,
+        headers: await ApiUtils.getHeaders(),
+      );
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
 
-      if (responseJson['error']) {
-        throw StatisticException(errorMessageCode: responseJson['message']);
+      if (responseJson['error'] as bool) {
+        throw StatisticException(
+          errorMessageCode: responseJson['message'].toString(),
+        );
       }
 
       return responseJson['data'];
     } on SocketException catch (_) {
-      throw StatisticException(errorMessageCode: noInternetCode);
+      throw StatisticException(errorMessageCode: errorCodeNoInternet);
     } on StatisticException catch (e) {
       throw StatisticException(errorMessageCode: e.toString());
     } catch (e) {
-      throw StatisticException(errorMessageCode: defaultErrorMessageCode);
+      throw StatisticException(errorMessageCode: errorCodeDefaultMessage);
     }
   }
 
-  Future<dynamic> getBattleStatistic({required String userId}) async {
+  Future<Map<String, dynamic>> getBattleStatistic() async {
     try {
-      final body = {
-        accessValueKey: accessValue,
-        userIdKey: userId,
-      };
-      final response = await http.post(Uri.parse(getBattleStatisticsUrl),
-          body: body, headers: await ApiUtils.getHeaders());
-      final responseJson = jsonDecode(response.body);
+      final response = await http.post(
+        Uri.parse(getBattleStatisticsUrl),
+        headers: await ApiUtils.getHeaders(),
+      );
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
 
       return responseJson;
     } on SocketException catch (_) {
-      throw StatisticException(errorMessageCode: noInternetCode);
+      throw StatisticException(errorMessageCode: errorCodeNoInternet);
     } on StatisticException catch (e) {
       throw StatisticException(errorMessageCode: e.toString());
     } catch (e) {
-      throw StatisticException(errorMessageCode: defaultErrorMessageCode);
+      throw StatisticException(errorMessageCode: errorCodeDefaultMessage);
     }
   }
 }

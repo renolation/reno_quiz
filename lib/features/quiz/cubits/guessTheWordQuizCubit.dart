@@ -1,8 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutterquiz/features/quiz/models/guessTheWordQuestion.dart';
-
 import 'package:flutterquiz/features/quiz/quizRepository.dart';
-import 'package:flutterquiz/utils/constants/constants.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
 
 abstract class GuessTheWordQuizState {}
@@ -12,23 +10,24 @@ class GuessTheWordQuizIntial extends GuessTheWordQuizState {}
 class GuessTheWordQuizFetchInProgress extends GuessTheWordQuizState {}
 
 class GuessTheWordQuizFetchFailure extends GuessTheWordQuizState {
-  final String errorMessage;
-
   GuessTheWordQuizFetchFailure(this.errorMessage);
+
+  final String errorMessage;
 }
 
 class GuessTheWordQuizFetchSuccess extends GuessTheWordQuizState {
+  GuessTheWordQuizFetchSuccess({
+    required this.questions,
+    required this.currentPoints,
+  });
+
   final List<GuessTheWordQuestion> questions;
   final int currentPoints;
-
-  GuessTheWordQuizFetchSuccess(
-      {required this.questions, required this.currentPoints});
 }
 
 class GuessTheWordQuizCubit extends Cubit<GuessTheWordQuizState> {
-  final QuizRepository _quizRepository;
-
   GuessTheWordQuizCubit(this._quizRepository) : super(GuessTheWordQuizIntial());
+  final QuizRepository _quizRepository;
 
   void getQuestion({
     required String questionLanguageId,
@@ -44,29 +43,35 @@ class GuessTheWordQuizCubit extends Cubit<GuessTheWordQuizState> {
     )
         .then(
       (questions) {
-        emit(GuessTheWordQuizFetchSuccess(
-            questions: questions, currentPoints: 0));
+        emit(
+          GuessTheWordQuizFetchSuccess(
+            questions: questions,
+            currentPoints: 0,
+          ),
+        );
       },
-    ).catchError((e) {
+    ).catchError((Object e) {
       emit(GuessTheWordQuizFetchFailure(e.toString()));
     });
   }
 
   void updateAnswer(String answer, int answerIndex, String questionId) {
     if (state is GuessTheWordQuizFetchSuccess) {
-      var questions = (state as GuessTheWordQuizFetchSuccess).questions;
-      var questionIndex =
+      final questions = (state as GuessTheWordQuizFetchSuccess).questions;
+      final questionIndex =
           questions.indexWhere((element) => element.id == questionId);
-      var question = questions[questionIndex];
-      var updatedAnswer = question.submittedAnswer;
+      final question = questions[questionIndex];
+      final updatedAnswer = question.submittedAnswer;
       updatedAnswer[answerIndex] = answer;
       questions[questionIndex] =
           question.copyWith(updatedAnswer: updatedAnswer);
 
-      emit(GuessTheWordQuizFetchSuccess(
+      emit(
+        GuessTheWordQuizFetchSuccess(
           questions: questions,
-          currentPoints:
-              (state as GuessTheWordQuizFetchSuccess).currentPoints));
+          currentPoints: (state as GuessTheWordQuizFetchSuccess).currentPoints,
+        ),
+      );
     }
   }
 
@@ -84,15 +89,20 @@ class GuessTheWordQuizCubit extends Cubit<GuessTheWordQuizState> {
     return 0;
   }
 
-  void submitAnswer(String questionId, List<String> answer) {
+  void submitAnswer(
+    String questionId,
+    List<String> answer,
+    int correctAnswerPoints,
+    int wrongAnswerPoints,
+  ) {
     //update hasAnswer and current points
 
     if (state is GuessTheWordQuizFetchSuccess) {
-      var currentState = (state as GuessTheWordQuizFetchSuccess);
-      var questions = currentState.questions;
-      var questionIndex =
+      final currentState = state as GuessTheWordQuizFetchSuccess;
+      final questions = currentState.questions;
+      final questionIndex =
           questions.indexWhere((element) => element.id == questionId);
-      var question = questions[questionIndex];
+      final question = questions[questionIndex];
       var updatedPoints = currentState.currentPoints;
 
       questions[questionIndex] =
@@ -100,13 +110,17 @@ class GuessTheWordQuizCubit extends Cubit<GuessTheWordQuizState> {
 
       //check correctness of answer and update current points
       if (UiUtils.buildGuessTheWordQuestionAnswer(answer) == question.answer) {
-        updatedPoints = updatedPoints + guessTheWordCorrectAnswerPoints;
+        updatedPoints = updatedPoints + correctAnswerPoints;
       } else {
-        updatedPoints = updatedPoints - guessTheWordWrongAnswerDeductPoints;
+        updatedPoints = updatedPoints - wrongAnswerPoints;
       }
 
-      emit(GuessTheWordQuizFetchSuccess(
-          questions: questions, currentPoints: updatedPoints));
+      emit(
+        GuessTheWordQuizFetchSuccess(
+          questions: questions,
+          currentPoints: updatedPoints,
+        ),
+      );
     }
   }
 

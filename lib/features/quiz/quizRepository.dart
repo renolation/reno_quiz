@@ -1,21 +1,16 @@
+import 'package:flutterquiz/features/quiz/models/category.dart';
+import 'package:flutterquiz/features/quiz/models/comprehension.dart';
+import 'package:flutterquiz/features/quiz/models/contest.dart';
+import 'package:flutterquiz/features/quiz/models/contestLeaderboard.dart';
 import 'package:flutterquiz/features/quiz/models/guessTheWordQuestion.dart';
 import 'package:flutterquiz/features/quiz/models/leaderBoardMonthly.dart';
+import 'package:flutterquiz/features/quiz/models/question.dart';
+import 'package:flutterquiz/features/quiz/models/quizType.dart';
+import 'package:flutterquiz/features/quiz/models/subcategory.dart';
 import 'package:flutterquiz/features/quiz/quizException.dart';
 import 'package:flutterquiz/features/quiz/quizRemoteDataSource.dart';
 
-import 'models/category.dart';
-import 'models/comprehension.dart';
-import 'models/contest.dart';
-import 'models/contestLeaderboard.dart';
-import 'models/question.dart';
-import 'models/quizType.dart';
-import 'models/subcategory.dart';
-
 class QuizRepository {
-  static final QuizRepository _quizRepository = QuizRepository._internal();
-  late QuizRemoteDataSource _quizRemoteDataSource;
-  static List<LeaderBoardMonthly> leaderBoardMonthlyList = [];
-
   //QuizLocalDataSource _quizLocalDataSource;
 
   factory QuizRepository() {
@@ -26,89 +21,78 @@ class QuizRepository {
 
   QuizRepository._internal();
 
-  Future<List<Category>> getCategory(
-      {required String languageId,
-      required String type,
-      required String userId}) async {
-    try {
-      List<Category> categoryList = [];
-      List result = await _quizRemoteDataSource.getCategoryWithUser(
-        languageId: languageId,
-        type: type,
-        userId: userId,
-      );
+  static final QuizRepository _quizRepository = QuizRepository._internal();
+  late QuizRemoteDataSource _quizRemoteDataSource;
+  static List<LeaderBoardMonthly> leaderBoardMonthlyList = [];
 
-      categoryList = result
-          .map((category) => Category.fromJson(Map.from(category)))
-          .toList();
-
-      return categoryList;
-    } catch (e) {
-      throw QuizException(errorMessageCode: e.toString());
-    }
-  }
-
-  Future<List<Category>> getCategorywithoutuser({
+  Future<List<Category>> getCategory({
     required String languageId,
     required String type,
+    String? subType,
   }) async {
     try {
-      List<Category> categoryList = [];
-      List result = await _quizRemoteDataSource.getCategory(
+      final result = await _quizRemoteDataSource.getCategoryWithUser(
         languageId: languageId,
         type: type,
+        subType: subType,
       );
 
-      categoryList = result
-          .map((category) => Category.fromJson(Map.from(category)))
-          .toList();
-
-      return categoryList;
+      return result.map(Category.fromJson).toList();
     } catch (e) {
       throw QuizException(errorMessageCode: e.toString());
     }
   }
 
-  Future<List<Subcategory>> getSubCategory(
-      String category, String userId) async {
+  Future<List<Category>> getCategoryWithoutUser({
+    required String languageId,
+    required String type,
+    String? subType,
+  }) async {
     try {
-      List<Subcategory> subCategoryList = [];
-      List result =
-          await _quizRemoteDataSource.getSubCategory(category, userId);
-      subCategoryList = result
-          .map((subCategory) => Subcategory.fromJson(Map.from(subCategory)))
-          .toList();
-      return subCategoryList;
+      final result = await _quizRemoteDataSource.getCategory(
+        languageId: languageId,
+        type: type,
+        subType: subType,
+      );
+
+      return result.map(Category.fromJson).toList();
     } catch (e) {
       throw QuizException(errorMessageCode: e.toString());
     }
   }
 
-  Future<int> getUnlockedLevel(
-      String? userId, String? category, String? subCategory) async {
+  Future<List<Subcategory>> getSubCategory(String category) async {
     try {
-      final result = await _quizRemoteDataSource.getUnlockedLevel(
-          userId, category, subCategory);
+      final result = await _quizRemoteDataSource.getSubCategory(category);
 
-      return int.parse(result['level'].toString());
+      return result.map(Subcategory.fromJson).toList();
     } catch (e) {
       throw QuizException(errorMessageCode: e.toString());
     }
   }
 
-  Future<void> updateLevel(
-      {String? userId,
-      String? category,
-      String? subCategory,
-      String? level}) async {
+  Future<int> getUnlockedLevel(String category, String subCategory) async {
     try {
-      print("Category Id : $category And Sub-category Id : $subCategory");
+      return await _quizRemoteDataSource.getUnlockedLevel(
+        category,
+        subCategory,
+      );
+    } catch (e) {
+      throw QuizException(errorMessageCode: e.toString());
+    }
+  }
 
+  Future<void> updateLevel({
+    required String category,
+    required String subCategory,
+    required String level,
+  }) async {
+    try {
       await _quizRemoteDataSource.updateLevel(
-          category: category,
-          level: level,
-          subCategory: subCategory,
-          userId: userId);
+        category: category,
+        level: level,
+        subCategory: subCategory,
+      );
     } catch (e) {
       throw QuizException(errorMessageCode: e.toString());
     }
@@ -116,27 +100,21 @@ class QuizRepository {
 
   Future<List<Question>> getQuestions(
     QuizTypes? quizType, {
-    String? userId, //will be in use for dailyQuiz
-    String?
-        languageId, // will be in use for dailyQuiz and self-challenge (quizType)
-    String?
-        categoryId, //will be in use for quizZone and self-challenge (quizType)
-    String?
-        subcategoryId, //will be in use for quizZone and self-challenge (quizType)
-    String? numberOfQuestions, //will be in use forself-challenge (quizType),
-    String? level, ////will be in use for quizZone (quizType)
-    String? contestId, //will use to get contest id vise question
+    String? languageId,
+    String? categoryId,
+    String? subcategoryId,
+    String? numberOfQuestions,
+    String? level,
+    String? contestId,
     String? funAndLearnId,
   }) async {
     try {
-      List<Question> questions = [];
-      List? result;
+      final List<Map<String, dynamic>> result;
+
       if (quizType == QuizTypes.dailyQuiz) {
         result = await _quizRemoteDataSource.getQuestionsForDailyQuiz(
-            languageId: languageId, userId: userId);
-        questions = result!
-            .map((question) => Question.fromJson(Map.from(question)))
-            .toList();
+          languageId: languageId,
+        );
       } else if (quizType == QuizTypes.selfChallenge) {
         result = await _quizRemoteDataSource.getQuestionsForSelfChallenge(
           languageId: languageId!,
@@ -144,14 +122,11 @@ class QuizRepository {
           numberOfQuestions: numberOfQuestions!,
           subcategoryId: subcategoryId!,
         );
-        questions = result!
-            .map((question) => Question.fromJson(Map.from(question)))
-            .toList();
       } else if (quizType == QuizTypes.quizZone) {
         //if level is 0 means need to fetch questions by get_question api endpoint
-        if (level! == "0") {
-          String type = categoryId!.isNotEmpty ? "category" : "subcategory";
-          String id = type == "category" ? categoryId : subcategoryId!;
+        if (level! == '0') {
+          final type = categoryId!.isNotEmpty ? 'category' : 'subcategory';
+          final id = type == 'category' ? categoryId : subcategoryId!;
           result =
               await _quizRemoteDataSource.getQuestionByCategoryOrSubcategory(
             type: type,
@@ -159,50 +134,34 @@ class QuizRepository {
           );
         } else {
           result = await _quizRemoteDataSource.getQuestionsForQuizZone(
-              languageId: languageId!,
-              categoryId: categoryId!,
-              subcategoryId: subcategoryId!,
-              level: level);
+            languageId: languageId!,
+            categoryId: categoryId!,
+            subcategoryId: subcategoryId!,
+            level: level,
+          );
         }
-
-        questions = result!
-            .map((question) => Question.fromJson(Map.from(question)))
-            .toList();
       } else if (quizType == QuizTypes.trueAndFalse) {
         result = await _quizRemoteDataSource.getQuestionByType(languageId!);
-        questions = result!
-            .map((question) => Question.fromJson(Map.from(question)))
-            .toList();
       } else if (quizType == QuizTypes.contest) {
         result = await _quizRemoteDataSource.getQuestionContest(contestId!);
-        questions = result!
-            .map((question) => Question.fromJson(Map.from(question)))
-            .toList();
       } else if (quizType == QuizTypes.funAndLearn) {
-        result = await (_quizRemoteDataSource
-            .getComprehensionQuestion(funAndLearnId));
-        questions = result!
-            .map((question) => Question.fromJson(Map.from(question)))
-            .toList();
+        result =
+            await _quizRemoteDataSource.getComprehensionQuestion(funAndLearnId);
       } else if (quizType == QuizTypes.audioQuestions) {
-        String type = categoryId!.isNotEmpty ? "category" : "subcategory";
-        String id = type == "category" ? categoryId : subcategoryId!;
+        final type = categoryId!.isNotEmpty ? 'category' : 'subcategory';
+        final id = type == 'category' ? categoryId : subcategoryId!;
         result =
             await _quizRemoteDataSource.getAudioQuestions(type: type, id: id);
-        questions = result
-            .map((question) => Question.fromJson(Map.from(question)))
-            .toList();
       } else if (quizType == QuizTypes.mathMania) {
-        String type = categoryId!.isNotEmpty ? "category" : "subcategory";
-        String id = type == "category" ? categoryId : subcategoryId!;
+        final type = categoryId!.isNotEmpty ? 'category' : 'subcategory';
+        final id = type == 'category' ? categoryId : subcategoryId!;
         result =
             await _quizRemoteDataSource.getLatexQuestions(type: type, id: id);
-        questions = result
-            .map((question) => Question.fromJson(Map.from(question)))
-            .toList();
+      } else {
+        result = [];
       }
 
-      return questions;
+      return result.map(Question.fromJson).toList(growable: false);
     } catch (e) {
       throw QuizException(errorMessageCode: e.toString());
     }
@@ -219,94 +178,99 @@ class QuizRepository {
         type: type,
         typeId: typeId,
       );
-      return result
-          .map((question) => GuessTheWordQuestion.fromJson(Map.from(question)))
-          .toList();
+
+      return result.map(GuessTheWordQuestion.fromJson).toList();
     } catch (e) {
       throw QuizException(errorMessageCode: e.toString());
     }
   }
 
-  Future<Contests> getContest(String? userId) async {
+  Future<Contests> getContest({required String languageId}) async {
     try {
-      final result = await _quizRemoteDataSource.getContest(userId);
-      return Contests.fromJson(Map.from(result));
+      final result =
+          await _quizRemoteDataSource.getContest(languageId: languageId);
+      return Contests.fromJson(result);
     } catch (e) {
-      print(e.toString());
-      throw QuizException(errorMessageKey: e.toString(), errorMessageCode: '');
+      throw QuizException(errorMessageCode: e.toString());
     }
   }
 
-  Future<void> setContestLeaderboard(
-      {String? userId,
-      String? contestId,
-      int? questionAttended,
-      int? correctAns,
-      int? score}) async {
+  Future<void> setContestLeaderboard({
+    String? contestId,
+    int? questionAttended,
+    int? correctAns,
+    int? score,
+  }) async {
     try {
       await _quizRemoteDataSource.setContestLeaderboard(
-          userId: userId,
-          contestId: contestId,
-          questionAttended: questionAttended,
-          correctAns: correctAns,
-          score: score);
+        contestId: contestId,
+        questionAttended: questionAttended,
+        correctAns: correctAns,
+        score: score,
+      );
     } catch (e) {
       throw QuizException(errorMessageCode: e.toString());
     }
   }
 
-  Future getContestLeaderboard({String? userId, String? contestId}) async {
+  Future<List<ContestLeaderboard>> getContestLeaderboard({
+    String? contestId,
+  }) async {
     try {
-      List<ContestLeaderboard> contestLeaderboardList = [];
-      List result = await _quizRemoteDataSource.getContestLeaderboard(
-          contestId, userId /*as Future<List<dynamic>>*/);
-      contestLeaderboardList = result
-          .map((category) => ContestLeaderboard.fromJson(Map.from(category)))
-          .toList();
-      return contestLeaderboardList;
-      // await _quizRemoteDataSource.getContestLeaderboard(userId,contestId,);
+      final result =
+          await _quizRemoteDataSource.getContestLeaderboard(contestId);
+
+      return result.map(ContestLeaderboard.fromJson).toList();
     } catch (e) {
       throw QuizException(errorMessageCode: e.toString());
     }
   }
 
-  Future getComprehension({
+  Future<List<Comprehension>> getComprehension({
     required String languageId,
     required String type,
     required String typeId,
-    required String userId,
   }) async {
     try {
-      List<Comprehension> comprehensionList = [];
-      List result = await _quizRemoteDataSource.getComprehension(
-        userId: userId,
+      final result = await _quizRemoteDataSource.getComprehension(
         languageId: languageId,
         type: type,
         typeId: typeId,
-      ) /*as Future<dynamic>*/;
-      comprehensionList = result
-          .map((category) => Comprehension.fromJson(Map.from(category)))
-          .toList();
-      return comprehensionList;
-      // await _quizRemoteDataSource.getContestLeaderboard(userId,contestId,);
+      );
+
+      return result.map(Comprehension.fromJson).toList();
     } catch (e) {
       throw QuizException(errorMessageCode: e.toString());
     }
   }
 
-  Future<void> setQuizCategoryPlayed(
-      {required String type,
-      required String userId,
-      required String categoryId,
-      required String subcategoryId,
-      required String typeId}) async {
+  Future<void> setQuizCategoryPlayed({
+    required String type,
+    required String categoryId,
+    required String subcategoryId,
+    required String typeId,
+  }) async {
     try {
       await _quizRemoteDataSource.setQuizCategoryPlayed(
-          type: type,
-          userId: userId,
-          categoryId: categoryId,
-          subcategoryId: subcategoryId,
-          typeId: typeId);
+        type: type,
+        categoryId: categoryId,
+        subcategoryId: subcategoryId,
+        typeId: typeId,
+      );
+    } catch (e) {
+      throw QuizException(errorMessageCode: e.toString());
+    }
+  }
+
+  Future<void> unlockPremiumCategory({
+    required String categoryId,
+    String? subCategoryId,
+  }) async {
+    try {
+      await _quizRemoteDataSource.unlockPremiumCategory(
+        categoryId: categoryId,
+        subCategoryId: subCategoryId,
+      );
     } catch (e) {
       throw QuizException(errorMessageCode: e.toString());
     }

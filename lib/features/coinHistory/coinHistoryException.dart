@@ -1,7 +1,6 @@
 class CoinHistoryException implements Exception {
-  final String errorMessageCode;
-
   CoinHistoryException({required this.errorMessageCode});
+  final String errorMessageCode;
   @override
   String toString() => errorMessageCode;
 }

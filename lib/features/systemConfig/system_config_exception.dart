@@ -1,7 +1,6 @@
 class SystemConfigException implements Exception {
-  final String errorMessageCode;
-
   SystemConfigException({required this.errorMessageCode});
+  final String errorMessageCode;
 
   @override
   String toString() => errorMessageCode;

@@ -1,45 +1,44 @@
 import 'package:flutter/material.dart';
-import 'package:flutterquiz/app/app_localization.dart';
 import 'package:flutterquiz/utils/constants/fonts.dart';
-import 'package:flutterquiz/utils/ui_utils.dart';
+import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/validators.dart';
 
 class EmailTextField extends StatelessWidget {
-  const EmailTextField({super.key, required this.controller});
+  const EmailTextField({required this.controller, super.key});
 
   final TextEditingController controller;
 
   @override
   Widget build(BuildContext context) {
-    final textColor = Theme.of(context).colorScheme.onTertiary;
-    final hintText =
-        "${AppLocalization.of(context)!.getTranslatedValues('emailAddress')!}*";
+    final colorScheme = Theme.of(context).colorScheme;
+    final hintText = "${context.tr('emailAddress')!}*";
 
     return TextFormField(
+      cursorColor: colorScheme.onTertiary,
       controller: controller,
       keyboardType: TextInputType.emailAddress,
       validator: (val) => Validators.validateEmail(
         val!,
-        AppLocalization.of(context)!.getTranslatedValues('emailRequiredMsg')!,
-        AppLocalization.of(context)!.getTranslatedValues('VALID_EMAIL'),
+        context.tr('emailRequiredMsg'),
+        context.tr('enterValidEmailMsg'),
       ),
       style: TextStyle(
-        color: textColor.withOpacity(0.8),
+        color: colorScheme.onTertiary.withOpacity(0.8),
         fontSize: 16,
         fontWeight: FontWeights.regular,
       ),
       decoration: InputDecoration(
-        fillColor: Theme.of(context).colorScheme.background,
+        fillColor: colorScheme.background,
         filled: true,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Theme.of(context).colorScheme.onBackground, width: 0.4),
+          borderSide: BorderSide.none,
         ),
         prefixIcon: const Icon(Icons.mail_outline_rounded),
-        prefixIconColor: textColor.withOpacity(0.4),
+        prefixIconColor: colorScheme.onTertiary.withOpacity(0.4),
         hintText: hintText,
         hintStyle: TextStyle(
-          color: textColor.withOpacity(0.4),
+          color: colorScheme.onTertiary.withOpacity(0.4),
           fontSize: 16,
           fontWeight: FontWeights.regular,
         ),

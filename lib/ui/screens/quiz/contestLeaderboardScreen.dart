@@ -1,53 +1,49 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutterquiz/app/app_localization.dart';
-import 'package:flutterquiz/features/profileManagement/cubits/userDetailsCubit.dart';
 import 'package:flutterquiz/features/quiz/cubits/getContestLeaderboardCubit.dart';
 import 'package:flutterquiz/features/quiz/models/contestLeaderboard.dart';
 import 'package:flutterquiz/features/quiz/quizRemoteDataSource.dart';
 import 'package:flutterquiz/features/quiz/quizRepository.dart';
 import 'package:flutterquiz/ui/widgets/circularProgressContainer.dart';
 import 'package:flutterquiz/ui/widgets/customAppbar.dart';
+import 'package:flutterquiz/ui/widgets/custom_image.dart';
 import 'package:flutterquiz/ui/widgets/errorContainer.dart';
 import 'package:flutterquiz/utils/constants/fonts.dart';
+import 'package:flutterquiz/utils/constants/string_labels.dart';
+import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
 
-import '../../../utils/constants/string_labels.dart';
-
 class ContestLeaderBoardScreen extends StatefulWidget {
-  final String? contestId;
-
   const ContestLeaderBoardScreen({super.key, this.contestId});
+
+  final String? contestId;
 
   @override
   State<ContestLeaderBoardScreen> createState() => _ContestLeaderBoardScreen();
 
   static Route<dynamic> route(RouteSettings routeSettings) {
-    Map? arguments = routeSettings.arguments as Map?;
+    final arguments = routeSettings.arguments as Map?;
     return CupertinoPageRoute(
       builder: (_) => BlocProvider<GetContestLeaderboardCubit>(
         create: (_) => GetContestLeaderboardCubit(QuizRepository()),
-        child: ContestLeaderBoardScreen(contestId: arguments!['contestId']),
+        child: ContestLeaderBoardScreen(
+          contestId: arguments!['contestId'] as String?,
+        ),
       ),
     );
   }
 }
 
 class _ContestLeaderBoardScreen extends State<ContestLeaderBoardScreen> {
-  late final String _userId;
-
   @override
   void initState() {
     super.initState();
-    _userId = context.read<UserDetailsCubit>().getUserId();
     getContestLeaderBoard();
   }
 
   void getContestLeaderBoard() {
     context.read<GetContestLeaderboardCubit>().getContestLeaderboard(
-          userId: _userId,
           contestId: widget.contestId,
         );
   }
@@ -58,8 +54,7 @@ class _ContestLeaderBoardScreen extends State<ContestLeaderBoardScreen> {
       appBar: QAppBar(
         elevation: 0,
         title: Text(
-          AppLocalization.of(context)!
-              .getTranslatedValues("contestLeaderBoardLbl")!,
+          context.tr('contestLeaderBoardLbl')!,
         ),
       ),
       body: BlocBuilder<GetContestLeaderboardCubit, GetContestLeaderboardState>(
@@ -138,7 +133,7 @@ class _ContestLeaderBoardScreen extends State<ContestLeaderBoardScreen> {
                           dense: true,
                           contentPadding: const EdgeInsets.only(right: 20),
                           title: Text(
-                            list[index].name ?? "...",
+                            list[index].name ?? '...',
                             overflow: TextOverflow.ellipsis,
                             style: textStyle,
                           ),
@@ -150,11 +145,11 @@ class _ContestLeaderBoardScreen extends State<ContestLeaderBoardScreen> {
                                   .primaryColor
                                   .withOpacity(0.5),
                               shape: BoxShape.circle,
-                              image: DecorationImage(
-                                image: NetworkImage(list[index].profile ?? ""),
-                                onError: (_, s) => const SizedBox(),
-                                fit: BoxFit.cover,
-                              ),
+                            ),
+                            child: QImage.circular(
+                              imageUrl: list[index].profile ?? '',
+                              width: double.maxFinite,
+                              height: double.maxFinite,
                             ),
                           ),
                           trailing: SizedBox(
@@ -162,7 +157,7 @@ class _ContestLeaderBoardScreen extends State<ContestLeaderBoardScreen> {
                             child: Center(
                               child: Text(
                                 UiUtils.formatNumber(
-                                  int.parse(list[index].score ?? "0"),
+                                  int.parse(list[index].score ?? '0'),
                                 ),
                                 maxLines: 1,
                                 softWrap: false,
@@ -202,218 +197,221 @@ class _ContestLeaderBoardScreen extends State<ContestLeaderBoardScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               /// Rank Two
-              list.length > 1
-                  ? Column(
-                      children: [
-                        SizedBox(height: height * .07),
-                        SizedBox(
-                          height: width * .224,
-                          width: width * .21,
-                          child: Stack(
-                            children: [
-                              Align(
-                                alignment: Alignment.topCenter,
-                                child: Container(
-                                  height: width * .21,
-                                  width: width * .21,
-                                  padding: const EdgeInsets.all(3),
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: onTertiary.withOpacity(.3),
-                                    ),
-                                  ),
-                                  child: CircleAvatar(
-                                    backgroundImage: CachedNetworkImageProvider(
-                                      list[1].profile!,
-                                    ),
-                                  ),
+              if (list.length > 1)
+                Column(
+                  children: [
+                    SizedBox(height: height * .07),
+                    SizedBox(
+                      height: width * .224,
+                      width: width * .21,
+                      child: Stack(
+                        children: [
+                          Align(
+                            alignment: Alignment.topCenter,
+                            child: Container(
+                              height: width * .21,
+                              width: width * .21,
+                              padding: const EdgeInsets.all(3),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: onTertiary.withOpacity(.3),
                                 ),
                               ),
-                              Align(
-                                alignment: Alignment.bottomCenter,
-                                child: rankCircle('2'),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 9),
-                        SizedBox(
-                          width: width * .2,
-                          child: Center(
-                            child: Text(
-                              list[1].name ?? "...",
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 2,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeights.regular,
-                                color: onTertiary.withOpacity(.8),
+                              child: QImage.circular(
+                                imageUrl: list[1].profile!,
+                                width: double.maxFinite,
+                                height: double.maxFinite,
                               ),
                             ),
                           ),
-                        ),
-                        SizedBox(
-                          width: width * .15,
-                          child: Center(
-                            child: Text(
-                              list[1].score ?? "...",
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeights.bold,
-                                color: onTertiary,
-                              ),
-                            ),
+                          Align(
+                            alignment: Alignment.bottomCenter,
+                            child: rankCircle('2'),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 9),
+                    SizedBox(
+                      width: width * .2,
+                      child: Center(
+                        child: Text(
+                          list[1].name ?? '...',
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 2,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeights.regular,
+                            color: onTertiary.withOpacity(.8),
                           ),
                         ),
-                      ],
-                    )
-                  : SizedBox(height: height * .1, width: width * .2),
+                      ),
+                    ),
+                    SizedBox(
+                      width: width * .15,
+                      child: Center(
+                        child: Text(
+                          list[1].score ?? '...',
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeights.bold,
+                            color: onTertiary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              else
+                SizedBox(height: height * .1, width: width * .2),
 
               /// Rank One
-              list.isNotEmpty
-                  ? Column(
-                      children: [
-                        SizedBox(
-                          height: width * .30,
-                          width: width * .28,
-                          child: Stack(
-                            children: [
-                              Align(
-                                alignment: Alignment.topCenter,
-                                child: Container(
-                                  height: width * .28,
-                                  width: width * .28,
-                                  padding: const EdgeInsets.all(3),
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.grey),
-                                  ),
-                                  child: CircleAvatar(
-                                    backgroundImage: CachedNetworkImageProvider(
-                                      list[0].profile!,
-                                    ),
-                                  ),
-                                ),
+              if (list.isNotEmpty)
+                Column(
+                  children: [
+                    SizedBox(
+                      height: width * .30,
+                      width: width * .28,
+                      child: Stack(
+                        children: [
+                          Align(
+                            alignment: Alignment.topCenter,
+                            child: Container(
+                              height: width * .28,
+                              width: width * .28,
+                              padding: const EdgeInsets.all(3),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.grey),
                               ),
-                              Align(
-                                alignment: Alignment.bottomCenter,
-                                child: rankCircle('1', size: 32),
-                              ),
-                            ],
-                          ),
-                        ),
-                        SizedBox(
-                          width: width * .2,
-                          child: Center(
-                            child: Text(
-                              list[0].name ?? "...",
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 2,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeights.regular,
-                                color: onTertiary.withOpacity(.8),
+                              child: QImage.circular(
+                                imageUrl: list[0].profile!,
+                                width: double.maxFinite,
+                                height: double.maxFinite,
                               ),
                             ),
                           ),
-                        ),
-                        SizedBox(
-                          width: width * .15,
-                          child: Center(
-                            child: Text(
-                              list[0].score ?? "...",
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeights.bold,
-                                color: onTertiary,
-                              ),
-                            ),
+                          Align(
+                            alignment: Alignment.bottomCenter,
+                            child: rankCircle('1', size: 32),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(
+                      width: width * .2,
+                      child: Center(
+                        child: Text(
+                          list[0].name ?? '...',
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 2,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeights.regular,
+                            color: onTertiary.withOpacity(.8),
                           ),
                         ),
-                      ],
-                    )
-                  : SizedBox(height: height * .1, width: width * .2),
+                      ),
+                    ),
+                    SizedBox(
+                      width: width * .15,
+                      child: Center(
+                        child: Text(
+                          list[0].score ?? '...',
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeights.bold,
+                            color: onTertiary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              else
+                SizedBox(height: height * .1, width: width * .2),
 
               /// Rank Three
-              list.length > 2
-                  ? Column(
-                      children: [
-                        SizedBox(height: height * .07),
-                        SizedBox(
-                          height: width * .224,
-                          width: width * .21,
-                          child: Stack(
-                            children: [
-                              Align(
-                                alignment: Alignment.topCenter,
-                                child: Container(
-                                  height: width * .21,
-                                  width: width * .21,
-                                  padding: const EdgeInsets.all(3),
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: onTertiary.withOpacity(.3),
-                                    ),
-                                  ),
-                                  child: CircleAvatar(
-                                    backgroundImage: CachedNetworkImageProvider(
-                                      list[2].profile!,
-                                    ),
-                                  ),
+              if (list.length > 2)
+                Column(
+                  children: [
+                    SizedBox(height: height * .07),
+                    SizedBox(
+                      height: width * .224,
+                      width: width * .21,
+                      child: Stack(
+                        children: [
+                          Align(
+                            alignment: Alignment.topCenter,
+                            child: Container(
+                              height: width * .21,
+                              width: width * .21,
+                              padding: const EdgeInsets.all(3),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: onTertiary.withOpacity(.3),
                                 ),
                               ),
-                              Align(
-                                alignment: Alignment.bottomCenter,
-                                child: rankCircle('3'),
-                              ),
-                            ],
-                          ),
-                        ),
-                        SizedBox(
-                          width: width * .2,
-                          child: Center(
-                            child: Text(
-                              list[2].name ?? "...",
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 2,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeights.regular,
-                                color: onTertiary.withOpacity(.8),
+                              child: QImage.circular(
+                                imageUrl: list[2].profile!,
+                                width: double.maxFinite,
+                                height: double.maxFinite,
                               ),
                             ),
                           ),
-                        ),
-                        SizedBox(
-                          width: width * .15,
-                          child: Center(
-                            child: Text(
-                              list[2].score ?? "...",
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeights.bold,
-                                color: onTertiary,
-                              ),
-                            ),
+                          Align(
+                            alignment: Alignment.bottomCenter,
+                            child: rankCircle('3'),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(
+                      width: width * .2,
+                      child: Center(
+                        child: Text(
+                          list[2].name ?? '...',
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 2,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeights.regular,
+                            color: onTertiary.withOpacity(.8),
                           ),
                         ),
-                      ],
-                    )
-                  : SizedBox(height: height * .1, width: width * .2),
+                      ),
+                    ),
+                    SizedBox(
+                      width: width * .15,
+                      child: Center(
+                        child: Text(
+                          list[2].score ?? '...',
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeights.bold,
+                            color: onTertiary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              else
+                SizedBox(height: height * .1, width: width * .2),
             ],
           );
         },
@@ -422,7 +420,7 @@ class _ContestLeaderBoardScreen extends State<ContestLeaderBoardScreen> {
   }
 
   Widget rankCircle(String text, {double size = 25}) {
-    var colorScheme = Theme.of(context).colorScheme;
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       width: size,
       height: size,
@@ -432,7 +430,7 @@ class _ContestLeaderBoardScreen extends State<ContestLeaderBoardScreen> {
       ),
       padding: const EdgeInsets.all(2),
       child: CircleAvatar(
-        backgroundColor: colorScheme.secondary,
+        backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: colorScheme.background,
         child: Text(text),
       ),
@@ -458,18 +456,18 @@ class _ContestLeaderBoardScreen extends State<ContestLeaderBoardScreen> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  width: 1.0,
                   color: colorScheme.background,
                 ),
-                image: DecorationImage(
-                  fit: BoxFit.cover,
-                  image: NetworkImage(profile),
-                ),
+              ),
+              child: QImage.circular(
+                imageUrl: profile,
+                width: double.maxFinite,
+                height: double.maxFinite,
               ),
             ),
             const SizedBox(width: 10),
             Text(
-              AppLocalization.of(context)!.getTranslatedValues(myRankKey)!,
+              context.tr(myRankKey)!,
               overflow: TextOverflow.ellipsis,
               style: textStyle,
             ),

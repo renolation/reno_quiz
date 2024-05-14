@@ -4,22 +4,15 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:flutterquiz/app/app_localization.dart';
 import 'package:flutterquiz/app/routes.dart';
 import 'package:flutterquiz/features/auth/authRepository.dart';
 import 'package:flutterquiz/features/auth/cubits/authCubit.dart';
 import 'package:flutterquiz/features/auth/cubits/signInCubit.dart';
 import 'package:flutterquiz/features/profileManagement/cubits/userDetailsCubit.dart';
-import 'package:flutterquiz/ui/screens/auth/widgets/resend_otp_timer_container.dart';
-import 'package:flutterquiz/ui/screens/auth/widgets/terms_and_condition.dart';
-import 'package:flutterquiz/ui/widgets/circularProgressContainer.dart';
-import 'package:flutterquiz/ui/widgets/customBackButton.dart';
-import 'package:flutterquiz/ui/widgets/customRoundedButton.dart';
+import 'package:flutterquiz/ui/screens/auth/widgets/all.dart';
+import 'package:flutterquiz/ui/widgets/all.dart';
 import 'package:flutterquiz/utils/constants/constants.dart';
-import 'package:flutterquiz/utils/constants/error_message_keys.dart';
-import 'package:flutterquiz/utils/constants/fonts.dart';
-import 'package:flutterquiz/utils/constants/string_labels.dart';
+import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
@@ -52,43 +45,43 @@ class _OtpScreen extends State<OtpScreen> {
 
   bool codeSent = false;
   bool hasError = false;
-  String errorMessage = "";
+  String errorMessage = '';
   bool isLoading = false;
-  String userVerificationId = "";
+  String userVerificationId = '';
 
   bool enableResendOtpButton = false;
 
-  void signInWithPhoneNumber({required String phoneNumber}) async {
+  Future<void> signInWithPhoneNumber({required String phoneNumber}) async {
     await FirebaseAuth.instance.verifyPhoneNumber(
       timeout: const Duration(seconds: otpTimeOutSeconds),
       phoneNumber: '${selectedCountryCode!.dialCode} $phoneNumber',
-      verificationCompleted: (PhoneAuthCredential credential) {
-        print("Phone number verified");
-      },
+      verificationCompleted: (PhoneAuthCredential credential) {},
       verificationFailed: (FirebaseAuthException e) {
         //if otp code does not verify
-        print("Firebase Auth error------------");
-        print(e.message);
-        print("---------------------");
-        UiUtils.setSnackbar(
-            AppLocalization.of(context)!.getTranslatedValues(
-                convertErrorCodeToLanguageKey(defaultErrorMessageCode))!,
-            context,
-            false);
+
+        UiUtils.showSnackBar(
+          context.tr(
+            convertErrorCodeToLanguageKey(
+              e.code == 'invalid-phone-number'
+                  ? errorCodeInvalidPhoneNumber
+                  : errorCodeDefaultMessage,
+            ),
+          )!,
+          context,
+        );
 
         setState(() {
           isLoading = false;
         });
       },
       codeSent: (String verificationId, int? resendToken) {
-        print("Code sent successfully");
         setState(() {
           codeSent = true;
           userVerificationId = verificationId;
           isLoading = false;
         });
 
-        Future.delayed(const Duration(milliseconds: 75)).then((value) {
+        Future<void>.delayed(const Duration(milliseconds: 75)).then((value) {
           resendOtpTimerContainerKey.currentState?.setResendOtpTimer();
         });
       },
@@ -101,11 +94,11 @@ class _OtpScreen extends State<OtpScreen> {
       return Column(
         children: [
           Text(
-            AppLocalization.of(context)!.getTranslatedValues(otpSendLbl)!,
+            context.tr(otpSendLbl)!,
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Theme.of(context).colorScheme.onTertiary.withOpacity(0.6),
-              fontSize: 16.0,
+              fontSize: 16,
             ),
           ),
           Text(
@@ -113,7 +106,7 @@ class _OtpScreen extends State<OtpScreen> {
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Theme.of(context).colorScheme.onTertiary,
-              fontSize: 16.0,
+              fontSize: 16,
             ),
           ),
         ],
@@ -127,18 +120,9 @@ class _OtpScreen extends State<OtpScreen> {
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
 
-    return WillPopScope(
-      onWillPop: () {
-        if (isLoading) {
-          print("Is loading is true");
-          return Future.value(false);
-        }
-        if (context.read<SignInCubit>().state is SignInProgress) {
-          return Future.value(false);
-        }
-
-        return Future.value(true);
-      },
+    return PopScope(
+      canPop:
+          context.read<SignInCubit>().state is! SignInProgress && !isLoading,
       child: Scaffold(
         body: Stack(
           children: [
@@ -153,20 +137,22 @@ class _OtpScreen extends State<OtpScreen> {
                   SizedBox(height: size.height * .07),
                   _backButton(),
                   SizedBox(height: size.height * 0.02),
-                  !codeSent ? _topImage() : const SizedBox(),
+                  if (!codeSent) const AppLogo() else const SizedBox(),
                   SizedBox(height: size.height * 0.03),
                   _registerText(),
                   SizedBox(height: size.height * 0.03),
                   _buildOTPSentToPhoneNumber(),
                   SizedBox(height: size.height * 0.04),
-                  codeSent
-                      ? _buildSmsCodeContainer()
-                      : _buildMobileNumberWithCountryCode(),
+                  if (codeSent)
+                    _buildSmsCodeContainer()
+                  else
+                    _buildMobileNumberWithCountryCode(),
                   SizedBox(height: size.height * 0.04),
-                  codeSent
-                      ? _buildSubmitOtpContainer()
-                      : _buildRequestOtpContainer(),
-                  codeSent ? _buildResendText() : const SizedBox(),
+                  if (codeSent)
+                    _buildSubmitOtpContainer()
+                  else
+                    _buildRequestOtpContainer(),
+                  if (codeSent) _buildResendText() else const SizedBox(),
                   SizedBox(height: size.height * 0.04),
                   const TermsAndCondition(),
                 ],
@@ -193,23 +179,12 @@ class _OtpScreen extends State<OtpScreen> {
     );
   }
 
-  SizedBox _topImage() {
-    return SizedBox(
-      height: 66,
-      width: 168,
-      child: SvgPicture.asset(
-        UiUtils.getImagePath("splash_logo.svg"),
-        // color: Theme.of(context).primaryColor,
-      ),
-    );
-  }
-
   Widget _registerText() {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          AppLocalization.of(context)!.getTranslatedValues("registration")!,
+          context.tr('registration')!,
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeights.bold,
@@ -221,7 +196,7 @@ class _OtpScreen extends State<OtpScreen> {
           SizedBox(
             width: MediaQuery.of(context).size.width * .7,
             child: Text(
-              AppLocalization.of(context)!.getTranslatedValues("regSubtitle")!,
+              context.tr('regSubtitle')!,
               maxLines: 2,
               textAlign: TextAlign.center,
               style: TextStyle(
@@ -241,14 +216,12 @@ class _OtpScreen extends State<OtpScreen> {
     return Row(
       children: [
         Expanded(
-          flex: 1,
           child: QBackButton(color: Theme.of(context).primaryColor),
         ),
         Expanded(
           flex: 10,
           child: Text(
-            AppLocalization.of(context)!
-                .getTranslatedValues('otpVerificationLbl')!,
+            context.tr('otpVerificationLbl')!,
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Theme.of(context).primaryColor,
@@ -263,7 +236,7 @@ class _OtpScreen extends State<OtpScreen> {
 
   Widget otpLabel() {
     return Text(
-      AppLocalization.of(context)!.getTranslatedValues('otpVerificationLbl')!,
+      context.tr('otpVerificationLbl')!,
       textAlign: TextAlign.center,
       style: TextStyle(
         color: Theme.of(context).primaryColor,
@@ -297,16 +270,15 @@ class _OtpScreen extends State<OtpScreen> {
                 color: Theme.of(context).colorScheme.onTertiary.withOpacity(.6),
                 fontSize: 16,
               ),
-              initialSelection: initialCountryCode,
-              showCountryOnly: false,
-              alignLeft: false,
+              initialSelection: defaultCountryCodeForPhoneLogin,
             ),
           ),
           Flexible(
             child: TextField(
+              enabled: !isLoading,
               controller: phoneNumberController,
               keyboardType: TextInputType.phone,
-              cursorColor: Theme.of(context).primaryColor,
+              cursorColor: Theme.of(context).colorScheme.onTertiary,
               inputFormatters: [
                 LengthLimitingTextInputFormatter(maxPhoneNumberLength),
                 FilteringTextInputFormatter.digitsOnly,
@@ -323,7 +295,7 @@ class _OtpScreen extends State<OtpScreen> {
                       Theme.of(context).colorScheme.onTertiary.withOpacity(0.6),
                   fontSize: 16,
                 ),
-                hintText: " 000 000 0000",
+                hintText: context.tr('phoneInputHintText'),
               ),
             ),
           ),
@@ -340,16 +312,15 @@ class _OtpScreen extends State<OtpScreen> {
       keyboardType: TextInputType.number,
       appContext: context,
       length: 6,
-      obscureText: false,
       hintCharacter: '0',
       hintStyle: TextStyle(color: colorScheme.onTertiary.withOpacity(.3)),
       textStyle: TextStyle(color: colorScheme.onTertiary),
       pinTheme: PinTheme(
-        selectedFillColor: colorScheme.secondary,
+        selectedFillColor: Theme.of(context).primaryColor,
         inactiveColor: colorScheme.background,
         activeColor: colorScheme.background,
         inactiveFillColor: colorScheme.background,
-        selectedColor: colorScheme.secondary.withOpacity(0.5),
+        selectedColor: Theme.of(context).primaryColor.withOpacity(0.5),
         shape: PinCodeFieldShape.box,
         borderRadius: BorderRadius.circular(5),
         fieldHeight: 45,
@@ -368,10 +339,7 @@ class _OtpScreen extends State<OtpScreen> {
       bloc: context.read<SignInCubit>(),
       builder: (context, state) {
         if (state is SignInProgress) {
-          return const CircularProgressContainer(
-            whiteLoader: false,
-            size: 50.0,
-          );
+          return const CircularProgressContainer(size: 50);
         }
 
         return Container(
@@ -382,8 +350,7 @@ class _OtpScreen extends State<OtpScreen> {
           child: CustomRoundedButton(
             widthPercentage: 1,
             backgroundColor: Theme.of(context).primaryColor,
-            buttonTitle:
-                AppLocalization.of(context)!.getTranslatedValues(submitBtn)!,
+            buttonTitle: context.tr(submitBtn),
             textSize: 20,
             fontWeight: FontWeights.bold,
             radius: 8,
@@ -392,66 +359,45 @@ class _OtpScreen extends State<OtpScreen> {
             onTap: () async {
               if (smsCodeController.text.trim().length == 6) {
                 context.read<SignInCubit>().signInUser(
-                      AuthProvider.mobile,
+                      AuthProviders.mobile,
                       smsCode: smsCodeController.text.trim(),
                       verificationId: userVerificationId,
                     );
               }
             },
           ),
-          // child: CupertinoButton(
-          //   borderRadius: BorderRadius.circular(8),
-          //   color: Theme.of(context).primaryColor,
-          //   onPressed: () async {
-          //     if (smsCodeController.text.trim().length == 6) {
-          //       context.read<SignInCubit>().signInUser(
-          //             AuthProvider.mobile,
-          //             smsCode: smsCodeController.text.trim(),
-          //             verificationId: userVerificationId,
-          //           );
-          //     }
-          //   },
-          //   child: Text(
-          //     AppLocalization.of(context)!.getTranslatedValues(submitBtn)!,
-          //     style: GoogleFonts.nunito(
-          //       textStyle: TextStyle(
-          //         color: Theme.of(context).colorScheme.background,
-          //         fontSize: 20,
-          //         fontWeight: FontWeight.bold,
-          //       ),
-          //     ),
-          //   ),
-          // ),
         );
       },
       listener: (context, state) {
         if (state is SignInSuccess) {
           //update auth details
           context.read<AuthCubit>().updateAuthDetails(
-                authProvider: AuthProvider.mobile,
+                authProvider: AuthProviders.mobile,
                 authStatus: true,
                 firebaseId: state.user.uid,
                 isNewUser: state.isNewUser,
               );
 
           if (state.isNewUser) {
-            context.read<UserDetailsCubit>().fetchUserDetails(state.user.uid);
+            context.read<UserDetailsCubit>().fetchUserDetails();
             Navigator.of(context).pop();
             Navigator.of(context)
                 .pushReplacementNamed(Routes.selectProfile, arguments: true);
           } else {
-            context.read<UserDetailsCubit>().fetchUserDetails(state.user.uid);
+            context.read<UserDetailsCubit>().fetchUserDetails();
             Navigator.of(context).pop();
-            Navigator.of(context)
-                .pushReplacementNamed(Routes.home, arguments: false);
+            Navigator.of(context).pushNamedAndRemoveUntil(
+              Routes.home,
+              (_) => false,
+              arguments: false,
+            );
           }
         } else if (state is SignInFailure) {
-          UiUtils.setSnackbar(
-            AppLocalization.of(context)!.getTranslatedValues(
+          UiUtils.showSnackBar(
+            context.tr(
               convertErrorCodeToLanguageKey(state.errorMessage),
             )!,
             context,
-            false,
           );
         }
       },
@@ -460,10 +406,7 @@ class _OtpScreen extends State<OtpScreen> {
 
   Widget _buildRequestOtpContainer() {
     if (isLoading) {
-      return const CircularProgressContainer(
-        whiteLoader: false,
-        size: 50.0,
-      );
+      return const CircularProgressContainer(size: 50);
     }
 
     return SizedBox(
@@ -472,22 +415,13 @@ class _OtpScreen extends State<OtpScreen> {
         borderRadius: BorderRadius.circular(8),
         color: Theme.of(context).primaryColor,
         onPressed: () async {
-          if (phoneNumberController.text.trim().length < 6) {
-            UiUtils.setSnackbar(
-              AppLocalization.of(context)!.getTranslatedValues(validMobMsg)!,
-              context,
-              false,
-            );
-          } else {
-            setState(() {
-              isLoading = true;
-            });
-            signInWithPhoneNumber(
-                phoneNumber: phoneNumberController.text.trim());
-          }
+          setState(() => isLoading = true);
+          await signInWithPhoneNumber(
+            phoneNumber: phoneNumberController.text.trim(),
+          );
         },
         child: Text(
-          AppLocalization.of(context)!.getTranslatedValues("requestOtpLbl")!,
+          context.tr('requestOtpLbl')!,
           maxLines: 1,
           style: GoogleFonts.nunito(
             textStyle: TextStyle(
@@ -506,28 +440,29 @@ class _OtpScreen extends State<OtpScreen> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         ResendOtpTimerContainer(
-            key: resendOtpTimerContainerKey,
-            enableResendOtpButton: () {
-              setState(() {
-                enableResendOtpButton = true;
-              });
-            }),
+          key: resendOtpTimerContainerKey,
+          enableResendOtpButton: () {
+            setState(() {
+              enableResendOtpButton = true;
+            });
+          },
+        ),
         TextButton(
           onPressed: enableResendOtpButton
               ? () async {
-                  print("Resend otp ");
                   setState(() {
                     isLoading = false;
                     enableResendOtpButton = false;
+                    smsCodeController.text = '';
                   });
                   resendOtpTimerContainerKey.currentState?.cancelOtpTimer();
-                  signInWithPhoneNumber(
+                  await signInWithPhoneNumber(
                     phoneNumber: phoneNumberController.text.trim(),
                   );
                 }
               : null,
           child: Text(
-            AppLocalization.of(context)!.getTranslatedValues("resendBtn")!,
+            context.tr('resendBtn')!,
             style: TextStyle(
               fontSize: 12,
               color: Theme.of(context).primaryColor,

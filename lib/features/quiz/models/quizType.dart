@@ -5,7 +5,7 @@ enum QuizTypes {
   contest,
   groupPlay,
   practiceSection,
-  battle,
+  oneVsOneBattle,
   funAndLearn,
   trueAndFalse,
   selfChallenge,
@@ -15,27 +15,27 @@ enum QuizTypes {
   mathMania,
   audioQuestions,
   exam,
-  tournament,
+  randomBattle,
 }
 
 QuizTypes getQuizTypeEnumFromTitle(String? title) {
-  if (title == "contest") {
+  if (title == 'contest') {
     return QuizTypes.contest;
-  } else if (title == "dailyQuiz") {
+  } else if (title == 'dailyQuiz') {
     return QuizTypes.dailyQuiz;
-  } else if (title == "groupPlay") {
+  } else if (title == 'groupPlay') {
     return QuizTypes.groupPlay;
-  } else if (title == "battleQuiz") {
-    return QuizTypes.battle;
-  } else if (title == "funAndLearn") {
+  } else if (title == 'battleQuiz') {
+    return QuizTypes.oneVsOneBattle;
+  } else if (title == 'funAndLearn') {
     return QuizTypes.funAndLearn;
-  } else if (title == "guessTheWord") {
+  } else if (title == 'guessTheWord') {
     return QuizTypes.guessTheWord;
-  } else if (title == "trueAndFalse") {
+  } else if (title == 'trueAndFalse') {
     return QuizTypes.trueAndFalse;
-  } else if (title == "selfChallenge") {
+  } else if (title == 'selfChallenge') {
     return QuizTypes.selfChallenge;
-  } else if (title == "quizZone") {
+  } else if (title == 'quizZone') {
     return QuizTypes.quizZone;
   } else if (title == mathManiaKey) {
     return QuizTypes.mathMania;
@@ -43,36 +43,7 @@ QuizTypes getQuizTypeEnumFromTitle(String? title) {
     return QuizTypes.audioQuestions;
   } else if (title == examKey) {
     return QuizTypes.exam;
-  } else if (title == tournamentKey) {
-    return QuizTypes.tournament;
   }
 
   return QuizTypes.practiceSection;
-}
-
-class QuizType {
-  late final String title, image;
-  late bool active;
-  late QuizTypes quizTypeEnum;
-  late String description;
-
-  QuizType({
-    required this.title,
-    required this.image,
-    required this.active,
-    required this.description,
-  }) {
-    image = "assets/images/$image";
-    quizTypeEnum = getQuizTypeEnumFromTitle(title);
-  }
-
-/*
-  static QuizType fromJson(Map<String, dynamic> parsedJson) {
-    return new QuizType(
-      title: parsedJson["TITLE"],
-      image: parsedJson["IMAGE"],
-      active: true,
-    );
-  }
-  */
 }

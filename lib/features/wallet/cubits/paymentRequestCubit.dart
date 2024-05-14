@@ -10,18 +10,16 @@ class PaymentRequestInProgress extends PaymentRequestState {}
 class PaymentRequestSuccess extends PaymentRequestState {}
 
 class PaymentRequestFailure extends PaymentRequestState {
-  final String errorMessage;
-
   PaymentRequestFailure(this.errorMessage);
+
+  final String errorMessage;
 }
 
 class PaymentRequestCubit extends Cubit<PaymentRequestState> {
+  PaymentRequestCubit(this._walletRepository) : super(PaymentRequestInitial());
   final WalletRepository _walletRepository;
 
-  PaymentRequestCubit(this._walletRepository) : super(PaymentRequestInitial());
-
-  void makePaymentRequest({
-    required String userId,
+  Future<void> makePaymentRequest({
     required String paymentType,
     required String paymentAddress,
     required String paymentAmount,
@@ -31,12 +29,12 @@ class PaymentRequestCubit extends Cubit<PaymentRequestState> {
     try {
       emit(PaymentRequestInProgress());
       await _walletRepository.makePaymentRequest(
-          userId: userId,
-          paymentType: paymentType,
-          paymentAddress: paymentAddress,
-          paymentAmount: paymentAmount,
-          coinUsed: coinUsed,
-          details: details);
+        paymentType: paymentType,
+        paymentAddress: paymentAddress,
+        paymentAmount: paymentAmount,
+        coinUsed: coinUsed,
+        details: details,
+      );
       emit(PaymentRequestSuccess());
       //
     } catch (e) {
@@ -44,4 +42,6 @@ class PaymentRequestCubit extends Cubit<PaymentRequestState> {
       emit(PaymentRequestFailure(e.toString()));
     }
   }
+
+  void reset() => emit(PaymentRequestInitial());
 }

@@ -1,17 +1,17 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_svg/svg.dart';
-import 'package:flutterquiz/app/app_localization.dart';
 import 'package:flutterquiz/features/auth/authRepository.dart';
 import 'package:flutterquiz/features/auth/cubits/authCubit.dart';
 import 'package:flutterquiz/features/auth/cubits/signUpCubit.dart';
+import 'package:flutterquiz/ui/screens/auth/widgets/app_logo.dart';
 import 'package:flutterquiz/ui/screens/auth/widgets/email_textfield.dart';
 import 'package:flutterquiz/ui/screens/auth/widgets/pswd_textfield.dart';
 import 'package:flutterquiz/ui/screens/auth/widgets/terms_and_condition.dart';
 import 'package:flutterquiz/ui/widgets/circularProgressContainer.dart';
 import 'package:flutterquiz/utils/constants/error_message_keys.dart';
 import 'package:flutterquiz/utils/constants/fonts.dart';
+import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -29,7 +29,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final emailController = TextEditingController();
   final pswdController = TextEditingController();
   final confirmPswdController = TextEditingController();
-  String userEmail = "";
+  String userEmail = '';
 
   @override
   Widget build(BuildContext context) {
@@ -70,7 +70,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               ],
             ),
             SizedBox(height: size.height * .02),
-            showTopImage(),
+            const AppLogo(),
             SizedBox(height: size.height * .08),
             EmailTextField(controller: emailController),
             SizedBox(height: size.height * .02),
@@ -78,19 +78,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
             SizedBox(height: size.height * .02),
             PswdTextField(
               controller: confirmPswdController,
-              hintText:
-                  "${AppLocalization.of(context)!.getTranslatedValues("cnPwdLbl")!}*",
+              hintText: "${context.tr("cnPwdLbl")!}*",
               validator: (val) {
-                if (val!.isEmpty) {
-                  return AppLocalization.of(context)!
-                      .getTranslatedValues('confirmPasswordRequired')!;
-                } else if (val.length < 6) {
-                  return AppLocalization.of(context)!
-                      .getTranslatedValues('pwdLengthMsg')!;
-                }
                 if (val != pswdController.text) {
-                  return AppLocalization.of(context)!
-                      .getTranslatedValues("cnPwdNotMatchMsg")!;
+                  return context.tr('cnPwdNotMatchMsg');
                 }
                 return null;
               },
@@ -107,25 +98,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 
-  Widget showTopImage() {
-    return SizedBox(
-      height: 66,
-      width: 168,
-      child: SvgPicture.asset(
-        UiUtils.getImagePath("splash_logo.svg"),
-        // color: Theme.of(context).primaryColor,
-      ),
-    );
-  }
-
   Widget showGoSignIn() {
     return Row(
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
-          AppLocalization.of(context)!
-              .getTranslatedValues('alreadyAccountLbl')!,
+          context.tr('alreadyAccountLbl')!,
           style: TextStyle(
             fontSize: 14,
             color: Theme.of(context).colorScheme.onTertiary.withOpacity(0.4),
@@ -135,11 +114,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
         InkWell(
           onTap: Navigator.of(context).pop,
           child: Text(
-            AppLocalization.of(context)!.getTranslatedValues('loginLbl')!,
+            context.tr('loginLbl')!,
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeights.regular,
               decoration: TextDecoration.underline,
+              decorationColor: Theme.of(context).primaryColor,
               color: Theme.of(context).primaryColor,
             ),
           ),
@@ -158,20 +138,21 @@ class _SignUpScreenState extends State<SignUpScreen> {
             listener: (context, state) async {
               if (state is SignUpSuccess) {
                 //on signup success navigate user to sign in screen
-                UiUtils.setSnackbar(
-                    "${AppLocalization.of(context)!.getTranslatedValues('emailVerify')} ${userEmail}",
-                    context,
-                    false);
+                UiUtils.showSnackBar(
+                  "${context.tr('emailVerify')} $userEmail",
+                  context,
+                );
                 setState(() {
                   Navigator.pop(context);
                 });
               } else if (state is SignUpFailure) {
                 //show error message
-                UiUtils.setSnackbar(
-                    AppLocalization.of(context)!.getTranslatedValues(
-                        convertErrorCodeToLanguageKey(state.errorMessage))!,
-                    context,
-                    false);
+                UiUtils.showSnackBar(
+                  context.tr(
+                    convertErrorCodeToLanguageKey(state.errorMessage),
+                  )!,
+                  context,
+                );
               }
             },
             builder: (context, state) {
@@ -182,7 +163,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   if (_formKey.currentState!.validate()) {
                     //calling signup user
                     context.read<SignUpCubit>().signUpUser(
-                          AuthProvider.email,
+                          AuthProviders.email,
                           emailController.text.trim(),
                           pswdController.text.trim(),
                         );
@@ -195,8 +176,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         child: CircularProgressContainer(whiteLoader: true),
                       )
                     : Text(
-                        AppLocalization.of(context)!
-                            .getTranslatedValues('signUpLbl')!,
+                        context.tr('signUpLbl')!,
                         style: GoogleFonts.nunito(
                           textStyle: TextStyle(
                             color: Theme.of(context).colorScheme.background,
@@ -212,12 +192,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 
-  resetForm() {
+  void resetForm() {
     setState(() {
       isLoading = false;
-      emailController.text = "";
-      pswdController.text = "";
-      confirmPswdController.text = "";
+      emailController.text = '';
+      pswdController.text = '';
+      confirmPswdController.text = '';
       _formKey.currentState!.reset();
     });
   }

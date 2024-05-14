@@ -12,28 +12,30 @@ class UpdateLevelInProgress extends UpdateLevelState {}
 class UpdateLevelSuccess extends UpdateLevelState {}
 
 class UpdateLevelFailure extends UpdateLevelState {
-  final String errorMessage;
   UpdateLevelFailure(this.errorMessage);
+
+  final String errorMessage;
 }
 
 class UpdateLevelCubit extends Cubit<UpdateLevelState> {
-  final QuizRepository _quizRepository;
   UpdateLevelCubit(this._quizRepository) : super(UpdateLevelInitial());
+  final QuizRepository _quizRepository;
 
-  //to update level
-  void updateLevel(String? userId, String? category, String? subCategory,
-      String level) async {
+  Future<void> updateLevel(
+    String category,
+    String subCategory,
+    String level,
+  ) async {
     emit(UpdateLevelInProgress());
     try {
-      _quizRepository.updateLevel(
-          category: category,
-          level: level,
-          subCategory: subCategory,
-          userId: userId);
+      await _quizRepository.updateLevel(
+        category: category,
+        level: level,
+        subCategory: subCategory,
+      );
 
-      emit((UpdateLevelSuccess()));
+      emit(UpdateLevelSuccess());
     } catch (e) {
-      print("update level error  ${e.toString()}");
       emit(UpdateLevelFailure(e.toString()));
     }
   }

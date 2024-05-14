@@ -1,13 +1,8 @@
 import 'package:flutterquiz/features/badges/badge.dart';
-import 'package:flutterquiz/features/badges/badgesExecption.dart';
+import 'package:flutterquiz/features/badges/badgesException.dart';
 import 'package:flutterquiz/features/badges/badgesRemoteDataSource.dart';
-import 'package:flutterquiz/utils/constants/constants.dart';
 
 class BadgesRepository {
-  static final BadgesRepository _badgesRepository =
-      BadgesRepository._internal();
-  late BadgesRemoteDataSource _badgesRemoteDataSource;
-
   factory BadgesRepository() {
     _badgesRepository._badgesRemoteDataSource = BadgesRemoteDataSource();
     return _badgesRepository;
@@ -15,32 +10,31 @@ class BadgesRepository {
 
   BadgesRepository._internal();
 
-  Future<List<Badges>> getBadges({required String userId}) async {
+  static final _badgesRepository = BadgesRepository._internal();
+  late BadgesRemoteDataSource _badgesRemoteDataSource;
+
+  Future<List<Badges>> getBadges({required String languageId}) async {
     try {
-      List<Badges> badges = [];
-      final badgesResult =
-          await _badgesRemoteDataSource.getBadges(userId: userId);
+      final result =
+          await _badgesRemoteDataSource.getBadges(languageId: languageId);
 
-      //get badges
-      for (var element in badgeTypes) {
-        print(badgesResult[element]);
-        badges.add(Badges.fromJson(Map.from(badgesResult[element])));
-      }
-
-      return badges;
+      return result.map(Badges.fromJson).toList();
     } catch (e) {
       throw BadgesException(errorMessageCode: e.toString());
     }
   }
 
-  Future<void> setBadge(
-      {required String userId, required String badgeType}) async {
+  Future<void> setBadge({
+    required String badgeType,
+    required String languageId,
+  }) async {
     try {
       await _badgesRemoteDataSource.setBadges(
-          userId: userId, badgeType: badgeType);
+        badgeType: badgeType,
+        languageId: languageId,
+      );
     } catch (e) {
-      print("Error while updating badge");
-      print(e.toString());
+      rethrow;
     }
   }
 }

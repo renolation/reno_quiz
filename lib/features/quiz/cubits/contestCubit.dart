@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutterquiz/features/quiz/models/contest.dart';
-
-import '../quizRepository.dart';
+import 'package:flutterquiz/features/quiz/quizRepository.dart';
 
 @immutable
 abstract class ContestState {}
@@ -12,27 +11,26 @@ class ContestInitial extends ContestState {}
 class ContestProgress extends ContestState {}
 
 class ContestSuccess extends ContestState {
-  final Contests contestList;
+  ContestSuccess(this.contestList);
 
-  ContestSuccess(
-    this.contestList,
-  );
+  final Contests contestList;
 }
 
 class ContestFailure extends ContestState {
-  final String errorMessage;
   ContestFailure(this.errorMessage);
+
+  final String errorMessage;
 }
 
 class ContestCubit extends Cubit<ContestState> {
-  final QuizRepository _quizRepository;
   ContestCubit(this._quizRepository) : super(ContestInitial());
+  final QuizRepository _quizRepository;
 
-  getContest(String? userId) async {
+  Future<void> getContest({required String languageId}) async {
     emit(ContestProgress());
-    _quizRepository.getContest(userId).then((val) {
+    await _quizRepository.getContest(languageId: languageId).then((val) {
       emit(ContestSuccess(val));
-    }).catchError((e) {
+    }).catchError((Object e) {
       emit(ContestFailure(e.toString()));
     });
   }

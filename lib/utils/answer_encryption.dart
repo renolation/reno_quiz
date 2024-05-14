@@ -7,7 +7,7 @@ class AnswerEncryption {
     required CorrectAnswer correctAnswer,
   }) {
     try {
-      final key = enc.Key.fromUtf8("${rawKey}0000");
+      final key = enc.Key.fromUtf8('${rawKey}0000');
 
       final encrypter = enc.Encrypter(enc.AES(key, mode: enc.AESMode.cbc));
 
@@ -18,12 +18,9 @@ class AnswerEncryption {
         iv: initializationVector,
       );
 
-      print("DataOFDecrypted$decrypted");
       return decrypted;
     } catch (e) {
-      print("DataOFDecrypted$e");
-      return "";
-
+      return '';
     }
   }
 }

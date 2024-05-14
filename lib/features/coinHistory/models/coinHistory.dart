@@ -8,6 +8,17 @@ class CoinHistory {
     required this.status,
     required this.date,
   });
+
+  CoinHistory.fromJson(Map<String, dynamic> json) {
+    id = json['id'] as String? ?? '';
+    userId = json['user_id'] as String? ?? '';
+    uid = json['uid'] as String? ?? '';
+    points = json['points'] as String? ?? '';
+    type = json['type'] as String? ?? '';
+    status = json['status'] as String? ?? '';
+    date = json['date'] as String? ?? '';
+  }
+
   late final String id;
   late final String userId;
   late final String uid;
@@ -15,26 +26,4 @@ class CoinHistory {
   late final String type;
   late final String status;
   late final String date;
-
-  CoinHistory.fromJson(Map<String, dynamic> json) {
-    id = json['id'] ?? "";
-    userId = json['user_id'] ?? "";
-    uid = json['uid'] ?? "";
-    points = json['points'] ?? "";
-    type = json['type'] ?? "";
-    status = json['status'] ?? "";
-    date = json['date'] ?? "";
-  }
-
-  Map<String, dynamic> toJson() {
-    final _data = <String, dynamic>{};
-    _data['id'] = id;
-    _data['user_id'] = userId;
-    _data['uid'] = uid;
-    _data['points'] = points;
-    _data['type'] = type;
-    _data['status'] = status;
-    _data['date'] = date;
-    return _data;
-  }
 }

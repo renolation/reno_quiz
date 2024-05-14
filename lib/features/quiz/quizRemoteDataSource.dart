@@ -1,131 +1,148 @@
 import 'dart:convert';
+import 'dart:developer';
 import 'dart:io';
-import 'package:flutterquiz/utils/constants/api_body_parameter_labels.dart';
-import 'package:http/http.dart' as http;
+
 import 'package:flutterquiz/features/quiz/quizException.dart';
 import 'package:flutterquiz/utils/api_utils.dart';
 import 'package:flutterquiz/utils/constants/constants.dart';
-import 'package:flutterquiz/utils/constants/error_message_keys.dart';
+import 'package:http/http.dart' as http;
 
 class QuizRemoteDataSource {
-  static late String profile, score, rank;
+  static late String profile;
+  static late String score;
+  static late String rank;
 
-  Future<List?> getQuestionsForDailyQuiz(
-      {String? languageId, String? userId}) async {
+  Future<List<Map<String, dynamic>>> getQuestionsForDailyQuiz({
+    String? languageId,
+  }) async {
     try {
-      Map<String, String> body = {
-        accessValueKey: accessValue,
-        languageIdKey: languageId!,
-        userIdKey: userId!
-      };
+      final body = <String, String>{languageIdKey: languageId!};
 
       if (languageId.isEmpty) {
         body.remove(languageIdKey);
       }
 
-      final response = await http.post(Uri.parse(getQuestionForDailyQuizUrl),
-          body: body, headers: await ApiUtils.getHeaders());
+      final response = await http.post(
+        Uri.parse(getQuestionForDailyQuizUrl),
+        body: body,
+        headers: await ApiUtils.getHeaders(),
+      );
 
-      final responseJson = jsonDecode(response.body);
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
 
-      if (responseJson['error']) {
-        print(responseJson['message']);
-        throw QuizException(errorMessageCode: responseJson['message']); //error
+      if (responseJson['error'] as bool) {
+        throw QuizException(
+          errorMessageCode: responseJson['message'].toString(),
+        );
       }
-      return responseJson['data'];
+
+      return (responseJson['data'] as List).cast<Map<String, dynamic>>();
     } on SocketException catch (_) {
-      throw QuizException(errorMessageCode: noInternetCode);
+      throw QuizException(errorMessageCode: errorCodeNoInternet);
     } on QuizException catch (e) {
       throw QuizException(errorMessageCode: e.toString());
     } catch (e) {
-      throw QuizException(errorMessageCode: defaultErrorMessageCode);
+      throw QuizException(errorMessageCode: errorCodeDefaultMessage);
     }
   }
 
-  Future<List?> getQuestionByType(String languageId) async {
+  Future<List<Map<String, dynamic>>> getQuestionByType(
+    String languageId,
+  ) async {
     try {
-      Map<String, String> body = {
-        accessValueKey: accessValue,
-        typeKey: "2",
-        limitKey: "10",
-        languageIdKey: languageId
-      };
+      final body = <String, String>{typeKey: '2', languageIdKey: languageId};
       if (languageId.isEmpty) {
         body.remove(languageIdKey);
       }
 
-      final response = await http.post(Uri.parse(getQuestionByTypeUrl),
-          body: body, headers: await ApiUtils.getHeaders());
+      final response = await http.post(
+        Uri.parse(getQuestionByTypeUrl),
+        body: body,
+        headers: await ApiUtils.getHeaders(),
+      );
 
-      final responseJson = jsonDecode(response.body);
-      if (responseJson['error']) {
-        throw QuizException(errorMessageCode: responseJson['message']); //error
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
+      if (responseJson['error'] as bool) {
+        throw QuizException(
+          errorMessageCode: responseJson['message'].toString(),
+        );
       }
-      return responseJson['data'];
+      return (responseJson['data'] as List).cast<Map<String, dynamic>>();
     } on SocketException catch (_) {
-      throw QuizException(errorMessageCode: noInternetCode);
+      throw QuizException(errorMessageCode: errorCodeNoInternet);
     } on QuizException catch (e) {
       throw QuizException(errorMessageCode: e.toString());
     } catch (e) {
-      throw QuizException(errorMessageCode: defaultErrorMessageCode);
+      throw QuizException(errorMessageCode: errorCodeDefaultMessage);
     }
   }
 
-  Future<List?> getQuestionContest(String contestId) async {
+  Future<List<Map<String, dynamic>>> getQuestionContest(
+    String contestId,
+  ) async {
     try {
-      Map<String, String> body = {
-        accessValueKey: accessValue,
+      final body = <String, String>{
         contestIdKey: contestId,
       };
 
-      final response = await http.post(Uri.parse(getQuestionContestUrl),
-          body: body, headers: await ApiUtils.getHeaders());
+      final response = await http.post(
+        Uri.parse(getQuestionContestUrl),
+        body: body,
+        headers: await ApiUtils.getHeaders(),
+      );
 
-      final responseJson = jsonDecode(response.body);
-      if (responseJson['error']) {
-        throw QuizException(errorMessageCode: responseJson['message']); //error
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
+      if (responseJson['error'] as bool) {
+        throw QuizException(
+          errorMessageCode: responseJson['message'].toString(),
+        );
       }
-      return responseJson['data'];
+      return (responseJson['data'] as List).cast<Map<String, dynamic>>();
     } on SocketException catch (_) {
-      throw QuizException(errorMessageCode: noInternetCode);
+      throw QuizException(errorMessageCode: errorCodeNoInternet);
     } on QuizException catch (e) {
       throw QuizException(errorMessageCode: e.toString());
     } catch (e) {
-      throw QuizException(errorMessageCode: defaultErrorMessageCode);
+      throw QuizException(errorMessageCode: errorCodeDefaultMessage);
     }
   }
 
-  Future<List<dynamic>> getGuessTheWordQuestions(
-      {required String languageId,
-      required String type, //category or subcategory
-      required String typeId}) //id of the category or subcategory)
-  async {
+  Future<List<Map<String, dynamic>>> getGuessTheWordQuestions({
+    required String languageId,
+    required String type, //category or subcategory
+    required String typeId,
+  }) async {
     try {
-      Map<String, String> body = {
-        accessValueKey: accessValue,
+      final body = <String, String>{
         languageIdKey: languageId,
         typeKey: type,
-        typeIdKey: typeId
+        typeIdKey: typeId,
       };
 
       if (languageId.isEmpty) {
         body.remove(languageIdKey);
       }
 
-      final response = await http.post(Uri.parse(getGuessTheWordQuestionUrl),
-          body: body, headers: await ApiUtils.getHeaders());
+      final response = await http.post(
+        Uri.parse(getGuessTheWordQuestionUrl),
+        body: body,
+        headers: await ApiUtils.getHeaders(),
+      );
 
-      final responseJson = jsonDecode(response.body);
-      if (responseJson['error']) {
-        throw QuizException(errorMessageCode: responseJson['message']); //error
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
+      if (responseJson['error'] as bool) {
+        throw QuizException(
+          errorMessageCode: responseJson['message'].toString(),
+        );
       }
-      return responseJson['data'];
+
+      return (responseJson['data'] as List).cast<Map<String, dynamic>>();
     } on SocketException catch (_) {
-      throw QuizException(errorMessageCode: noInternetCode);
+      throw QuizException(errorMessageCode: errorCodeNoInternet);
     } on QuizException catch (e) {
       throw QuizException(errorMessageCode: e.toString());
     } catch (e) {
-      throw QuizException(errorMessageCode: defaultErrorMessageCode);
+      throw QuizException(errorMessageCode: errorCodeDefaultMessage);
     }
   }
 
@@ -138,14 +155,14 @@ class QuizRemoteDataSource {
 	language_id:2
    */
 
-  Future<List?> getQuestionsForQuizZone(
-      {required String languageId,
-      required String categoryId,
-      required String subcategoryId,
-      required String level}) async {
+  Future<List<Map<String, dynamic>>> getQuestionsForQuizZone({
+    required String languageId,
+    required String categoryId,
+    required String subcategoryId,
+    required String level,
+  }) async {
     try {
-      Map<String, String> body = {
-        accessValueKey: accessValue,
+      final body = <String, String>{
         languageIdKey: languageId,
         categoryKey: categoryId,
         subCategoryKey: subcategoryId,
@@ -163,192 +180,230 @@ class QuizRemoteDataSource {
       if (subcategoryId.isNotEmpty) {
         body.remove(categoryKey);
       }
-      print("quizzone body getQuestionsForQuizZone $body");
-      final response = await http.post(Uri.parse(getQuestionsByLevelUrl),
-          body: body, headers: await ApiUtils.getHeaders());
 
-      final responseJson = jsonDecode(response.body);
+      final response = await http.post(
+        Uri.parse(getQuestionsByLevelUrl),
+        body: body,
+        headers: await ApiUtils.getHeaders(),
+      );
 
-      print(responseJson);
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
 
-      if (responseJson['error']) {
-        throw QuizException(errorMessageCode: responseJson['message']);
+      if (responseJson['error'] as bool) {
+        throw QuizException(
+          errorMessageCode: responseJson['message'].toString(),
+        );
       }
-      return responseJson['data'];
+      return (responseJson['data'] as List).cast<Map<String, dynamic>>();
     } on SocketException catch (_) {
-      throw QuizException(errorMessageCode: noInternetCode);
+      throw QuizException(errorMessageCode: errorCodeNoInternet);
     } on QuizException catch (e) {
       throw QuizException(errorMessageCode: e.toString());
     } catch (e) {
-      throw QuizException(errorMessageCode: defaultErrorMessageCode);
+      throw QuizException(errorMessageCode: errorCodeDefaultMessage);
     }
   }
 
-  Future<List?> getQuestionByCategoryOrSubcategory({
+  Future<List<Map<String, dynamic>>> getQuestionByCategoryOrSubcategory({
     required String type,
     required String id,
   }) async {
     try {
-      Map<String, String> body = {
-        accessValueKey: accessValue,
+      final body = <String, String>{
         typeKey: type,
         idKey: id,
       };
-      print("quizzone body getQuestionByCategoryOrSubcategory $body");
+
       final response = await http.post(
-          Uri.parse(getQuestionsByCategoryOrSubcategory),
-          body: body,
-          headers: await ApiUtils.getHeaders());
+        Uri.parse(getQuestionsByCategoryOrSubcategory),
+        body: body,
+        headers: await ApiUtils.getHeaders(),
+      );
 
-      final responseJson = jsonDecode(response.body);
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
 
-      if (responseJson['error']) {
-        throw QuizException(errorMessageCode: responseJson['message']);
+      if (responseJson['error'] as bool) {
+        throw QuizException(
+          errorMessageCode: responseJson['message'].toString(),
+        );
       }
-      return responseJson['data'];
+
+      return (responseJson['data'] as List).cast<Map<String, dynamic>>();
     } on SocketException catch (_) {
-      throw QuizException(errorMessageCode: noInternetCode);
+      throw QuizException(errorMessageCode: errorCodeNoInternet);
     } on QuizException catch (e) {
       throw QuizException(errorMessageCode: e.toString());
     } catch (e) {
-      throw QuizException(errorMessageCode: defaultErrorMessageCode);
+      throw QuizException(errorMessageCode: errorCodeDefaultMessage);
     }
   }
 
-  Future<List> getAudioQuestions(
-      {required String type, required String id}) async {
+  Future<List<Map<String, dynamic>>> getAudioQuestions({
+    required String type,
+    required String id,
+  }) async {
     try {
-      Map<String, String> body = {
-        accessValueKey: accessValue,
+      final body = <String, String>{
         typeKey: type,
         typeIdKey: id,
       };
 
-      final response = await http.post(Uri.parse(getAudioQuestionUrl),
-          body: body, headers: await ApiUtils.getHeaders());
+      final response = await http.post(
+        Uri.parse(getAudioQuestionUrl),
+        body: body,
+        headers: await ApiUtils.getHeaders(),
+      );
 
-      final responseJson = jsonDecode(response.body);
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
 
-      if (responseJson['error']) {
-        throw QuizException(errorMessageCode: responseJson['message']);
+      if (responseJson['error'] as bool) {
+        throw QuizException(
+          errorMessageCode: responseJson['message'].toString(),
+        );
       }
-      return responseJson['data'];
+      return (responseJson['data'] as List).cast<Map<String, dynamic>>();
     } on SocketException catch (_) {
-      throw QuizException(errorMessageCode: noInternetCode);
+      throw QuizException(errorMessageCode: errorCodeNoInternet);
     } on QuizException catch (e) {
       throw QuizException(errorMessageCode: e.toString());
     } catch (e) {
-      throw QuizException(errorMessageCode: defaultErrorMessageCode);
+      throw QuizException(errorMessageCode: errorCodeDefaultMessage);
     }
   }
 
-  Future<List> getLatexQuestions(
-      {required String type, required String id}) async {
+  Future<List<Map<String, dynamic>>> getLatexQuestions({
+    required String type,
+    required String id,
+  }) async {
     try {
-      Map<String, String> body = {
-        accessValueKey: accessValue,
+      final body = <String, String>{
         typeKey: type,
         typeIdKey: id,
       };
 
-      final response = await http.post(Uri.parse(getLatexQuestionUrl),
-          body: body, headers: await ApiUtils.getHeaders());
+      final response = await http.post(
+        Uri.parse(getLatexQuestionUrl),
+        body: body,
+        headers: await ApiUtils.getHeaders(),
+      );
 
-      final responseJson = jsonDecode(response.body);
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
 
-      if (responseJson['error']) {
-        throw QuizException(errorMessageCode: responseJson['message']);
+      if (responseJson['error'] as bool) {
+        throw QuizException(
+          errorMessageCode: responseJson['message'].toString(),
+        );
       }
-      return responseJson['data'];
+      return (responseJson['data'] as List).cast<Map<String, dynamic>>();
     } on SocketException catch (_) {
-      throw QuizException(errorMessageCode: noInternetCode);
+      throw QuizException(errorMessageCode: errorCodeNoInternet);
     } on QuizException catch (e) {
       throw QuizException(errorMessageCode: e.toString());
     } catch (e) {
-      throw QuizException(errorMessageCode: defaultErrorMessageCode);
+      throw QuizException(errorMessageCode: errorCodeDefaultMessage);
     }
   }
 
-  Future<dynamic> getCategoryWithUser({
+  Future<List<Map<String, dynamic>>> getCategoryWithUser({
     required String languageId,
     required String type,
-    required String userId,
+    String? subType,
   }) async {
     try {
       //body of post request
-      Map<String, String> body = {
-        accessValueKey: accessValue,
+      final body = <String, String>{
         languageIdKey: languageId,
-        userIdKey: userId,
-        typeKey: type
-      };
-
-      if (languageId.isEmpty) {
-        body.remove(languageIdKey);
-      }
-      print("fun n lern body $body");
-      final response = await http.post(Uri.parse(getCategoryUrl),
-          body: body, headers: await ApiUtils.getHeaders());
-      final responseJson = jsonDecode(response.body);
-
-      if (responseJson['error']) {
-        throw QuizException(errorMessageCode: responseJson['message']);
-      }
-      return responseJson['data'];
-    } on SocketException catch (_) {
-      throw QuizException(errorMessageCode: noInternetCode);
-    } on QuizException catch (e) {
-      throw QuizException(errorMessageCode: e.toString());
-    } catch (e) {
-      throw QuizException(errorMessageCode: defaultErrorMessageCode);
-    }
-  }
-
-  Future<dynamic> getCategory({
-    required String languageId,
-    required String type,
-  }) async {
-    try {
-      //body of post request
-      Map<String, String> body = {
-        accessValueKey: accessValue,
-        languageIdKey: languageId,
-        typeKey: type
+        typeKey: type,
+        subTypeKey: subType ?? '',
       };
 
       if (languageId.isEmpty) {
         body.remove(languageIdKey);
       }
 
-      final response = await http.post(Uri.parse(getCategoryUrl),
-          body: body, headers: await ApiUtils.getHeaders());
-      final responseJson = jsonDecode(response.body);
-
-      if (responseJson['error']) {
-        throw QuizException(errorMessageCode: responseJson['message']);
+      if (subType != null && subType.isEmpty) {
+        body.remove(subTypeKey);
       }
-      return responseJson['data'];
+
+      final response = await http.post(
+        Uri.parse(getCategoryUrl),
+        body: body,
+        headers: await ApiUtils.getHeaders(),
+      );
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
+
+      if (responseJson['error'] as bool) {
+        throw QuizException(
+          errorMessageCode: responseJson['message'].toString(),
+        );
+      }
+
+      return (responseJson['data'] as List).cast<Map<String, dynamic>>();
     } on SocketException catch (_) {
-      throw QuizException(errorMessageCode: noInternetCode);
+      throw QuizException(errorMessageCode: errorCodeNoInternet);
     } on QuizException catch (e) {
       throw QuizException(errorMessageCode: e.toString());
     } catch (e) {
-      throw QuizException(errorMessageCode: defaultErrorMessageCode);
+      throw QuizException(errorMessageCode: errorCodeDefaultMessage);
     }
   }
 
-  Future<List?> getQuestionsForSelfChallenge(
-      {required String languageId,
-      required String categoryId,
-      required String subcategoryId,
-      required String numberOfQuestions}) async {
+  Future<List<Map<String, dynamic>>> getCategory({
+    required String languageId,
+    required String type,
+    String? subType,
+  }) async {
     try {
-      Map<String, String> body = {
-        accessValueKey: accessValue,
+      //body of post request
+      final body = <String, String>{
+        languageIdKey: languageId,
+        typeKey: type,
+        subTypeKey: subType ?? '',
+      };
+
+      if (languageId.isEmpty) {
+        body.remove(languageIdKey);
+      }
+
+      if (subType != null && subType.isEmpty) {
+        body.remove(subTypeKey);
+      }
+
+      final response = await http.post(
+        Uri.parse(getCategoryUrl),
+        body: body,
+        headers: await ApiUtils.getHeaders(),
+      );
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
+
+      if (responseJson['error'] as bool) {
+        throw QuizException(
+          errorMessageCode: responseJson['message'].toString(),
+        );
+      }
+
+      return (responseJson['data'] as List).cast<Map<String, dynamic>>();
+    } on SocketException catch (_) {
+      throw QuizException(errorMessageCode: errorCodeNoInternet);
+    } on QuizException catch (e) {
+      throw QuizException(errorMessageCode: e.toString());
+    } catch (e) {
+      throw QuizException(errorMessageCode: errorCodeDefaultMessage);
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getQuestionsForSelfChallenge({
+    required String languageId,
+    required String categoryId,
+    required String subcategoryId,
+    required String numberOfQuestions,
+  }) async {
+    try {
+      final body = <String, String>{
         languageIdKey: languageId,
         categoryKey: categoryId,
         subCategoryKey: subcategoryId,
-        limitKey: numberOfQuestions
+        limitKey: numberOfQuestions,
       };
 
       if (languageId.isEmpty) {
@@ -364,18 +419,21 @@ class QuizRemoteDataSource {
       }
 
       final response = await http.post(
-          Uri.parse(getQuestionForSelfChallengeUrl),
-          body: body,
-          headers: await ApiUtils.getHeaders());
+        Uri.parse(getQuestionForSelfChallengeUrl),
+        body: body,
+        headers: await ApiUtils.getHeaders(),
+      );
 
-      final responseJson = jsonDecode(response.body);
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
 
-      if (responseJson['error']) {
-        throw QuizException(errorMessageCode: responseJson['message']);
+      if (responseJson['error'] as bool) {
+        throw QuizException(
+          errorMessageCode: responseJson['message'].toString(),
+        );
       }
-      return responseJson['data'];
+      return (responseJson['data'] as List).cast<Map<String, dynamic>>();
     } on SocketException catch (_) {
-      throw QuizException(errorMessageCode: noInternetCode);
+      throw QuizException(errorMessageCode: errorCodeNoInternet);
     } on QuizException catch (e) {
       throw QuizException(errorMessageCode: e.toString());
     } catch (e) {
@@ -383,268 +441,267 @@ class QuizRemoteDataSource {
     }
   }
 
-  Future<dynamic> getSubCategory(String? category, String userId) async {
+  Future<List<Map<String, dynamic>>> getSubCategory(String category) async {
     try {
       //body of post request
-      final body = {
-        accessValueKey: accessValue,
-        categoryKey: category,
-        userIdKey: userId,
-      };
-      print("fun N learn body $body");
-      final response = await http.post(Uri.parse(getSubCategoryUrl),
-          body: body, headers: await ApiUtils.getHeaders());
-      final responseJson = jsonDecode(response.body);
-      if (responseJson['error']) {
-        throw QuizException(errorMessageCode: responseJson['message']);
+      final body = <String, String>{categoryKey: category};
+
+      final response = await http.post(
+        Uri.parse(getSubCategoryUrl),
+        body: body,
+        headers: await ApiUtils.getHeaders(),
+      );
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
+
+      if (responseJson['error'] as bool) {
+        throw QuizException(
+          errorMessageCode: responseJson['message'].toString(),
+        );
       }
-      return responseJson['data'];
+      return (responseJson['data'] as List).cast<Map<String, dynamic>>();
     } on SocketException catch (_) {
-      throw QuizException(errorMessageCode: noInternetCode);
-    } on QuizException catch (e) {
-      print("errorrrrrr ${e.toString()}");
-      throw QuizException(errorMessageCode: e.toString());
-    } catch (e) {
-      throw QuizException(errorMessageCode: defaultErrorMessageCode);
-    }
-  }
-
-  Future<dynamic> getUnlockedLevel(
-      String? userId, String? category, String? subCategory) async {
-    try {
-      //body of post request
-      final body = {
-        accessValueKey: accessValue,
-        categoryKey: category,
-        userIdKey: userId,
-        subCategoryKey: subCategory
-      };
-
-      print("update level body $body");
-
-      final response = await http.post(Uri.parse(getLevelUrl),
-          body: body, headers: await ApiUtils.getHeaders());
-      final responseJson = jsonDecode(response.body);
-      print(responseJson);
-      if (responseJson['error']) {
-        throw QuizException(errorMessageCode: responseJson['message']);
-      }
-      return responseJson['data'];
-    } on SocketException catch (_) {
-      throw QuizException(errorMessageCode: noInternetCode);
+      throw QuizException(errorMessageCode: errorCodeNoInternet);
     } on QuizException catch (e) {
       throw QuizException(errorMessageCode: e.toString());
     } catch (e) {
-      throw QuizException(errorMessageCode: defaultErrorMessageCode);
+      throw QuizException(errorMessageCode: errorCodeDefaultMessage);
     }
   }
 
-  /*
-        access_key:8525
-        user_id:10
-        category:1
-        subcategory:2
-        level:1
-        */
-
-  Future<dynamic> updateLevel(
-      {String? userId,
-      String? category,
-      String? subCategory,
-      String? level}) async {
+  Future<int> getUnlockedLevel(String category, String subCategory) async {
     try {
       //body of post request
-      final body = {
-        accessValueKey: accessValue,
+      final body = <String, String>{
         categoryKey: category,
-        userIdKey: userId,
         subCategoryKey: subCategory,
-        levelKey: level
       };
 
-      print("update level body $body");
-      final response = await http.post(Uri.parse(updateLevelUrl),
-          body: body, headers: await ApiUtils.getHeaders());
-      final responseJson = jsonDecode(response.body);
-      print(responseJson);
-      if (responseJson['error']) {
-        throw QuizException(errorMessageCode: responseJson['message']);
+      if (subCategory.isEmpty) body.remove(subCategoryKey);
+
+      final response = await http.post(
+        Uri.parse(getLevelUrl),
+        body: body,
+        headers: await ApiUtils.getHeaders(),
+      );
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
+
+      if (responseJson['error'] as bool) {
+        throw QuizException(
+          errorMessageCode: responseJson['message'].toString(),
+        );
       }
-      return responseJson['data'];
+
+      final data = responseJson['data'] as Map<String, dynamic>;
+
+      return int.parse(data['level'] as String? ?? '0');
     } on SocketException catch (_) {
-      throw QuizException(errorMessageCode: noInternetCode);
+      throw QuizException(errorMessageCode: errorCodeNoInternet);
     } on QuizException catch (e) {
       throw QuizException(errorMessageCode: e.toString());
     } catch (e) {
-      throw QuizException(errorMessageCode: defaultErrorMessageCode);
+      throw QuizException(errorMessageCode: errorCodeDefaultMessage);
     }
   }
 
-  Future getContest(String? userId) async {
+  Future<void> updateLevel({
+    required String category,
+    required String subCategory,
+    required String level,
+  }) async {
+    try {
+      final body = <String, String>{
+        categoryKey: category,
+        subCategoryKey: subCategory,
+        levelKey: level,
+      };
+
+      final response = await http.post(
+        Uri.parse(updateLevelUrl),
+        body: body,
+        headers: await ApiUtils.getHeaders(),
+      );
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
+
+      if (responseJson['error'] as bool) {
+        throw QuizException(
+          errorMessageCode: responseJson['message'].toString(),
+        );
+      }
+    } on SocketException catch (_) {
+      throw QuizException(errorMessageCode: errorCodeNoInternet);
+    } on QuizException catch (e) {
+      throw QuizException(errorMessageCode: e.toString());
+    } catch (e) {
+      throw QuizException(errorMessageCode: errorCodeDefaultMessage);
+    }
+  }
+
+  Future<Map<String, dynamic>> getContest({required String languageId}) async {
     try {
       //body of post request
       final body = {
-        accessValueKey: accessValue,
-        "get_contest": "1",
-        userIdKey: userId
+        'get_contest': '1',
+        languageIdKey: languageId,
       };
 
-      print("GetBody$body");
-      final response = await http.post(Uri.parse(getContestUrl),
-          body: body, headers: await ApiUtils.getHeaders());
+      final response = await http.post(
+        Uri.parse(getContestUrl),
+        body: body,
+        headers: await ApiUtils.getHeaders(),
+      );
       final responseJson = jsonDecode(response.body);
-      print(responseJson);
-      return (responseJson);
+
+      return responseJson as Map<String, dynamic>;
       // return responseJson;
     } on SocketException catch (_) {
       throw QuizException(
-          errorMessageKey: notPlayedContestKey,
-          errorMessageCode: notPlayedContestKey);
+        errorMessageCode: notPlayedContestKey,
+      );
     } catch (e) {
       throw QuizException(
-          errorMessageKey: notPlayedContestKey,
-          errorMessageCode: notPlayedContestKey);
+        errorMessageCode: notPlayedContestKey,
+      );
     }
   }
 
-  Future<dynamic> setContestLeaderboard(
-      {String? userId,
-      String? contestId,
-      int? questionAttended,
-      int? correctAns,
-      int? score}) async {
+  Future<void> setContestLeaderboard({
+    String? contestId,
+    int? questionAttended,
+    int? correctAns,
+    int? score,
+  }) async {
     try {
-      //body of post request
-      final body = {
-        accessValueKey: accessValue,
-        userIdKey: userId,
+      final body = <String, dynamic>{
         contestIdKey: contestId,
         questionAttendedKey: questionAttended.toString(),
         correctAnswersKey: correctAns.toString(),
-        scoreKey: score.toString()
+        scoreKey: score.toString(),
       };
-      final response = await http.post(Uri.parse(setContestLeaderboardUrl),
-          body: body, headers: await ApiUtils.getHeaders());
-      final responseJson = jsonDecode(response.body);
-      if (responseJson['error']) {
-        throw QuizException(errorMessageCode: responseJson['message']);
+      final response = await http.post(
+        Uri.parse(setContestLeaderboardUrl),
+        body: body,
+        headers: await ApiUtils.getHeaders(),
+      );
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
+      if (responseJson['error'] as bool) {
+        throw QuizException(
+          errorMessageCode: responseJson['message'].toString(),
+        );
       }
-      return responseJson['data'];
     } on SocketException catch (_) {
-      throw QuizException(errorMessageCode: noInternetCode);
+      throw QuizException(errorMessageCode: errorCodeNoInternet);
     } on QuizException catch (e) {
       throw QuizException(errorMessageCode: e.toString());
     } catch (e) {
-      throw QuizException(errorMessageCode: defaultErrorMessageCode);
+      throw QuizException(errorMessageCode: errorCodeDefaultMessage);
     }
   }
 
-  Future<dynamic> getContestLeaderboard(
-      String? contestId, String? userId) async {
+  Future<List<Map<String, dynamic>>> getContestLeaderboard(
+    String? contestId,
+  ) async {
     try {
-      //body of post request
-      final body = {
-        accessValueKey: accessValue,
-        userIdKey: userId,
-        contestIdKey: contestId,
-      };
-      final response = await http.post(Uri.parse(getContestLeaderboardUrl),
-          body: body, headers: await ApiUtils.getHeaders());
-      final responseJson = jsonDecode(response.body);
-      rank = responseJson["my_rank"]["user_rank"].toString();
-      profile = responseJson["my_rank"][profileKey].toString();
-      score = responseJson["my_rank"]["score"].toString() ?? "0";
-      if (responseJson['error']) {
-        throw QuizException(errorMessageCode: responseJson['message']);
+      final body = {contestIdKey: contestId};
+      final response = await http.post(
+        Uri.parse(getContestLeaderboardUrl),
+        body: body,
+        headers: await ApiUtils.getHeaders(),
+      );
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
+
+      final myRank = responseJson['my_rank'] as Map<String, dynamic>;
+
+      rank = myRank['user_rank'].toString();
+      profile = myRank[profileKey].toString();
+      score = myRank['score'].toString();
+      if (responseJson['error'] as bool) {
+        throw QuizException(
+          errorMessageCode: responseJson['message'].toString(),
+        );
       }
-      return responseJson['data'];
+      return (responseJson['data'] as List).cast<Map<String, dynamic>>();
     } on SocketException catch (_) {
-      throw QuizException(errorMessageCode: noInternetCode);
+      throw QuizException(errorMessageCode: errorCodeNoInternet);
     } on QuizException catch (e) {
       throw QuizException(errorMessageCode: e.toString());
     } catch (e) {
-      throw QuizException(errorMessageCode: defaultErrorMessageCode);
+      throw QuizException(errorMessageCode: errorCodeDefaultMessage);
     }
   }
 
-  Future<dynamic> getComprehension(
-      {required String languageId,
-      required String userId,
-      required String type,
-      required String typeId}) async {
+  Future<List<Map<String, dynamic>>> getComprehension({
+    required String languageId,
+    required String type,
+    required String typeId,
+  }) async {
     try {
-      //body of post request
       final body = {
-        accessValueKey: accessValue,
         typeKey: type,
         typeIdKey: typeId,
-        userIdKey: userId,
-        languageIdKey: languageId
+        languageIdKey: languageId,
       };
       if (languageId.isEmpty) {
         body.remove(languageIdKey);
       }
-      final response = await http.post(Uri.parse(getFunAndLearnUrl),
-          body: body, headers: await ApiUtils.getHeaders());
-      final responseJson = jsonDecode(response.body);
-      if (responseJson['error']) {
-        throw QuizException(errorMessageCode: responseJson['message']);
+      final response = await http.post(
+        Uri.parse(getFunAndLearnUrl),
+        body: body,
+        headers: await ApiUtils.getHeaders(),
+      );
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
+      if (responseJson['error'] as bool) {
+        throw QuizException(
+          errorMessageCode: responseJson['message'].toString(),
+        );
       }
-      return responseJson['data'];
+      return (responseJson['data'] as List).cast<Map<String, dynamic>>();
     } on SocketException catch (_) {
-      throw QuizException(errorMessageCode: noInternetCode);
+      throw QuizException(errorMessageCode: errorCodeNoInternet);
     } on QuizException catch (e) {
       throw QuizException(errorMessageCode: e.toString());
     } catch (e) {
-      throw QuizException(errorMessageCode: defaultErrorMessageCode);
+      throw QuizException(errorMessageCode: errorCodeDefaultMessage);
     }
   }
 
-  Future<dynamic> getComprehensionQuestion(String? funAndLearnId) async {
-    print(funAndLearnId);
+  Future<List<Map<String, dynamic>>> getComprehensionQuestion(
+    String? funAndLearnId,
+  ) async {
     try {
       //body of post request
-      final body = {accessValueKey: accessValue, funAndLearnKey: funAndLearnId};
-      final response = await http.post(Uri.parse(getFunAndLearnQuestionsUrl),
-          body: body, headers: await ApiUtils.getHeaders());
-      final responseJson = jsonDecode(response.body);
-      if (responseJson['error']) {
-        throw QuizException(errorMessageCode: responseJson['message']);
+      final body = {funAndLearnKey: funAndLearnId};
+      final response = await http.post(
+        Uri.parse(getFunAndLearnQuestionsUrl),
+        body: body,
+        headers: await ApiUtils.getHeaders(),
+      );
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
+      if (responseJson['error'] as bool) {
+        throw QuizException(
+          errorMessageCode: responseJson['message'].toString(),
+        );
       }
 
-      return responseJson['data'];
+      return (responseJson['data'] as List).cast<Map<String, dynamic>>();
     } on SocketException catch (_) {
-      throw QuizException(errorMessageCode: noInternetCode);
+      throw QuizException(errorMessageCode: errorCodeNoInternet);
     } on QuizException catch (e) {
       throw QuizException(errorMessageCode: e.toString());
     } catch (e) {
-      throw QuizException(errorMessageCode: defaultErrorMessageCode);
+      throw QuizException(errorMessageCode: errorCodeDefaultMessage);
     }
   }
 
-  //This will be in use to mark category, subcategory and fun n learn para. played
-  /*
-  access_key:8525
-        user_id:1
-        type:3      // 2-fun_n_learn, 3-guess_the_word, 4-audio_question
-        category:1
-        subcategory:2   //{optional}
-        type_id:1       // for fun_n_learn_id
-
-   */
-  Future<void> setQuizCategoryPlayed(
-      {required String type,
-      required String userId,
-      required String categoryId,
-      required String subcategoryId,
-      required String typeId}) async {
+  Future<void> setQuizCategoryPlayed({
+    required String type,
+    required String categoryId,
+    required String subcategoryId,
+    required String typeId,
+  }) async {
     try {
-      //body of post request
-      final body = {
-        accessValueKey: accessValue,
+      final body = <String, dynamic>{
         typeKey: type,
         typeIdKey: typeId,
-        userIdKey: userId,
         categoryKey: categoryId,
         subCategoryKey: subcategoryId,
       };
@@ -655,20 +712,59 @@ class QuizRemoteDataSource {
         body.remove(typeIdKey);
       }
 
-      print("Set quiz category body : $body");
-      final response = await http.post(Uri.parse(setQuizCategoryPlayedUrl),
-          body: body, headers: await ApiUtils.getHeaders());
-      final responseJson = jsonDecode(response.body);
-      if (responseJson['error']) {
-        print(responseJson);
-        throw QuizException(errorMessageCode: responseJson['message']);
+      final response = await http.post(
+        Uri.parse(setQuizCategoryPlayedUrl),
+        body: body,
+        headers: await ApiUtils.getHeaders(),
+      );
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
+      if (responseJson['error'] as bool) {
+        throw QuizException(
+          errorMessageCode: responseJson['message'].toString(),
+        );
       }
     } on SocketException catch (_) {
-      throw QuizException(errorMessageCode: noInternetCode);
+      throw QuizException(errorMessageCode: errorCodeNoInternet);
     } on QuizException catch (e) {
       throw QuizException(errorMessageCode: e.toString());
     } catch (e) {
-      throw QuizException(errorMessageCode: defaultErrorMessageCode);
+      throw QuizException(errorMessageCode: errorCodeDefaultMessage);
+    }
+  }
+
+  Future<void> unlockPremiumCategory({
+    required String categoryId,
+    String? subCategoryId,
+  }) async {
+    try {
+      final body = {
+        categoryKey: categoryId,
+        subCategoryKey: subCategoryId,
+      };
+
+      if (subCategoryId == null || subCategoryId.isEmpty) {
+        body.remove(subCategoryKey);
+      }
+
+      log('Body $body', name: 'unlockPremiumCategory API');
+      final rawRes = await http.post(
+        Uri.parse(unlockPremiumCategoryUrl),
+        body: body,
+        headers: await ApiUtils.getHeaders(),
+      );
+      final jsonRes = jsonDecode(rawRes.body) as Map<String, dynamic>;
+
+      if (jsonRes['error'] as bool) {
+        throw QuizException(
+          errorMessageCode: jsonRes['message'].toString(),
+        );
+      }
+    } on SocketException catch (_) {
+      throw QuizException(errorMessageCode: errorCodeNoInternet);
+    } on QuizException catch (e) {
+      throw QuizException(errorMessageCode: e.toString());
+    } catch (e) {
+      throw QuizException(errorMessageCode: errorCodeDefaultMessage);
     }
   }
 }

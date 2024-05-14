@@ -1,48 +1,50 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:flutterquiz/app/app_localization.dart';
+import 'package:flutterquiz/app/routes.dart';
 import 'package:flutterquiz/features/ads/interstitial_ad_cubit.dart';
 import 'package:flutterquiz/features/badges/cubits/badgesCubit.dart';
 import 'package:flutterquiz/features/profileManagement/cubits/updateScoreAndCoinsCubit.dart';
 import 'package:flutterquiz/features/profileManagement/cubits/userDetailsCubit.dart';
-
 import 'package:flutterquiz/features/profileManagement/profileManagementRepository.dart';
 import 'package:flutterquiz/features/quiz/models/userBattleRoomDetails.dart';
-import 'package:flutterquiz/ui/widgets/circularImageContainer.dart';
+import 'package:flutterquiz/ui/widgets/alreadyLoggedInDialog.dart';
 import 'package:flutterquiz/ui/widgets/customAppbar.dart';
-
 import 'package:flutterquiz/ui/widgets/customRoundedButton.dart';
+import 'package:flutterquiz/ui/widgets/custom_image.dart';
+import 'package:flutterquiz/utils/constants/assets_constants.dart';
 import 'package:flutterquiz/utils/constants/error_message_keys.dart';
 import 'package:flutterquiz/utils/constants/fonts.dart';
-
 import 'package:flutterquiz/utils/constants/string_labels.dart';
+import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
 
 class MultiUserBattleRoomResultScreen extends StatefulWidget {
-  final List<UserBattleRoomDetails?> users;
-  final int entryFee;
-
   const MultiUserBattleRoomResultScreen({
-    super.key,
     required this.users,
     required this.entryFee,
+    required this.totalQuestions,
+    super.key,
   });
+
+  final List<UserBattleRoomDetails?> users;
+  final int entryFee;
+  final int totalQuestions;
 
   @override
   State<MultiUserBattleRoomResultScreen> createState() =>
       _MultiUserBattleRoomResultScreenState();
 
   static Route<dynamic> route(RouteSettings routeSettings) {
-    final arguments = routeSettings.arguments as Map<String, dynamic>?;
+    final args = routeSettings.arguments as Map<String, dynamic>?;
     return CupertinoPageRoute(
       builder: (_) => BlocProvider<UpdateScoreAndCoinsCubit>(
         create: (_) => UpdateScoreAndCoinsCubit(ProfileManagementRepository()),
         child: MultiUserBattleRoomResultScreen(
-          users: arguments!['user'],
-          entryFee: arguments['entryFee'],
+          users: args!['user'] as List<UserBattleRoomDetails?>,
+          entryFee: args['entryFee'] as int,
+          totalQuestions: args['totalQuestions'] as int,
         ),
       ),
     );
@@ -52,7 +54,6 @@ class MultiUserBattleRoomResultScreen extends StatefulWidget {
 class _MultiUserBattleRoomResultScreenState
     extends State<MultiUserBattleRoomResultScreen> {
   List<Map<String, dynamic>> usersWithRank = [];
-  int _winAmount = -1; //if amount is -1 then show nothing
 
   @override
   void initState() {
@@ -65,62 +66,64 @@ class _MultiUserBattleRoomResultScreenState
 
   void getResultAndUpdateCoins() {
     //create new array of map that creates user and rank
-    for (var element in widget.users) {
-      usersWithRank.add({
-        "user": element,
-      });
+    for (final element in widget.users) {
+      usersWithRank.add({'user': element});
     }
-    var points = usersWithRank.map((details) {
-      return (details['user'] as UserBattleRoomDetails).correctAnswers;
-    }).toList();
+    final points = usersWithRank
+        .map((d) => (d['user'] as UserBattleRoomDetails).correctAnswers)
+        .toSet()
+        .toList()
+      ..sort((first, second) => second.compareTo(first));
 
-    points = points.toSet().toList();
-    points.sort((first, second) => second.compareTo(first));
-
-    for (var userDetails in usersWithRank) {
-      int rank = points.indexOf(
-              (userDetails['user'] as UserBattleRoomDetails).correctAnswers) +
+    for (final userDetails in usersWithRank) {
+      final rank = points.indexOf(
+            (userDetails['user'] as UserBattleRoomDetails).correctAnswers,
+          ) +
           1;
-      userDetails.addAll({"rank": rank});
+      userDetails.addAll({'rank': rank});
     }
-    usersWithRank.sort((first, second) => int.parse(first['rank'].toString())
-        .compareTo(int.parse(second['rank'].toString())));
+    usersWithRank.sort(
+      (first, second) => int.parse(first['rank'].toString())
+          .compareTo(int.parse(second['rank'].toString())),
+    );
     //
     Future.delayed(Duration.zero, () {
       final currentUser = usersWithRank
-          .where((element) =>
-              (element['user'] as UserBattleRoomDetails).uid ==
-              context.read<UserDetailsCubit>().getUserId())
+          .where(
+            (element) =>
+                (element['user'] as UserBattleRoomDetails).uid ==
+                context.read<UserDetailsCubit>().userId(),
+          )
           .toList()
           .first;
       final totalWinner = usersWithRank
-          .where((element) => (element['rank'] == 1))
+          .where((element) => element['rank'] == 1)
           .toList()
           .length;
       final winAmount = widget.entryFee * (widget.users.length / totalWinner);
 
       if (currentUser['rank'] == 1) {
         //update badge if locked
-        if (context.read<BadgesCubit>().isBadgeLocked("clash_winner")) {
+        if (context.read<BadgesCubit>().isBadgeLocked('clash_winner')) {
           context.read<BadgesCubit>().setBadge(
-              badgeType: "clash_winner",
-              userId: context.read<UserDetailsCubit>().getUserId());
+                badgeType: 'clash_winner',
+                languageId: UiUtils.getCurrentQuestionLanguageId(context),
+              );
         }
 
         //add coins
         //update coins
+
         context.read<UpdateScoreAndCoinsCubit>().updateCoins(
-              context.read<UserDetailsCubit>().getUserId(),
-              winAmount.toInt(),
-              true,
-              wonGroupBattleKey,
+              coins: winAmount.toInt(),
+              addCoin: true,
+              title: wonGroupBattleKey,
             );
         context.read<UserDetailsCubit>().updateCoins(
               addCoin: true,
               coins: winAmount.toInt(),
             );
         //update winAmount in ui as well
-        _winAmount = winAmount.toInt();
         setState(() {});
         //
       }
@@ -142,37 +145,38 @@ class _MultiUserBattleRoomResultScreenState
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Row(
           mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Stack(
               alignment: Alignment.center,
               children: [
-
-                CircularImageContainer(
+                QImage.circular(
                   width: 52,
                   height: 52,
-                  imagePath: userBattleRoomDetails.profileUrl,
+                  imageUrl: userBattleRoomDetails.profileUrl,
                 ),
                 Center(
                   child: SvgPicture.asset(
-                    UiUtils.getImagePath("hexagon_frame.svg"),
+                    Assets.hexagonFrame,
                     width: 60,
                     height: 60,
                   ),
                 ),
               ],
             ),
-            const SizedBox(width: 18),
-            Text(
-              userBattleRoomDetails.name,
-              maxLines: 2,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeights.bold,
-                color: Theme.of(context).colorScheme.onTertiary,
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                userBattleRoomDetails.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeights.bold,
+                  color: Theme.of(context).colorScheme.onTertiary,
+                ),
               ),
             ),
-            const Spacer(),
+            const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(
                 horizontal: 12,
@@ -183,14 +187,14 @@ class _MultiUserBattleRoomResultScreenState
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
-                "${userBattleRoomDetails.correctAnswers}/10",
+                '${userBattleRoomDetails.correctAnswers}/${widget.totalQuestions}',
                 style: TextStyle(
                   fontWeight: FontWeights.bold,
                   fontSize: 14,
                   color: Theme.of(context).colorScheme.onTertiary,
                 ),
               ),
-            )
+            ),
           ],
         ),
       ),
@@ -217,22 +221,22 @@ class _MultiUserBattleRoomResultScreenState
             Stack(
               alignment: Alignment.center,
               children: [
-
-                CircularImageContainer(
+                QImage.circular(
                   width: 100,
                   height: 100,
-                  imagePath:  userBattleRoomDetails.profileUrl,
+                  imageUrl: userBattleRoomDetails.profileUrl,
                 ),
                 Center(
-                  child: SvgPicture.asset(
-                    UiUtils.getImagePath("hexagon_frame.svg"),
-                  ),
+                  child: SvgPicture.asset(Assets.hexagonFrame),
                 ),
               ],
             ),
             const SizedBox(height: 10),
             Text(
               userBattleRoomDetails.name,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
               style: TextStyle(
                 fontWeight: FontWeights.bold,
                 fontSize: 16,
@@ -250,58 +254,14 @@ class _MultiUserBattleRoomResultScreenState
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
-                "${userBattleRoomDetails.correctAnswers}/10",
+                '${userBattleRoomDetails.correctAnswers}/${widget.totalQuestions}',
                 style: TextStyle(
                   fontWeight: FontWeights.bold,
                   fontSize: 18,
                   color: Theme.of(context).colorScheme.onTertiary,
                 ),
               ),
-            )
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildResultLabel() {
-    final currentUser = usersWithRank
-        .where((element) =>
-            (element['user'] as UserBattleRoomDetails).uid ==
-            context.read<UserDetailsCubit>().getUserId())
-        .toList()
-        .first;
-
-    return Align(
-      alignment: Alignment.topCenter,
-      child: Padding(
-        padding: EdgeInsets.only(
-          top: MediaQuery.of(context).size.height * (0.06),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Text(
-              currentUser['rank'] == 1
-                  ? AppLocalization.of(context)!
-                      .getTranslatedValues('youWonLbl')!
-                      .toUpperCase()
-                  : AppLocalization.of(context)!
-                      .getTranslatedValues('youLostLbl')!,
-              style: TextStyle(
-                  color: Theme.of(context).primaryColor,
-                  fontSize: 22.0,
-                  fontWeight: FontWeight.w500),
             ),
-            const SizedBox(height: 2.5),
-            _winAmount != -1
-                ? Text(
-                    "$_winAmount ${AppLocalization.of(context)!.getTranslatedValues(coinsLbl)!} ",
-                    style: TextStyle(
-                        color: Theme.of(context).primaryColor, fontSize: 20.0),
-                  )
-                : Container(),
           ],
         ),
       ),
@@ -313,16 +273,17 @@ class _MultiUserBattleRoomResultScreenState
     return BlocListener<UpdateScoreAndCoinsCubit, UpdateScoreAndCoinsState>(
       listener: (context, state) {
         if (state is UpdateScoreAndCoinsFailure) {
-          if (state.errorMessage == unauthorizedAccessCode) {
-            UiUtils.showAlreadyLoggedInDialog(context: context);
+          if (state.errorMessage == errorCodeUnauthorizedAccess) {
+            showAlreadyLoggedInDialog(context);
           }
         }
       },
       child: Scaffold(
         appBar: QAppBar(
           roundedAppBar: false,
-          title: Text(AppLocalization.of(context)!
-              .getTranslatedValues('groupBattleResult')!),
+          title: Text(
+            context.tr('groupBattleResult')!,
+          ),
         ),
         body: Stack(
           children: [
@@ -345,81 +306,93 @@ class _MultiUserBattleRoomResultScreenState
                     // Rank 1
                     _buildUserTopDetailsContainer(
                       usersWithRank.first['user'] as UserBattleRoomDetails,
-                      usersWithRank.first['rank'],
-                      Size(MediaQuery.of(context).size.width * (0.475),
-                          MediaQuery.of(context).size.height * (0.35)),
+                      usersWithRank.first['rank'] as int,
+                      Size(
+                        MediaQuery.of(context).size.width * (0.475),
+                        MediaQuery.of(context).size.height * (0.35),
+                      ),
                       true,
                       AlignmentDirectional.centerStart,
                       EdgeInsetsDirectional.only(
-                        start: 10.0,
+                        start: 10,
                         top: MediaQuery.of(context).size.height * (0.025),
                       ),
                       Colors.green,
                     ),
 
                     //user 2
-                    usersWithRank.length == 2
-                        ? _buildUserDetailsContainer(
-                            usersWithRank[1]['user'] as UserBattleRoomDetails,
-                            usersWithRank[1]['rank'],
-                            Size(MediaQuery.of(context).size.width * (0.15),
-                                MediaQuery.of(context).size.height * (0.08)),
-                            false,
-                            AlignmentDirectional.centerStart,
-                            EdgeInsetsDirectional.zero,
-                            Colors.redAccent,
-                          )
-                        : _buildUserDetailsContainer(
-                            usersWithRank[1]['user'] as UserBattleRoomDetails,
-                            usersWithRank[1]['rank'],
-                            Size(MediaQuery.of(context).size.width * (0.38),
-                                MediaQuery.of(context).size.height * (0.28)),
-                            false,
-                            AlignmentDirectional.center,
-                            EdgeInsetsDirectional.only(
-                              start: MediaQuery.of(context).size.width * (0.3),
-                              bottom:
-                                  MediaQuery.of(context).size.height * (0.42),
-                            ),
-                            Colors.redAccent,
-                          ),
+                    if (usersWithRank.length == 2)
+                      _buildUserDetailsContainer(
+                        usersWithRank[1]['user'] as UserBattleRoomDetails,
+                        usersWithRank[1]['rank'] as int,
+                        Size(
+                          MediaQuery.of(context).size.width * (0.15),
+                          MediaQuery.of(context).size.height * (0.08),
+                        ),
+                        false,
+                        AlignmentDirectional.centerStart,
+                        EdgeInsetsDirectional.zero,
+                        Colors.redAccent,
+                      )
+                    else
+                      _buildUserDetailsContainer(
+                        usersWithRank[1]['user'] as UserBattleRoomDetails,
+                        usersWithRank[1]['rank'] as int,
+                        Size(
+                          MediaQuery.of(context).size.width * (0.38),
+                          MediaQuery.of(context).size.height * (0.28),
+                        ),
+                        false,
+                        AlignmentDirectional.center,
+                        EdgeInsetsDirectional.only(
+                          start: MediaQuery.of(context).size.width * (0.3),
+                          bottom: MediaQuery.of(context).size.height * (0.42),
+                        ),
+                        Colors.redAccent,
+                      ),
                     const SizedBox(height: 12),
 
                     //user 3
-                    usersWithRank.length > 2
-                        ? _buildUserDetailsContainer(
-                            usersWithRank[2]['user'] as UserBattleRoomDetails,
-                            usersWithRank[2]['rank'],
-                            Size(MediaQuery.of(context).size.width * (0.36),
-                                MediaQuery.of(context).size.height * (0.25)),
-                            false,
-                            AlignmentDirectional.centerEnd,
-                            EdgeInsetsDirectional.only(
-                              end: 10.0,
-                              top: MediaQuery.of(context).size.height * (0.1),
-                            ),
-                            Colors.redAccent,
-                          )
-                        : const SizedBox(),
+                    if (usersWithRank.length > 2)
+                      _buildUserDetailsContainer(
+                        usersWithRank[2]['user'] as UserBattleRoomDetails,
+                        usersWithRank[2]['rank'] as int,
+                        Size(
+                          MediaQuery.of(context).size.width * (0.36),
+                          MediaQuery.of(context).size.height * (0.25),
+                        ),
+                        false,
+                        AlignmentDirectional.centerEnd,
+                        EdgeInsetsDirectional.only(
+                          end: 10,
+                          top: MediaQuery.of(context).size.height * (0.1),
+                        ),
+                        Colors.redAccent,
+                      )
+                    else
+                      const SizedBox(),
 
                     const SizedBox(height: 12),
 
                     //user 4
-                    usersWithRank.length == 4
-                        ? _buildUserDetailsContainer(
-                            usersWithRank.last['user'] as UserBattleRoomDetails,
-                            usersWithRank.last['rank'],
-                            Size(MediaQuery.of(context).size.width * (0.35),
-                                MediaQuery.of(context).size.height * (0.25)),
-                            false,
-                            AlignmentDirectional.center,
-                            EdgeInsetsDirectional.only(
-                              start: MediaQuery.of(context).size.width * (0.3),
-                              top: MediaQuery.of(context).size.height * (0.575),
-                            ),
-                            Colors.redAccent,
-                          )
-                        : const SizedBox(),
+                    if (usersWithRank.length == 4)
+                      _buildUserDetailsContainer(
+                        usersWithRank.last['user'] as UserBattleRoomDetails,
+                        usersWithRank.last['rank'] as int,
+                        Size(
+                          MediaQuery.of(context).size.width * (0.35),
+                          MediaQuery.of(context).size.height * (0.25),
+                        ),
+                        false,
+                        AlignmentDirectional.center,
+                        EdgeInsetsDirectional.only(
+                          start: MediaQuery.of(context).size.width * (0.3),
+                          top: MediaQuery.of(context).size.height * (0.575),
+                        ),
+                        Colors.redAccent,
+                      )
+                    else
+                      const SizedBox(),
                   ],
                 ),
               ),
@@ -434,83 +407,27 @@ class _MultiUserBattleRoomResultScreenState
                 child: CustomRoundedButton(
                   widthPercentage: 0.85,
                   backgroundColor: Theme.of(context).primaryColor,
-                  buttonTitle: AppLocalization.of(context)!
-                      .getTranslatedValues("homeBtn")!,
-                  radius: 5.0,
+                  buttonTitle: context.tr('homeBtn'),
+                  radius: 5,
                   showBorder: false,
                   fontWeight: FontWeight.bold,
-                  height: 40.0,
-                  elevation: 5.0,
+                  height: 40,
+                  elevation: 5,
                   titleColor: Theme.of(context).colorScheme.background,
                   onTap: () {
-                    Navigator.of(context).popUntil((route) => route.isFirst);
+                    Navigator.of(context).pushNamedAndRemoveUntil(
+                      Routes.home,
+                      (_) => false,
+                      arguments: false,
+                    );
                   },
-                  textSize: 17.0,
+                  textSize: 17,
                 ),
               ),
-            )
+            ),
           ],
         ),
       ),
     );
   }
 }
-
-class PointsPainter extends CustomPainter {
-  final Color color;
-
-  PointsPainter(this.color);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    Paint paint = Paint()..color = color;
-    Path path = Path();
-
-    path.lineTo(size.width, 0);
-    path.lineTo(size.width, size.height);
-    path.lineTo(size.width * (0.5), size.height * (0.8));
-    path.lineTo(0, size.height);
-    path.close();
-
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return false;
-  }
-}
-
-/*
-To decide result
-
-  List<Map<String,dynamic>> users = [{
-    "id" : 1,
-    "points" : 0
-  },{
-    "id" : 2,
-    "points" : 1
-  },{
-    "id" : 3,
-    "points" : 2
-  },{
-    "id" : 4,
-    "points" : 0
-  }
-  ];
-  var points = users.map((details) => details['points']).toList();
-
-  points = points.toSet().toList();
-  points.sort((first,second) => second.compareTo(first));
-
-  users.forEach((userDetails) {
-    int rank = points.indexOf(userDetails['points']) + 1;
-    userDetails.addAll({
-      "rank" : rank
-    });
-  });
-
-  print(users);
-
-
- */

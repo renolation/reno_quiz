@@ -1,3 +1,10 @@
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    id "dev.flutter.flutter-gradle-plugin"
+    id "com.google.gms.google-services"
+}
+
 def localProperties = new Properties()
 def localPropertiesFile = rootProject.file('local.properties')
 if (localPropertiesFile.exists()) {
@@ -21,10 +28,6 @@ if (flutterVersionName == null) {
     flutterVersionName = '1.0'
 }
 
-apply plugin: 'com.android.application'
-apply plugin: 'com.google.gms.google-services'
-apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
-
 def keystoreProperties = new Properties()
 def keystorePropertiesFile = rootProject.file('key.properties')
 if (keystorePropertiesFile.exists()) {
@@ -32,12 +35,27 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    compileSdkVersion 33
+    namespace "com.renolation.quiz"
+    compileSdkVersion 34
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+    }
+
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId "com.renolation.quiz"
-        minSdkVersion 19
-        targetSdkVersion 33
+        minSdkVersion 21
+        targetSdkVersion 34
         ndkVersion "22.1.7171670"
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
@@ -56,7 +74,7 @@ android {
 
     buildTypes {
         release {
-            //signingConfig signingConfigs.debug
+//            signingConfig signingConfigs.debug
             signingConfig signingConfigs.release
             minifyEnabled true // Add these lines
             shrinkResources true // Add these lines
@@ -70,25 +88,10 @@ flutter {
 }
 
 dependencies {
-    constraints {
-        implementation('com.facebook.android:audience-network-sdk') {
-            version {
-                strictly '6.8.0'
-            }
-        }
-    }
 
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
     implementation "androidx.multidex:multidex:2.0.1"
     implementation 'com.google.firebase:firebase-messaging:20.2.4'
-    implementation 'com.google.ads.mediation:facebook:5.8.0.0'
     implementation 'com.google.android.gms:play-services-location:20.0.0'
+    implementation 'com.google.android.recaptcha:recaptcha:18.4.0'
     implementation('com.android.billingclient:billing:4.0.0')
-    implementation 'com.google.ads.mediation:facebook:6.14.0.0'
-    implementation 'com.google.android.play:integrity:1.2.0'
-
-    def billingVersion = "6.0.0"
-
-    implementation "com.android.billingclient:billing:$billingVersion"
-
 }

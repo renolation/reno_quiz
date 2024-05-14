@@ -1,15 +1,15 @@
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class CircularProgressContainer extends StatefulWidget {
-  final bool whiteLoader;
-  final double size;
-
   const CircularProgressContainer({
     super.key,
     this.whiteLoader = false,
     this.size = 40,
   });
+
+  final bool whiteLoader;
+  final double size;
 
   @override
   State<CircularProgressContainer> createState() =>
@@ -21,8 +21,8 @@ class _CircularProgressContainerState extends State<CircularProgressContainer>
   late final AnimationController _rotationController;
 
   /// The PI constant.
-  static const double pi = 3.1415926535897932;
-  static const String loader = "assets/images/loadder.svg";
+  static const double pi2 = 3.1415926535897932 * 2;
+  static const String loader = 'assets/images/loadder.svg';
 
   @override
   void initState() {
@@ -43,17 +43,21 @@ class _CircularProgressContainerState extends State<CircularProgressContainer>
   Widget build(BuildContext context) {
     final color =
         widget.whiteLoader ? Colors.white : Theme.of(context).primaryColor;
-    return RepaintBoundary(
-      child: AnimatedBuilder(
-        animation: _rotationController,
-        builder: (_, __) => Transform.rotate(
-          angle: (_rotationController.value * 6) * 2 * pi,
-          child: SizedBox(
-            width: widget.size,
-            height: widget.size,
-            child: Padding(
-              padding: const EdgeInsets.all(3.0),
-              child: SvgPicture.asset(loader, color: color),
+
+    return SizedBox(
+      width: widget.size,
+      height: widget.size,
+      child: Padding(
+        padding: const EdgeInsets.all(3),
+        child: RepaintBoundary(
+          child: AnimatedBuilder(
+            animation: _rotationController,
+            builder: (_, __) => Transform.rotate(
+              angle: (_rotationController.value * 6) * pi2,
+              child: SvgPicture.asset(
+                loader,
+                colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+              ),
             ),
           ),
         ),

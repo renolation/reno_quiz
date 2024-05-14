@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 
 class CustomBackButton extends StatelessWidget {
-  final bool? removeSnackBars;
-  final Color? iconColor;
-  final Function? onTap;
-
   const CustomBackButton({
     super.key,
     this.removeSnackBars,
     this.iconColor,
     this.onTap,
   });
+
+  final bool? removeSnackBars;
+  final Color? iconColor;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +26,7 @@ class CustomBackButton extends StatelessWidget {
               onTap?.call();
             },
       child: Container(
-        padding: const EdgeInsets.all(8.0),
+        padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           border: Border.all(color: Colors.transparent),
         ),

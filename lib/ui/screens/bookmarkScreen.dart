@@ -1,7 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutterquiz/app/app_localization.dart';
+import 'package:flutter_tex/flutter_tex.dart';
 import 'package:flutterquiz/app/routes.dart';
 import 'package:flutterquiz/features/bookmark/bookmarkRepository.dart';
 import 'package:flutterquiz/features/bookmark/cubits/audioQuestionBookmarkCubit.dart';
@@ -9,9 +9,8 @@ import 'package:flutterquiz/features/bookmark/cubits/bookmarkCubit.dart';
 import 'package:flutterquiz/features/bookmark/cubits/guessTheWordBookmarkCubit.dart';
 import 'package:flutterquiz/features/bookmark/cubits/updateBookmarkCubit.dart';
 import 'package:flutterquiz/features/profileManagement/cubits/userDetailsCubit.dart';
-import 'package:flutterquiz/features/quiz/models/guessTheWordQuestion.dart';
-import 'package:flutterquiz/features/quiz/models/question.dart';
 import 'package:flutterquiz/features/quiz/models/quizType.dart';
+import 'package:flutterquiz/features/systemConfig/cubits/systemConfigCubit.dart';
 import 'package:flutterquiz/ui/widgets/circularProgressContainer.dart';
 import 'package:flutterquiz/ui/widgets/customAppbar.dart';
 import 'package:flutterquiz/ui/widgets/customRoundedButton.dart';
@@ -20,6 +19,7 @@ import 'package:flutterquiz/utils/answer_encryption.dart';
 import 'package:flutterquiz/utils/constants/error_message_keys.dart';
 import 'package:flutterquiz/utils/constants/fonts.dart';
 import 'package:flutterquiz/utils/constants/string_labels.dart';
+import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
 
 class BookmarkScreen extends StatefulWidget {
@@ -31,25 +31,35 @@ class BookmarkScreen extends StatefulWidget {
 
 class _BookmarkScreenState extends State<BookmarkScreen>
     with SingleTickerProviderStateMixin {
-  // int _currentSelectedTab = 1;
   late final String _userId;
   late final String _userFirebaseId;
 
-  // late final String _firebaseId;
-
   late TabController tabController;
-  late final tabs = <String>[
-    AppLocalization.of(context)!.getTranslatedValues(quizZone)!,
-    AppLocalization.of(context)!.getTranslatedValues(guessTheWord)!,
-    AppLocalization.of(context)!.getTranslatedValues(audioQuestionsKey)!,
+  late List<(String, Widget)> tabs = <(String, Widget)>[
+    (quizZone, _buildQuizZoneQuestions()),
+    (guessTheWord, _buildGuessTheWordQuestions()),
+    (audioQuestionsKey, _buildAudioQuestions()),
   ];
 
   @override
   void initState() {
     super.initState();
-    tabController = TabController(length: 3, vsync: this);
-    _userId = context.read<UserDetailsCubit>().getUserId();
+    _userId = context.read<UserDetailsCubit>().userId();
     _userFirebaseId = context.read<UserDetailsCubit>().getUserFirebaseId();
+
+    // Remove disabled quizzes
+    final sysConfig = context.read<SystemConfigCubit>();
+    if (!sysConfig.isQuizZoneEnabled) {
+      tabs.removeWhere((t) => t.$1 == quizZone);
+    }
+    if (!sysConfig.isGuessTheWordEnabled) {
+      tabs.removeWhere((t) => t.$1 == guessTheWord);
+    }
+    if (!sysConfig.isAudioQuizEnabled) {
+      tabs.removeWhere((t) => t.$1 == audioQuestionsKey);
+    }
+
+    tabController = TabController(length: tabs.length, vsync: this);
   }
 
   @override
@@ -63,162 +73,230 @@ class _BookmarkScreenState extends State<BookmarkScreen>
     required String? imageUrl,
     required String correctAnswer,
     required String yourAnswer,
+    bool isLatex = false,
   }) {
-    print("Image: $imageUrl");
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       shape: const RoundedRectangleBorder(
         borderRadius: UiUtils.bottomSheetTopRadius,
       ),
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       isScrollControlled: true,
       context: context,
-      builder: (_) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 15.0),
-
-          /// Title
-          Text(
-            tabs[tabController.index],
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onTertiary,
-            ),
+      builder: (_) {
+        return Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: UiUtils.bottomSheetTopRadius,
           ),
-          const Divider(),
+          height: MediaQuery.sizeOf(context).height * .7,
+          margin: MediaQuery.of(context).viewInsets,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 15),
 
-          ///
-          Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal:
-                  MediaQuery.of(context).size.width * UiUtils.hzMarginPct,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 15.0),
-                Text(
-                  question,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontWeight: FontWeights.regular,
-                    fontSize: 18.0,
-                    color: Theme.of(context).colorScheme.onTertiary,
-                  ),
+              /// Title
+              Text(
+                context.tr(tabs[tabController.index].$1)!,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onTertiary,
                 ),
-                if (imageUrl != null && imageUrl != '') ...[
-                  const SizedBox(height: 30.0),
-                  Center(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      width: MediaQuery.of(context).size.width * .9,
-                      height: MediaQuery.of(context).size.width * .5,
-                      alignment: Alignment.center,
-                      child: CachedNetworkImage(
-                        placeholder: (_, __) => const Center(
-                          child: CircularProgressContainer(),
-                        ),
-                        imageUrl: imageUrl,
-                        imageBuilder: (context, imageProvider) {
-                          return Container(
-                            decoration: BoxDecoration(
-                              image: DecorationImage(
-                                image: imageProvider,
-                                fit: BoxFit.cover,
+              ),
+              const Divider(),
+
+              if (isLatex) ...[
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: TeXView(
+                      child: TeXViewColumn(
+                        children: [
+                          TeXViewDocument(
+                            question,
+                            style: TeXViewStyle(
+                              fontStyle: TeXViewFontStyle(
+                                sizeUnit: TeXViewSizeUnit.pixels,
+                                fontSize: 18,
+                                fontWeight: TeXViewFontWeight.bold,
                               ),
-                              borderRadius: BorderRadius.circular(10.0),
+                              margin: const TeXViewMargin.only(
+                                bottom: 30,
+                                sizeUnit: TeXViewSizeUnit.pixels,
+                              ),
                             ),
-                          );
-                        },
-                        errorWidget: (_, i, e) {
-                          return Center(
-                            child: Icon(
-                              Icons.error,
-                              color: Theme.of(context).primaryColor,
+                          ),
+                          if (imageUrl != null && imageUrl != '') ...[
+                            TeXViewContainer(
+                              child: TeXViewImage.network(imageUrl),
+                              style: const TeXViewStyle(
+                                margin: TeXViewMargin.only(
+                                  bottom: 15,
+                                  sizeUnit: TeXViewSizeUnit.pixels,
+                                ),
+                                borderRadius: TeXViewBorderRadius.all(
+                                  10,
+                                  sizeUnit: TeXViewSizeUnit.pixels,
+                                ),
+                              ),
                             ),
-                          );
-                        },
+                          ],
+                          TeXViewDocument(
+                            context.tr('yourAnsLbl')!,
+                            style: const TeXViewStyle(
+                              margin: TeXViewMargin.only(
+                                bottom: 30,
+                                sizeUnit: TeXViewSizeUnit.pixels,
+                              ),
+                            ),
+                          ),
+
+                          ///
+                          TeXViewContainer(
+                            child: TeXViewDocument(yourAnswer),
+                            style: TeXViewStyle(
+                              borderRadius: const TeXViewBorderRadius.all(8),
+                              backgroundColor:
+                                  Theme.of(context).colorScheme.background,
+                              padding: const TeXViewPadding.only(
+                                top: 16,
+                                bottom: 16,
+                                left: 14,
+                                right: 14,
+                              ),
+                              margin: const TeXViewMargin.only(bottom: 20),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 15.0),
-                Text(
-                  AppLocalization.of(context)!
-                      .getTranslatedValues("yourAnsLbl")!,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeights.regular,
-                    color: Theme.of(context).colorScheme.onTertiary,
-                  ),
-                ),
-                const SizedBox(height: 10.0),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.background,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  // height: 48,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 16,
-                  ),
-                  width: double.maxFinite,
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    yourAnswer,
-                    style: TextStyle(
-                      fontWeight: FontWeights.regular,
-                      fontSize: 16.0,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onTertiary
-                          .withOpacity(.3),
+                      style: TeXViewStyle(
+                        margin: const TeXViewMargin.all(
+                          20,
+                          sizeUnit: TeXViewSizeUnit.pixels,
+                        ),
+                        contentColor: Theme.of(context).colorScheme.onTertiary,
+                        fontStyle: TeXViewFontStyle(
+                          sizeUnit: TeXViewSizeUnit.pixels,
+                          fontSize: 16,
+                          fontWeight: TeXViewFontWeight.normal,
+                        ),
+                      ),
+                      renderingEngine: const TeXViewRenderingEngine.katex(),
                     ),
                   ),
                 ),
-                const SizedBox(height: 10),
-                Text(
-                  AppLocalization.of(context)!
-                      .getTranslatedValues("correctAndLbl")!,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeights.regular,
-                    color: Theme.of(context).colorScheme.onTertiary,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.background,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  // height: 48,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 16,
-                  ),
-                  width: double.maxFinite,
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    correctAnswer,
-                    style: TextStyle(
-                      fontWeight: FontWeights.regular,
-                      fontSize: 16.0,
-                      color: Theme.of(context).colorScheme.onTertiary,
+              ] else ...[
+                Flexible(
+                  fit: FlexFit.tight,
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: MediaQuery.of(context).size.width *
+                          UiUtils.hzMarginPct,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 15),
+
+                        Text(
+                          question,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontWeight: FontWeights.regular,
+                            fontSize: 18,
+                            color: Theme.of(context).colorScheme.onTertiary,
+                          ),
+                        ),
+
+                        /// Image
+                        if (imageUrl != null && imageUrl != '') ...[
+                          const SizedBox(height: 30),
+                          Center(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              width: MediaQuery.of(context).size.width * .9,
+                              height: MediaQuery.of(context).size.width * .5,
+                              alignment: Alignment.center,
+                              child: CachedNetworkImage(
+                                placeholder: (_, __) => const Center(
+                                  child: CircularProgressContainer(),
+                                ),
+                                imageUrl: imageUrl,
+                                imageBuilder: (context, imageProvider) {
+                                  return InteractiveViewer(
+                                    boundaryMargin: const EdgeInsets.all(20),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        image: DecorationImage(
+                                          image: imageProvider,
+                                          fit: BoxFit.cover,
+                                        ),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                    ),
+                                  );
+                                },
+                                errorWidget: (_, i, e) {
+                                  return Center(
+                                    child: Icon(
+                                      Icons.error,
+                                      color: Theme.of(context).primaryColor,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
+
+                        const SizedBox(height: 15),
+                        Text(
+                          context.tr('yourAnsLbl')!,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeights.regular,
+                            color: Theme.of(context).colorScheme.onTertiary,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.background,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          // height: 48,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 16,
+                          ),
+                          width: double.maxFinite,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            yourAnswer,
+                            style: TextStyle(
+                              fontWeight: FontWeights.regular,
+                              fontSize: 16,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onTertiary
+                                  .withOpacity(.3),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                      ],
                     ),
                   ),
                 ),
-                const SizedBox(height: 50.0),
               ],
-            ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -239,7 +317,7 @@ class _BookmarkScreenState extends State<BookmarkScreen>
                   height: MediaQuery.of(context).size.height * .65,
                   child: ListView.separated(
                     itemBuilder: (_, index) {
-                      Question question = state.questions[index];
+                      final question = state.questions[index];
 
                       //providing updateBookmarkCubit to every bookmarked question
                       return BlocProvider<UpdateBookmarkCubit>(
@@ -253,52 +331,55 @@ class _BookmarkScreenState extends State<BookmarkScreen>
                             listener: (_, state) {
                               if (state is UpdateBookmarkSuccess) {
                                 bookmarkCubit.removeBookmarkQuestion(
-                                    question.id, _userId);
+                                  question.id,
+                                  _userId,
+                                );
                               }
                               if (state is UpdateBookmarkFailure) {
-                                UiUtils.setSnackbar(
-                                    AppLocalization.of(context)!
-                                        .getTranslatedValues(
-                                            convertErrorCodeToLanguageKey(
-                                                updateBookmarkFailureCode))!,
-                                    context,
-                                    false);
+                                UiUtils.showSnackBar(
+                                  context.tr(
+                                    convertErrorCodeToLanguageKey(
+                                      errorCodeUpdateBookmarkFailure,
+                                    ),
+                                  )!,
+                                  context,
+                                );
                               }
                             },
                             builder: (context, state) {
-                              return
-                                  // GestureDetector(
-                                  //   onTap: () {
-                                  //     openBottomSheet(
-                                  //         question: question.question!,
-                                  //         yourAnswer: context
-                                  //             .read<BookmarkCubit>()
-                                  //             .getSubmittedAnswerForQuestion(
-                                  //                 question.id),
-                                  //         imageUrl: question.imageUrl,
-                                  //         correctAnswer: question
-                                  //             .answerOptions![question
-                                  //                 .answerOptions!
-                                  //                 .indexWhere(
-                                  //           (e) =>
-                                  //               e.id ==
-                                  //               AnswerEncryption
-                                  //                   .decryptCorrectAnswer(
-                                  //                 rawKey: _userFirebaseId,
-                                  //                 correctAnswer:
-                                  //                     question.correctAnswer!,
-                                  //               ),
-                                  //         )]
-                                  //             .title!);
-                                  //   },
-                                  //   child:
-                                  BookmarkCard(
+                              final ya = context
+                                  .read<BookmarkCubit>()
+                                  .getSubmittedAnswerForQuestion(question.id);
+                              final yourAnswer = context.tr(ya) ?? ya;
+
+                              return BookmarkCard(
                                 queId: question.id!,
-                                index: "${index + 1}",
+                                index: '${index + 1}',
                                 title: question.question!,
-                                desc:
-                                    "${question.answerOptions![question.answerOptions!.indexWhere((e) => e.id == AnswerEncryption.decryptCorrectAnswer(rawKey: _userFirebaseId, correctAnswer: question.correctAnswer!))].title}",
-                                // ),
+                                desc: yourAnswer,
+                                type: '1',
+                                // type QuizZone
+                                isLatex: true,
+                                onTap: () {
+                                  openBottomSheet(
+                                    question: question.question!,
+                                    yourAnswer: yourAnswer,
+                                    imageUrl: question.imageUrl,
+                                    isLatex: true,
+                                    correctAnswer: question
+                                        .answerOptions![
+                                            question.answerOptions!.indexWhere(
+                                      (e) =>
+                                          e.id ==
+                                          AnswerEncryption.decryptCorrectAnswer(
+                                            rawKey: _userFirebaseId,
+                                            correctAnswer:
+                                                question.correctAnswer!,
+                                          ),
+                                    )]
+                                        .title!,
+                                  );
+                                },
                               );
                             },
                           ),
@@ -314,20 +395,19 @@ class _BookmarkScreenState extends State<BookmarkScreen>
               Align(
                 alignment: Alignment.bottomCenter,
                 child: Padding(
-                  padding: const EdgeInsets.only(bottom: 25.0),
+                  padding: const EdgeInsets.only(bottom: 25),
                   child: BlocBuilder<BookmarkCubit, BookmarkState>(
                     builder: (context, state) {
                       if (state is BookmarkFetchSuccess &&
                           state.questions.isNotEmpty) {
                         return CustomRoundedButton(
-                          widthPercentage: 1.0,
+                          widthPercentage: 1,
                           backgroundColor: Theme.of(context).primaryColor,
-                          buttonTitle: AppLocalization.of(context)!
-                              .getTranslatedValues("playBookmarkBtn")!,
-                          radius: 8.0,
+                          buttonTitle: context.tr('playBookmarkBtn'),
+                          radius: 8,
                           showBorder: false,
                           fontWeight: FontWeights.semiBold,
-                          height: 58.0,
+                          height: 58,
                           titleColor: Theme.of(context).colorScheme.background,
                           onTap: () {
                             Navigator.of(context).pushNamed(
@@ -336,7 +416,7 @@ class _BookmarkScreenState extends State<BookmarkScreen>
                             );
                           },
                           elevation: 6.5,
-                          textSize: 18.0,
+                          textSize: 18,
                         );
                       }
                       return const SizedBox();
@@ -349,8 +429,7 @@ class _BookmarkScreenState extends State<BookmarkScreen>
         }
         if (state is BookmarkFetchFailure) {
           return ErrorContainer(
-            errorMessage: AppLocalization.of(context)!.getTranslatedValues(
-                convertErrorCodeToLanguageKey(state.errorMessageCode)),
+            errorMessage: convertErrorCodeToLanguageKey(state.errorMessageCode),
             showErrorImage: true,
             errorMessageColor: Theme.of(context).primaryColor,
             onTapRetry: () {
@@ -381,11 +460,11 @@ class _BookmarkScreenState extends State<BookmarkScreen>
                   height: MediaQuery.of(context).size.height * .65,
                   child: ListView.separated(
                     itemBuilder: (context, index) {
-                      Question question = state.questions[index];
+                      final question = state.questions[index];
 
                       //providing updateBookmarkCubit to every bookmarekd question
                       return BlocProvider<UpdateBookmarkCubit>(
-                        create: (context) =>
+                        create: (_) =>
                             UpdateBookmarkCubit(BookmarkRepository()),
                         //using builder so we can access the recently provided cubit
                         child: Builder(
@@ -400,30 +479,52 @@ class _BookmarkScreenState extends State<BookmarkScreen>
                                 );
                               }
                               if (state is UpdateBookmarkFailure) {
-                                UiUtils.setSnackbar(
-                                  AppLocalization.of(context)!
-                                      .getTranslatedValues(
-                                          convertErrorCodeToLanguageKey(
-                                              updateBookmarkFailureCode))!,
+                                UiUtils.showSnackBar(
+                                  context.tr(
+                                    convertErrorCodeToLanguageKey(
+                                      errorCodeUpdateBookmarkFailure,
+                                    ),
+                                  )!,
                                   context,
-                                  false,
                                 );
                               }
                             },
                             builder: (context, state) {
+                              final ya = bookmarkCubit
+                                  .getSubmittedAnswerForQuestion(question.id);
+                              final yourAnswer = context.tr(ya) ?? ya;
+
                               return BookmarkCard(
                                 queId: question.id!,
-                                index: "${index + 1}",
+                                index: '${index + 1}',
                                 title: question.question!,
-                                desc:
-                                    "${question.answerOptions![question.answerOptions!.indexWhere(
-                                  (e) =>
-                                      e.id ==
-                                      AnswerEncryption.decryptCorrectAnswer(
-                                        rawKey: _userFirebaseId,
-                                        correctAnswer: question.correctAnswer!,
-                                      ),
-                                )].title!}",
+                                desc: yourAnswer,
+                                type: '4',
+                                onTap: state is UpdateBookmarkInProgress
+                                    ? () {}
+                                    : () {
+                                        openBottomSheet(
+                                          question: question.question!,
+                                          yourAnswer: yourAnswer,
+                                          correctAnswer: question
+                                              .answerOptions![question
+                                                  .answerOptions!
+                                                  .indexWhere(
+                                            (o) =>
+                                                o.id ==
+                                                AnswerEncryption
+                                                    .decryptCorrectAnswer(
+                                                  rawKey: context
+                                                      .read<UserDetailsCubit>()
+                                                      .getUserFirebaseId(),
+                                                  correctAnswer:
+                                                      question.correctAnswer!,
+                                                ),
+                                          )]
+                                              .title!,
+                                          imageUrl: '',
+                                        );
+                                      }, // type Audio Quiz
                               );
                             },
                           ),
@@ -440,7 +541,7 @@ class _BookmarkScreenState extends State<BookmarkScreen>
               Align(
                 alignment: Alignment.bottomCenter,
                 child: Padding(
-                  padding: const EdgeInsets.only(bottom: 25.0),
+                  padding: const EdgeInsets.only(bottom: 25),
                   child: BlocBuilder<AudioQuestionBookmarkCubit,
                       AudioQuestionBookMarkState>(
                     builder: (context, state) {
@@ -449,12 +550,11 @@ class _BookmarkScreenState extends State<BookmarkScreen>
                         return CustomRoundedButton(
                           widthPercentage: 1,
                           backgroundColor: Theme.of(context).primaryColor,
-                          buttonTitle: AppLocalization.of(context)!
-                              .getTranslatedValues("playBookmarkBtn")!,
-                          radius: 8.0,
+                          buttonTitle: context.tr('playBookmarkBtn'),
+                          radius: 8,
                           showBorder: false,
                           fontWeight: FontWeight.w500,
-                          height: 58.0,
+                          height: 58,
                           titleColor: Theme.of(context).colorScheme.background,
                           onTap: () {
                             Navigator.of(context).pushNamed(
@@ -463,7 +563,7 @@ class _BookmarkScreenState extends State<BookmarkScreen>
                             );
                           },
                           elevation: 6.5,
-                          textSize: 18.0,
+                          textSize: 18,
                         );
                       }
                       return const SizedBox();
@@ -476,8 +576,7 @@ class _BookmarkScreenState extends State<BookmarkScreen>
         }
         if (state is AudioQuestionBookmarkFetchFailure) {
           return ErrorContainer(
-            errorMessage: AppLocalization.of(context)!.getTranslatedValues(
-                convertErrorCodeToLanguageKey(state.errorMessageCode)),
+            errorMessage: convertErrorCodeToLanguageKey(state.errorMessageCode),
             showErrorImage: true,
             errorMessageColor: Theme.of(context).primaryColor,
             onTapRetry: () {
@@ -490,17 +589,15 @@ class _BookmarkScreenState extends State<BookmarkScreen>
     );
   }
 
-  Center noBookmarksFound() {
-    return Center(
-      child: Text(
-        AppLocalization.of(context)!.getTranslatedValues("noBookmarkQueLbl")!,
-        style: TextStyle(
-          color: Theme.of(context).colorScheme.onTertiary,
-          fontSize: 20.0,
+  Center noBookmarksFound() => Center(
+        child: Text(
+          context.tr('noBookmarkQueLbl')!,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onTertiary,
+            fontSize: 20,
+          ),
         ),
-      ),
-    );
-  }
+      );
 
   Widget _buildGuessTheWordQuestions() {
     final bookmarkCubit = context.read<GuessTheWordBookmarkCubit>();
@@ -518,9 +615,10 @@ class _BookmarkScreenState extends State<BookmarkScreen>
                 height: MediaQuery.of(context).size.height * .65,
                 child: ListView.separated(
                   separatorBuilder: (_, i) => SizedBox(
-                      height: MediaQuery.of(context).size.height * 0.015),
+                    height: MediaQuery.of(context).size.height * 0.015,
+                  ),
                   itemBuilder: (context, index) {
-                    GuessTheWordQuestion question = state.questions[index];
+                    final question = state.questions[index];
 
                     //providing updateBookmarkCubit to every bookmarked question
                     return BlocProvider<UpdateBookmarkCubit>(
@@ -539,22 +637,35 @@ class _BookmarkScreenState extends State<BookmarkScreen>
                               );
                             }
                             if (state is UpdateBookmarkFailure) {
-                              UiUtils.setSnackbar(
-                                AppLocalization.of(context)!
-                                    .getTranslatedValues(
-                                        convertErrorCodeToLanguageKey(
-                                            updateBookmarkFailureCode))!,
+                              UiUtils.showSnackBar(
+                                context.tr(
+                                  convertErrorCodeToLanguageKey(
+                                    errorCodeUpdateBookmarkFailure,
+                                  ),
+                                )!,
                                 context,
-                                false,
                               );
                             }
                           },
                           builder: (context, state) {
+                            final ya = context
+                                .read<GuessTheWordBookmarkCubit>()
+                                .getSubmittedAnswerForQuestion(question.id);
+                            final yourAnswer = context.tr(ya) ?? ya;
                             return BookmarkCard(
                               queId: question.id,
-                              index: "${index + 1}",
+                              index: '${index + 1}',
                               title: question.question,
-                              desc: "${question.answer}",
+                              desc: yourAnswer,
+                              type: '3',
+                              onTap: () {
+                                openBottomSheet(
+                                  yourAnswer: yourAnswer,
+                                  question: question.question,
+                                  correctAnswer: question.answer,
+                                  imageUrl: question.image,
+                                );
+                              },
                             );
                           },
                         ),
@@ -567,21 +678,20 @@ class _BookmarkScreenState extends State<BookmarkScreen>
               Align(
                 alignment: Alignment.bottomCenter,
                 child: Padding(
-                  padding: const EdgeInsets.only(bottom: 25.0),
+                  padding: const EdgeInsets.only(bottom: 25),
                   child: BlocBuilder<GuessTheWordBookmarkCubit,
                       GuessTheWordBookmarkState>(
                     builder: (context, state) {
                       if (state is GuessTheWordBookmarkFetchSuccess &&
                           state.questions.isNotEmpty) {
                         return CustomRoundedButton(
-                          widthPercentage: 1.0,
+                          widthPercentage: 1,
                           backgroundColor: Theme.of(context).primaryColor,
-                          buttonTitle: AppLocalization.of(context)!
-                              .getTranslatedValues("playBookmarkBtn")!,
-                          radius: 8.0,
+                          buttonTitle: context.tr('playBookmarkBtn'),
+                          radius: 8,
                           showBorder: false,
                           fontWeight: FontWeight.w500,
-                          height: 58.0,
+                          height: 58,
                           titleColor: Theme.of(context).colorScheme.background,
                           onTap: () {
                             Navigator.of(context).pushNamed(
@@ -590,7 +700,7 @@ class _BookmarkScreenState extends State<BookmarkScreen>
                             );
                           },
                           elevation: 6.5,
-                          textSize: 18.0,
+                          textSize: 18,
                         );
                       }
                       return const SizedBox();
@@ -603,9 +713,7 @@ class _BookmarkScreenState extends State<BookmarkScreen>
         }
         if (state is GuessTheWordBookmarkFetchFailure) {
           return ErrorContainer(
-            errorMessage: AppLocalization.of(context)!.getTranslatedValues(
-              convertErrorCodeToLanguageKey(state.errorMessageCode),
-            ),
+            errorMessage: convertErrorCodeToLanguageKey(state.errorMessageCode),
             showErrorImage: true,
             errorMessageColor: Theme.of(context).primaryColor,
             onTapRetry: () =>
@@ -617,123 +725,23 @@ class _BookmarkScreenState extends State<BookmarkScreen>
     );
   }
 
-  // Widget _buildPlayButton() {
-  //   if (_currentSelectedTab == 1) {
-  //     return Align(
-  //       alignment: Alignment.bottomCenter,
-  //       child: Padding(
-  //         padding: EdgeInsets.only(bottom: 25.0),
-  //         child: BlocBuilder<BookmarkCubit, BookmarkState>(
-  //           builder: (context, state) {
-  //             if (state is BookmarkFetchSuccess && state.questions.isNotEmpty) {
-  //               return CustomRoundedButton(
-  //                 widthPercentage: 0.85,
-  //                 backgroundColor: Theme.of(context).primaryColor,
-  //                 buttonTitle: AppLocalization.of(context)!
-  //                     .getTranslatedValues("playBookmarkBtn")!,
-  //                 radius: 5.0,
-  //                 showBorder: false,
-  //                 fontWeight: FontWeight.w500,
-  //                 height: 50.0,
-  //                 titleColor: Theme.of(context).backgroundColor,
-  //                 onTap: () {
-  //                   Navigator.of(context).pushNamed(
-  //                     Routes.bookmarkQuiz,
-  //                     arguments: QuizTypes.quizZone,
-  //                   );
-  //                 },
-  //                 elevation: 6.5,
-  //                 textSize: 17.0,
-  //               );
-  //             }
-  //             return Container();
-  //           },
-  //         ),
-  //       ),
-  //     );
-  //   }
-  //   if (_currentSelectedTab == 2) {
-  //     return Align(
-  //       alignment: Alignment.bottomCenter,
-  //       child: Padding(
-  //         padding: EdgeInsets.only(bottom: 25.0),
-  //         child:
-  //             BlocBuilder<GuessTheWordBookmarkCubit, GuessTheWordBookmarkState>(
-  //           builder: (context, state) {
-  //             if (state is GuessTheWordBookmarkFetchSuccess &&
-  //                 state.questions.isNotEmpty) {
-  //               return CustomRoundedButton(
-  //                 widthPercentage: 0.85,
-  //                 backgroundColor: Theme.of(context).primaryColor,
-  //                 buttonTitle: AppLocalization.of(context)!
-  //                     .getTranslatedValues("playBookmarkBtn")!,
-  //                 radius: 5.0,
-  //                 showBorder: false,
-  //                 fontWeight: FontWeight.w500,
-  //                 height: 50.0,
-  //                 titleColor: Theme.of(context).backgroundColor,
-  //                 onTap: () {
-  //                   Navigator.of(context).pushNamed(
-  //                     Routes.bookmarkQuiz,
-  //                     arguments: QuizTypes.guessTheWord,
-  //                   );
-  //                 },
-  //                 elevation: 6.5,
-  //                 textSize: 17.0,
-  //               );
-  //             }
-  //             return Container();
-  //           },
-  //         ),
-  //       ),
-  //     );
-  //   }
-  //   return Align(
-  //     alignment: Alignment.bottomCenter,
-  //     child: Padding(
-  //       padding: EdgeInsets.only(bottom: 25.0),
-  //       child:
-  //           BlocBuilder<AudioQuestionBookmarkCubit, AudioQuestionBookMarkState>(
-  //         builder: (context, state) {
-  //           if (state is AudioQuestionBookmarkFetchSuccess &&
-  //               state.questions.isNotEmpty) {
-  //             return CustomRoundedButton(
-  //               widthPercentage: 0.85,
-  //               backgroundColor: Theme.of(context).primaryColor,
-  //               buttonTitle: AppLocalization.of(context)!
-  //                   .getTranslatedValues("playBookmarkBtn")!,
-  //               radius: 5.0,
-  //               showBorder: false,
-  //               fontWeight: FontWeight.w500,
-  //               height: 50.0,
-  //               titleColor: Theme.of(context).backgroundColor,
-  //               onTap: () {
-  //                 Navigator.of(context).pushNamed(
-  //                   Routes.bookmarkQuiz,
-  //                   arguments: QuizTypes.audioQuestions,
-  //                 );
-  //               },
-  //               elevation: 6.5,
-  //               textSize: 17.0,
-  //             );
-  //           }
-  //           return Container();
-  //         },
-  //       ),
-  //     ),
-  //   );
-  // }
-  //
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: QAppBar(
         title: Text(
-            AppLocalization.of(context)!.getTranslatedValues(bookmarkLbl)!),
+          context.tr(bookmarkLbl)!,
+        ),
         bottom: TabBar(
           isScrollable: true,
           controller: tabController,
-          tabs: tabs.map((e) => Tab(text: e)).toList(),
+          tabs: tabs
+              .map(
+                (tab) => Tab(
+                  text: context.tr(tab.$1),
+                ),
+              )
+              .toList(),
         ),
       ),
       body: Padding(
@@ -743,11 +751,7 @@ class _BookmarkScreenState extends State<BookmarkScreen>
         ),
         child: TabBarView(
           controller: tabController,
-          children: [
-            _buildQuizZoneQuestions(),
-            _buildGuessTheWordQuestions(),
-            _buildAudioQuestions(),
-          ],
+          children: tabs.map((tab) => tab.$2).toList(),
         ),
       ),
     );
@@ -756,112 +760,174 @@ class _BookmarkScreenState extends State<BookmarkScreen>
 
 class BookmarkCard extends StatelessWidget {
   const BookmarkCard({
-    super.key,
     required this.index,
     required this.title,
     required this.desc,
     required this.queId,
+    required this.type,
+    required this.onTap,
+    super.key,
+    this.isLatex = false,
   });
 
   final String index;
   final String title;
   final String desc;
   final String queId;
+  final String type;
+  final bool isLatex;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: MediaQuery.of(context).size.height * .116,
-      width: MediaQuery.of(context).size.width,
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.background,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(6),
-              color: Theme.of(context).primaryColor.withOpacity(0.3),
-            ),
-            width: MediaQuery.of(context).size.width * .110,
-            height: MediaQuery.of(context).size.width * .110,
-            child: Center(
-              child: Text(
-                index,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Theme.of(context).primaryColor,
-                  fontWeight: FontWeights.bold,
-                ),
-              ),
-            ),
-          ),
+    final size = MediaQuery.sizeOf(context);
 
-          const SizedBox(width: 10),
-          SizedBox(
-            width: MediaQuery.of(context).size.width * .62,
-            child: Column(
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: size.height * .116,
+        width: size.width,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.background,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return Row(
               crossAxisAlignment: CrossAxisAlignment.start,
-              // mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                /// Title
-                Text(
-                  title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeights.bold,
-                    color: Theme.of(context).colorScheme.onTertiary,
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(6),
+                    color: const Color(0xffFFD7E5),
+                  ),
+                  width: constraints.maxWidth * .13,
+                  height: constraints.maxWidth * .13,
+                  child: Center(
+                    child: Text(
+                      index,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Theme.of(context).primaryColor,
+                        fontWeight: FontWeights.bold,
+                      ),
+                    ),
                   ),
                 ),
 
-                /// Subtitle
-                Text(
-                  desc,
-                  maxLines: 1,
-                  style: TextStyle(
-                    fontSize: 14,
-                    overflow: TextOverflow.ellipsis,
-                    fontWeight: FontWeights.regular,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onTertiary
-                        .withOpacity(0.3),
+                const SizedBox(width: 10),
+                SizedBox(
+                  width: constraints.maxWidth * .722,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ///
+                      if (isLatex) ...[
+                        Expanded(
+                          child: TeXView(
+                            child: TeXViewGroup(
+                              children: [
+                                TeXViewGroupItem(
+                                  id: '-',
+                                  child: TeXViewDocument(
+                                    title,
+                                    style: TeXViewStyle(
+                                      contentColor: Theme.of(context)
+                                          .colorScheme
+                                          .onTertiary,
+                                      fontStyle: TeXViewFontStyle(
+                                        sizeUnit: TeXViewSizeUnit.pixels,
+                                        fontSize: 16,
+                                        fontWeight: TeXViewFontWeight.w500,
+                                      ),
+                                      margin: const TeXViewMargin.only(
+                                        bottom: 10,
+                                        sizeUnit: TeXViewSizeUnit.pixels,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                TeXViewGroupItem(
+                                  id: '--',
+                                  child: TeXViewDocument(
+                                    desc,
+                                    style: TeXViewStyle(
+                                      contentColor: Theme.of(context)
+                                          .colorScheme
+                                          .onTertiary,
+                                      fontStyle: TeXViewFontStyle(
+                                        sizeUnit: TeXViewSizeUnit.pixels,
+                                        fontSize: 16,
+                                        fontWeight: TeXViewFontWeight.normal,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              onTap: (_) => onTap(),
+                            ),
+                            renderingEngine:
+                                const TeXViewRenderingEngine.katex(),
+                          ),
+                        ),
+                      ] else ...[
+                        Text(
+                          title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeights.bold,
+                            color: Theme.of(context).colorScheme.onTertiary,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          desc,
+                          maxLines: 1,
+                          style: TextStyle(
+                            fontSize: 14,
+                            overflow: TextOverflow.ellipsis,
+                            fontWeight: FontWeights.regular,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onTertiary
+                                .withOpacity(0.3),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+
+                /// Close
+                GestureDetector(
+                  onTap: () {
+                    context.read<UpdateBookmarkCubit>().updateBookmark(
+                          queId,
+                          '0',
+                          type,
+                        );
+                  },
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: Theme.of(context).scaffoldBackgroundColor,
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.close_rounded,
+                      color: Theme.of(context).colorScheme.onTertiary,
+                    ),
                   ),
                 ),
               ],
-            ),
-          ),
-
-          /// Close
-          GestureDetector(
-            onTap: () {
-              context.read<UpdateBookmarkCubit>().updateBookmark(
-                  context.read<UserDetailsCubit>().getUserId(),
-                  queId,
-                  "0",
-                  "1");
-            },
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(
-                  color: Theme.of(context).scaffoldBackgroundColor,
-                  width: 1,
-                ),
-              ),
-              child: Icon(
-                Icons.close_rounded,
-                color: Theme.of(context).colorScheme.onTertiary,
-              ),
-            ),
-          ),
-        ],
+            );
+          },
+        ),
       ),
     );
   }

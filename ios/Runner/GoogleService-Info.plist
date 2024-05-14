@@ -3,23 +3,23 @@
 <plist version="1.0">
 <dict>
 	<key>CLIENT_ID</key>
-	<string>676014903428-guvlqlnhqfq421q7q0avn2bh8beinb6n.apps.googleusercontent.com</string>
+	<string>322915959213-dh9pngcbov233e8hok2b4i142nem7vs4.apps.googleusercontent.com</string>
 	<key>REVERSED_CLIENT_ID</key>
-	<string>com.googleusercontent.apps.676014903428-guvlqlnhqfq421q7q0avn2bh8beinb6n</string>
+	<string>com.googleusercontent.apps.322915959213-dh9pngcbov233e8hok2b4i142nem7vs4</string>
 	<key>ANDROID_CLIENT_ID</key>
-	<string>676014903428-l8t96978dkobo7vfdtb47tdlrqi48lb8.apps.googleusercontent.com</string>
+	<string>322915959213-arod7ptpsdt8b8encohtlipoat224s3q.apps.googleusercontent.com</string>
 	<key>API_KEY</key>
-	<string>AIzaSyComPNjFHPblOwStdUrnoqJA_KdtxdWSZ8</string>
+	<string>AIzaSyChcZscTQiWbqGeHPrb52Ffmzw9En9iOlY</string>
 	<key>GCM_SENDER_ID</key>
-	<string>676014903428</string>
+	<string>322915959213</string>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
 	<string>com.renolation.quiz</string>
 	<key>PROJECT_ID</key>
-	<string>quizapp-359910</string>
+	<string>quiz-flutter-new</string>
 	<key>STORAGE_BUCKET</key>
-	<string>quizapp-359910.appspot.com</string>
+	<string>quiz-flutter-new.appspot.com</string>
 	<key>IS_ADS_ENABLED</key>
 	<false></false>
 	<key>IS_ANALYTICS_ENABLED</key>
@@ -31,6 +31,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:676014903428:ios:18e72fe288fb53e28f72d1</string>
+	<string>1:322915959213:ios:c19bac87f4cd365642e124</string>
 </dict>
 </plist>

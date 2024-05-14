@@ -1,17 +1,12 @@
+import 'dart:io';
+
+import 'package:flutterquiz/features/profileManagement/models/userProfile.dart';
 import 'package:flutterquiz/features/profileManagement/profileManagementException.dart';
 import 'package:flutterquiz/features/profileManagement/profileManagementLocalDataSource.dart';
 import 'package:flutterquiz/features/profileManagement/profileManagementRemoteDataSource.dart';
 import 'package:flutterquiz/utils/constants/error_message_keys.dart';
-import 'dart:io';
-
-import 'models/userProfile.dart';
 
 class ProfileManagementRepository {
-  static final ProfileManagementRepository _profileManagementRepository =
-      ProfileManagementRepository._internal();
-  late ProfileManagementLocalDataSource _profileManagementLocalDataSource;
-  late ProfileManagementRemoteDataSource _profileManagementRemoteDataSource;
-
   factory ProfileManagementRepository() {
     _profileManagementRepository._profileManagementLocalDataSource =
         ProfileManagementLocalDataSource();
@@ -23,12 +18,17 @@ class ProfileManagementRepository {
 
   ProfileManagementRepository._internal();
 
+  static final ProfileManagementRepository _profileManagementRepository =
+      ProfileManagementRepository._internal();
+  late ProfileManagementLocalDataSource _profileManagementLocalDataSource;
+  late ProfileManagementRemoteDataSource _profileManagementRemoteDataSource;
+
   ProfileManagementLocalDataSource get profileManagementLocalDataSource =>
       _profileManagementLocalDataSource;
 
-  Future<void> deleteAccount({required String userId}) async {
+  Future<void> deleteAccount() async {
     try {
-      await _profileManagementRemoteDataSource.deleteAccount(userId: userId);
+      await _profileManagementRemoteDataSource.deleteAccount();
     } catch (e) {
       throw ProfileManagementException(errorMessageCode: e.toString());
     }
@@ -64,100 +64,126 @@ class ProfileManagementRepository {
         mobileNumber: _profileManagementLocalDataSource.getMobileNumber(),
         name: _profileManagementLocalDataSource.getName(),
         profileUrl: _profileManagementLocalDataSource.getProfileUrl(),
-        registeredDate: "",
+        registeredDate: '',
         status: _profileManagementLocalDataSource.getStatus(),
         userId: _profileManagementLocalDataSource.getUserUID(),
       );
     } catch (e) {
       throw ProfileManagementException(
-          errorMessageCode: defaultErrorMessageCode);
+        errorMessageCode: errorCodeDefaultMessage,
+      );
     }
   }
 
-  Future<UserProfile> getUserDetailsById(String firebaseId) async {
+  Future<UserProfile> getUserDetailsById() async {
     try {
-      final result = await _profileManagementRemoteDataSource
-          .getUserDetailsById(firebaseId);
+      final result =
+          await _profileManagementRemoteDataSource.getUserDetailsById();
 
-      print(UserProfile.fromJson(result));
       return UserProfile.fromJson(result);
     } catch (e) {
       throw ProfileManagementException(errorMessageCode: e.toString());
     }
   }
 
-  Future<String> uploadProfilePicture(File? file, String? userId) async {
+  Future<String> uploadProfilePicture(File? file) async {
     try {
-      final result = await _profileManagementRemoteDataSource.addProfileImage(
-          file, userId);
+      final result =
+          await _profileManagementRemoteDataSource.addProfileImage(file);
+
       return result['profile'].toString();
     } catch (e) {
       throw ProfileManagementException(errorMessageCode: e.toString());
     }
   }
 
-  Future<Map> updateCoinsAndScore(
-      {required String userId,
-      required int? score,
-      required int coins,
-      required bool addCoin,
-      required String title,
-      String? type}) async {
+  Future<({String coins, String score})> updateCoinsAndScore({
+    required int? score,
+    required int coins,
+    required bool addCoin,
+    required String title,
+    String? type,
+  }) async {
     try {
       final result =
           await _profileManagementRemoteDataSource.updateCoinsAndScore(
-              userId: userId,
-              title: title,
-              coins: addCoin ? coins.toString() : (coins * -1).toString(),
-              score: score.toString(),
-              type: type);
-      print("Result of coins and score update : $result");
-      return Map.from(result);
+        title: title,
+        coins: addCoin ? coins.toString() : (coins * -1).toString(),
+        score: score.toString(),
+        type: type,
+      );
+
+      return (
+        coins: result['coins'] as String? ?? '0',
+        score: result['score'] as String? ?? '0'
+      );
     } catch (e) {
       throw ProfileManagementException(errorMessageCode: e.toString());
     }
   }
 
-  Future<Map> updateConins(
-      {required String userId,
-      required int? coins,
-      required bool addCoin,
-      required String title,
-      String? type}) async {
+  Future<({String? coins, String? score})> updateCoins({
+    required int? coins,
+    required bool addCoin,
+    required String title,
+    String? type,
+  }) async {
     try {
       final result = await _profileManagementRemoteDataSource.updateCoins(
-          title: title,
-          userId: userId,
-          coins: addCoin ? coins.toString() : (coins! * -1).toString(),
-          type: type);
-      return Map.from(result);
+        title: title,
+        coins: addCoin ? coins.toString() : (coins! * -1).toString(),
+        type: type,
+      );
+
+      return (
+        coins: result['coins'] as String?,
+        score: result['score'] as String?
+      );
     } catch (e) {
       throw ProfileManagementException(errorMessageCode: e.toString());
     }
   }
 
-  Future<Map> updateScore(
-      {required String userId, required int? score, String? type}) async {
+  Future<Map<String, dynamic>> updateScore({
+    required int? score,
+    String? type,
+  }) {
     try {
-      final result = await _profileManagementRemoteDataSource.updateScore(
-          type: type, userId: userId, score: score.toString());
-      return Map.from(result);
+      return _profileManagementRemoteDataSource.updateScore(
+        type: type,
+        score: score.toString(),
+      );
+    } catch (e) {
+      throw ProfileManagementException(errorMessageCode: e.toString());
+    }
+  }
+
+  Future<void> removeAdsForUser({required bool status}) async {
+    try {
+      await _profileManagementRemoteDataSource.removeAdsForUser(status: status);
     } catch (e) {
       throw ProfileManagementException(errorMessageCode: e.toString());
     }
   }
 
   //update profile method in remote data source
-  Future<void> updateProfile(
-      {required String userId,
-      required String email,
-      required String name,
-      required String mobile}) async {
+  Future<void> updateProfile({
+    required String email,
+    required String name,
+    required String mobile,
+  }) async {
     try {
       await _profileManagementRemoteDataSource.updateProfile(
-          userId: userId, email: email, mobile: mobile, name: name);
+        email: email,
+        mobile: mobile,
+        name: name,
+      );
     } catch (e) {
       throw ProfileManagementException(errorMessageCode: e.toString());
     }
+  }
+
+  Future<bool> watchedDailyAd() async {
+    return _profileManagementRemoteDataSource.watchedDailyAd();
   }
 }

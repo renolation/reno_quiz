@@ -12,37 +12,43 @@ class UpdateUserDetailInProgress extends UpdateUserDetailState {}
 class UpdateUserDetailSuccess extends UpdateUserDetailState {}
 
 class UpdateUserDetailFailure extends UpdateUserDetailState {
-  final String errorMessage;
-
   UpdateUserDetailFailure(this.errorMessage);
+
+  final String errorMessage;
 }
 
 class UpdateUserDetailCubit extends Cubit<UpdateUserDetailState> {
-  final ProfileManagementRepository _profileManagementRepository;
-
   UpdateUserDetailCubit(this._profileManagementRepository)
       : super(UpdateUserDetailInitial());
+  final ProfileManagementRepository _profileManagementRepository;
 
   void updateState(UpdateUserDetailState newState) {
     emit(newState);
   }
 
-  void updateProfile(
-      {required String userId,
-      required String email,
-      required String name,
-      required String mobile}) async {
+  void removeAdsForUser({required bool status}) {
     emit(UpdateUserDetailInProgress());
     _profileManagementRepository
+        .removeAdsForUser(status: status)
+        .then((value) => emit(UpdateUserDetailSuccess()))
+        .catchError((Object e) => emit(UpdateUserDetailFailure(e.toString())));
+  }
+
+  Future<void> updateProfile({
+    required String email,
+    required String name,
+    required String mobile,
+  }) async {
+    emit(UpdateUserDetailInProgress());
+    await _profileManagementRepository
         .updateProfile(
-      userId: userId,
       email: email,
       mobile: mobile,
       name: name,
     )
         .then((value) {
       emit(UpdateUserDetailSuccess());
-    }).catchError((e) {
+    }).catchError((Object e) {
       emit(UpdateUserDetailFailure(e.toString()));
     });
   }

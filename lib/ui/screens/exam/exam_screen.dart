@@ -1,29 +1,29 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_svg/svg.dart';
 import 'package:flutter_windowmanager/flutter_windowmanager.dart';
-import 'package:flutterquiz/app/app_localization.dart';
 import 'package:flutterquiz/app/routes.dart';
 import 'package:flutterquiz/features/exam/cubits/examCubit.dart';
 import 'package:flutterquiz/features/profileManagement/cubits/userDetailsCubit.dart';
 import 'package:flutterquiz/features/quiz/models/quizType.dart';
+import 'package:flutterquiz/features/systemConfig/cubits/systemConfigCubit.dart';
+import 'package:flutterquiz/features/systemConfig/model/answer_mode.dart';
 import 'package:flutterquiz/ui/screens/exam/widgets/examQuestionStatusBottomSheetContainer.dart';
 import 'package:flutterquiz/ui/screens/exam/widgets/examTimerContainer.dart';
 import 'package:flutterquiz/ui/screens/quiz/widgets/questionContainer.dart';
 import 'package:flutterquiz/ui/widgets/customAppbar.dart';
-import 'package:flutterquiz/ui/widgets/customBackButton.dart';
 import 'package:flutterquiz/ui/widgets/exitGameDialog.dart';
 import 'package:flutterquiz/ui/widgets/optionContainer.dart';
 import 'package:flutterquiz/utils/answer_encryption.dart';
 import 'package:flutterquiz/utils/constants/string_labels.dart';
+import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
 import 'package:ios_insecure_screen_detector/ios_insecure_screen_detector.dart';
-import 'package:wakelock/wakelock.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
+// import 'package:wakelock/wakelock.dart';
 
 class ExamScreen extends StatefulWidget {
   const ExamScreen({super.key});
@@ -44,7 +44,8 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
   Timer? canGiveExamAgainTimer;
   bool canGiveExamAgain = true;
 
-  int canGiveExamAgainTimeInSeconds = 5;
+  late int canGiveExamAgainTimeInSeconds =
+      context.read<SystemConfigCubit>().resumeExamAfterCloseTimeout;
 
   bool isExitDialogOpen = false;
   bool userLeftTheExam = false;
@@ -65,7 +66,7 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
 
     //wake lock enable so phone will not lock automatically after sometime
 
-    Wakelock.enable();
+    WakelockPlus.enable();
 
     WidgetsBinding.instance.addObserver(this);
 
@@ -81,20 +82,22 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
     });
   }
 
-  void initScreenshotAndScreenRecordDetectorInIos() async {
+  Future<void> initScreenshotAndScreenRecordDetectorInIos() async {
     _iosInsecureScreenDetector = IosInsecureScreenDetector();
     await _iosInsecureScreenDetector?.initialize();
     _iosInsecureScreenDetector?.addListener(
-        iosScreenshotCallback, iosScreenRecordCallback);
+      iosScreenshotCallback,
+      (b) => iosScreenRecordCallback(isRecording: b),
+    );
   }
 
   void iosScreenshotCallback() {
-    print("User took screenshot");
     iosCapturedScreenshotQuestionIds.add(
-        context.read<ExamCubit>().getQuestions()[currentQuestionIndex].id!);
+      context.read<ExamCubit>().getQuestions()[currentQuestionIndex].id!,
+    );
   }
 
-  void iosScreenRecordCallback(bool isRecording) {
+  void iosScreenRecordCallback({required bool isRecording}) {
     setState(() => isScreenRecordingInIos = isRecording);
   }
 
@@ -120,14 +123,15 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
   }
 
   @override
-  void didChangeAppLifecycleState(appState) {
+  void didChangeAppLifecycleState(AppLifecycleState appState) {
     if (appState == AppLifecycleState.paused) {
       setCanGiveExamTimer();
     } else if (appState == AppLifecycleState.resumed) {
       canGiveExamAgainTimer?.cancel();
       //if user can give exam again
       if (canGiveExamAgain) {
-        canGiveExamAgainTimeInSeconds = 5;
+        canGiveExamAgainTimeInSeconds =
+            context.read<SystemConfigCubit>().resumeExamAfterCloseTimeout;
       }
     }
   }
@@ -136,7 +140,7 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
   void dispose() {
     canGiveExamAgainTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
-    Wakelock.disable();
+    WakelockPlus.disable();
     _iosInsecureScreenDetector?.dispose();
     if (Platform.isAndroid) {
       FlutterWindowManager.clearFlags(FlutterWindowManager.FLAG_SECURE);
@@ -146,9 +150,9 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
 
   void showExamQuestionStatusBottomSheet() {
     isExamQuestionStatusBottomSheetOpen = true;
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       isScrollControlled: true,
-      elevation: 5.0,
+      elevation: 5,
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: UiUtils.bottomSheetTopRadius,
@@ -174,26 +178,28 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
           userId: context.read<UserDetailsCubit>().getUserFirebaseId(),
           totalDuration:
               timerKey.currentState?.getCompletedExamDuration().toString() ??
-                  "0",
+                  '0',
         );
   }
 
   void submitAnswer(String submittedAnswerId) {
-    var examCubit = context.read<ExamCubit>();
+    final examCubit = context.read<ExamCubit>();
     if (hasSubmittedAnswerForCurrentQuestion()) {
       if (examCubit.canUserSubmitAnswerAgainInExam()) {
         examCubit.updateQuestionWithAnswer(
-            examCubit.getQuestions()[currentQuestionIndex].id!,
-            submittedAnswerId);
+          examCubit.getQuestions()[currentQuestionIndex].id!,
+          submittedAnswerId,
+        );
       }
     } else {
       examCubit.updateQuestionWithAnswer(
-          examCubit.getQuestions()[currentQuestionIndex].id!,
-          submittedAnswerId);
+        examCubit.getQuestions()[currentQuestionIndex].id!,
+        submittedAnswerId,
+      );
     }
   }
 
-  void navigateToResultScreen() async {
+  void navigateToResultScreen() {
     if (isExitDialogOpen) {
       Navigator.of(context).pop();
     }
@@ -209,20 +215,14 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
     Navigator.of(context).pushReplacementNamed(
       Routes.result,
       arguments: {
-        "quizType": QuizTypes.exam,
-        "exam": examCubit.getExam(),
-        "obtainedMarks": examCubit.obtainedMarks(userFirebaseId),
-        "examCompletedInMinutes":
+        'quizType': QuizTypes.exam,
+        'exam': examCubit.getExam(),
+        'obtainedMarks': examCubit.obtainedMarks(userFirebaseId),
+        'examCompletedInMinutes':
             timerKey.currentState?.getCompletedExamDuration(),
-        "correctExamAnswers": examCubit.correctAnswers(userFirebaseId),
-        "incorrectExamAnswers": examCubit.incorrectAnswers(userFirebaseId),
-        "numberOfPlayer": 1,
-      },
-    );
-    await FirebaseAnalytics.instance.logEvent(
-      name: "Quiz_type_exam",
-      parameters: {
-        "examCompletedInMinutes": timerKey.currentState?.getCompletedExamDuration(),
+        'correctExamAnswers': examCubit.correctAnswers(userFirebaseId),
+        'incorrectExamAnswers': examCubit.incorrectAnswers(userFirebaseId),
+        'numberOfPlayer': 1,
       },
     );
   }
@@ -274,9 +274,7 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
             ),
             padding: const EdgeInsets.only(left: 42, right: 48),
             child: IconButton(
-              onPressed: () {
-                showExamQuestionStatusBottomSheet();
-              },
+              onPressed: showExamQuestionStatusBottomSheet,
               icon: Icon(
                 Icons.keyboard_arrow_up_rounded,
                 color: Theme.of(context).colorScheme.background,
@@ -325,23 +323,21 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
   Widget _buildYouLeftTheExam() {
     if (showYouLeftTheExam) {
       return Align(
-        alignment: Alignment.center,
         child: Container(
           width: MediaQuery.of(context).size.width,
           height: MediaQuery.of(context).size.height,
           alignment: Alignment.center,
-          color: Theme.of(context).colorScheme.secondary.withOpacity(0.5),
+          color: Theme.of(context).primaryColor.withOpacity(0.5),
           child: AlertDialog(
             content: Text(
-              AppLocalization.of(context)!
-                  .getTranslatedValues(youLeftTheExamKey)!,
+              context.tr(youLeftTheExamKey)!,
               style: TextStyle(color: Theme.of(context).colorScheme.onTertiary),
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
                 child: Text(
-                  AppLocalization.of(context)!.getTranslatedValues(okayLbl)!,
+                  context.tr(okayLbl)!,
                   style: TextStyle(color: Theme.of(context).primaryColor),
                 ),
               ),
@@ -370,41 +366,36 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
                 child: Column(
                   children: [
                     QuestionContainer(
-                      isMathQuestion: false,
+                      isMathQuestion: true,
                       questionColor: Theme.of(context).colorScheme.onTertiary,
                       questionNumber: index + 1,
                       question: state.questions[index],
                     ),
                     const SizedBox(height: 25),
-                    ...state.questions[index].answerOptions!
-                        .map(
-                          (option) => OptionContainer(
-                            quizType: QuizTypes.exam,
-                            showAnswerCorrectness: false,
-                            showAudiencePoll: false,
-                            hasSubmittedAnswerForCurrentQuestion:
-                                hasSubmittedAnswerForCurrentQuestion,
-                            constraints: BoxConstraints(
-                              maxWidth:
-                                  MediaQuery.of(context).size.width * (0.85),
-                              maxHeight: MediaQuery.of(context).size.height *
-                                  UiUtils.questionContainerHeightPercentage,
-                            ),
-                            answerOption: option,
-                            correctOptionId:
-                                AnswerEncryption.decryptCorrectAnswer(
-                              rawKey: context
-                                  .read<UserDetailsCubit>()
-                                  .getUserFirebaseId(),
-                              correctAnswer:
-                                  state.questions[index].correctAnswer!,
-                            ),
-                            submitAnswer: submitAnswer,
-                            submittedAnswerId:
-                                state.questions[index].submittedAnswerId,
-                          ),
-                        )
-                        .toList(),
+                    ...state.questions[index].answerOptions!.map(
+                      (option) => OptionContainer(
+                        quizType: QuizTypes.exam,
+                        answerMode: AnswerMode.noAnswerCorrectness,
+                        showAudiencePoll: false,
+                        hasSubmittedAnswerForCurrentQuestion:
+                            hasSubmittedAnswerForCurrentQuestion,
+                        constraints: BoxConstraints(
+                          maxWidth: MediaQuery.of(context).size.width * (0.85),
+                          maxHeight: MediaQuery.of(context).size.height *
+                              UiUtils.questionContainerHeightPercentage,
+                        ),
+                        answerOption: option,
+                        correctOptionId: AnswerEncryption.decryptCorrectAnswer(
+                          rawKey: context
+                              .read<UserDetailsCubit>()
+                              .getUserFirebaseId(),
+                          correctAnswer: state.questions[index].correctAnswer!,
+                        ),
+                        submitAnswer: submitAnswer,
+                        submittedAnswerId:
+                            state.questions[index].submittedAnswerId,
+                      ),
+                    ),
                   ],
                 ),
               );
@@ -419,14 +410,12 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () {
-        if (showYouLeftTheExam) {
-          return Future.value(true);
-        }
+    return PopScope(
+      canPop: showYouLeftTheExam,
+      onPopInvoked: (didPop) {
+        if (didPop) return;
 
         onTapBackButton();
-        return Future.value(false);
       },
       child: Scaffold(
         appBar: QAppBar(
@@ -437,10 +426,7 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
                 int.parse(context.read<ExamCubit>().getExam().duration),
             key: timerKey,
           ),
-          onTapBackButton: () {
-            onTapBackButton();
-            return Future.value(false);
-          },
+          onTapBackButton: onTapBackButton,
         ),
         body: Stack(
           children: [
@@ -464,7 +450,7 @@ class _ExamScreenState extends State<ExamScreen> with WidgetsBindingObserver {
 
   void onTapBackButton() {
     isExitDialogOpen = true;
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (_) => ExitGameDialog(
         onTapYes: () {

@@ -12,68 +12,60 @@ class ExamInitial extends ExamState {}
 class ExamFetchInProgress extends ExamState {}
 
 class ExamFetchFailure extends ExamState {
-  final String errorMessage;
-
   ExamFetchFailure(this.errorMessage);
+
+  final String errorMessage;
 }
 
 class ExamFetchSuccess extends ExamState {
+  ExamFetchSuccess({required this.exam, required this.questions});
+
   final List<Question> questions;
   final Exam exam;
-
-  ExamFetchSuccess({required this.exam, required this.questions});
 }
 
 class ExamCubit extends Cubit<ExamState> {
-  final ExamRepository _examRepository;
-
   ExamCubit(this._examRepository) : super(ExamInitial());
+  final ExamRepository _examRepository;
 
   void updateState(ExamState newState) {
     emit(newState);
   }
 
-  void startExam({required Exam exam, required String userId}) async {
+  Future<void> startExam({required Exam exam}) async {
     emit(ExamFetchInProgress());
-    //
     try {
-      //fetch question
-
-      List<Question> questions =
-          await _examRepository.getExamMouduleQuestions(examModuleId: exam.id);
-
-      //
+      final questions = await _examRepository.getExamQuestions(examId: exam.id);
 
       //check if user can give exam or not
       //if user is in exam then it will throw 103 error means fill all data
-      await _examRepository.updateExamStatusToInExam(
-          examModuleId: exam.id, userId: userId);
+      await _examRepository.updateExamStatusToInExam(examModuleId: exam.id);
       await _examRepository.examLocalDataSource.addExamModuleId(exam.id);
       emit(
-          ExamFetchSuccess(exam: exam, questions: arrangeQuestions(questions)));
+        ExamFetchSuccess(exam: exam, questions: arrangeQuestions(questions)),
+      );
     } catch (e) {
       emit(ExamFetchFailure(e.toString()));
     }
   }
 
   List<Question> arrangeQuestions(List<Question> questions) {
-    List<Question> arrangedQuestions = [];
+    final arrangedQuestions = <Question>[];
 
-    List<String> marks =
-        questions.map((question) => question.marks!).toSet().toList();
-    //sort marks
-    marks.sort((first, second) => first.compareTo(second));
+    final marks = questions.map((q) => q.marks!).toSet().toList()
+      ..sort((f, s) => f.compareTo(s));
 
-    //arrange questions from low to high mrak
-    for (var questionMark in marks) {
+    //arrange questions from low to high marks
+    for (final questionMark in marks) {
       arrangedQuestions.addAll(
-          questions.where((element) => element.marks == questionMark).toList());
+        questions.where((e) => e.marks == questionMark).toList(),
+      );
     }
 
     return arrangedQuestions;
   }
 
-  int getQuetionIndexById(String questionId) {
+  int getQuestionIndexById(String questionId) {
     if (state is ExamFetchSuccess) {
       return (state as ExamFetchSuccess)
           .questions
@@ -85,17 +77,20 @@ class ExamCubit extends Cubit<ExamState> {
   //submitted AnswerId will contain -1, 0 or optionId (a,b,c,d,e)
   void updateQuestionWithAnswer(String questionId, String submittedAnswerId) {
     if (state is ExamFetchSuccess) {
-      //fethcing questions that need to update
-      List<Question> updatedQuestions = (state as ExamFetchSuccess).questions;
+      final updatedQuestions = (state as ExamFetchSuccess).questions;
       //fetching index of question that need to update with submittedAnswer
-      int questionIndex =
+      final questionIndex =
           updatedQuestions.indexWhere((element) => element.id == questionId);
       //update question at given questionIndex with submittedAnswerId
       updatedQuestions[questionIndex] = updatedQuestions[questionIndex]
           .updateQuestionWithAnswer(submittedAnswerId: submittedAnswerId);
 
-      emit(ExamFetchSuccess(
-          exam: (state as ExamFetchSuccess).exam, questions: updatedQuestions));
+      emit(
+        ExamFetchSuccess(
+          exam: (state as ExamFetchSuccess).exam,
+          questions: updatedQuestions,
+        ),
+      );
     }
   }
 
@@ -114,7 +109,7 @@ class ExamCubit extends Cubit<ExamState> {
   }
 
   bool canUserSubmitAnswerAgainInExam() {
-    return getExam().answerAgain == "1";
+    return getExam().answerAgain == '1';
   }
 
   void submitResult({
@@ -124,37 +119,38 @@ class ExamCubit extends Cubit<ExamState> {
     required List<String> capturedQuestionIds,
   }) {
     if (state is ExamFetchSuccess) {
-      List<Statistics> markStatistics = [];
+      final markStatistics = <Statistics>[];
 
       getUniqueQuestionMark().forEach((mark) {
-        List<Question> questions = getQuestionsByMark(mark);
-        int correctAnswers = questions
-            .where((element) =>
-                element.submittedAnswerId ==
-                AnswerEncryption.decryptCorrectAnswer(
-                    rawKey: userId, correctAnswer: element.correctAnswer!))
+        final questions = getQuestionsByMark(mark);
+        final correctAnswers = questions
+            .where(
+              (e) =>
+                  e.submittedAnswerId ==
+                  AnswerEncryption.decryptCorrectAnswer(
+                    rawKey: userId,
+                    correctAnswer: e.correctAnswer!,
+                  ),
+            )
             .toList()
             .length;
-        Statistics statistics = Statistics(
-            mark: mark,
-            correctAnswer: correctAnswers.toString(),
-            incorrect: (questions.length - correctAnswers).toString());
+        final statistics = Statistics(
+          mark: mark,
+          correctAnswer: correctAnswers.toString(),
+          incorrect: (questions.length - correctAnswers).toString(),
+        );
         markStatistics.add(statistics);
       });
 
       //
-      for (var element in markStatistics) {
-        print(element.toJson());
-      }
-
       _examRepository.submitExamResult(
-          capturedQuestionIds: capturedQuestionIds,
-          rulesViolated: rulesViolated,
-          obtainedMarks: obtainedMarks(userId).toString(),
-          examModuleId: (state as ExamFetchSuccess).exam.id,
-          userId: userId,
-          totalDuration: totalDuration,
-          statistics: markStatistics.map((e) => e.toJson()).toList());
+        capturedQuestionIds: capturedQuestionIds,
+        rulesViolated: rulesViolated,
+        obtainedMarks: obtainedMarks(userId).toString(),
+        examModuleId: (state as ExamFetchSuccess).exam.id,
+        totalDuration: totalDuration,
+        statistics: markStatistics.map((e) => e.toJson()).toList(),
+      );
 
       _examRepository.examLocalDataSource
           .removeExamModuleId((state as ExamFetchSuccess).exam.id);
@@ -165,10 +161,14 @@ class ExamCubit extends Cubit<ExamState> {
     if (state is ExamFetchSuccess) {
       return (state as ExamFetchSuccess)
           .questions
-          .where((element) =>
-              element.submittedAnswerId ==
-              AnswerEncryption.decryptCorrectAnswer(
-                  rawKey: userId, correctAnswer: element.correctAnswer!))
+          .where(
+            (e) =>
+                e.submittedAnswerId ==
+                AnswerEncryption.decryptCorrectAnswer(
+                  rawKey: userId,
+                  correctAnswer: e.correctAnswer!,
+                ),
+          )
           .toList()
           .length;
     }
@@ -187,15 +187,19 @@ class ExamCubit extends Cubit<ExamState> {
     if (state is ExamFetchSuccess) {
       final correctAnswers = (state as ExamFetchSuccess)
           .questions
-          .where((element) =>
-              element.submittedAnswerId ==
-              AnswerEncryption.decryptCorrectAnswer(
-                  rawKey: userId, correctAnswer: element.correctAnswer!))
+          .where(
+            (element) =>
+                element.submittedAnswerId ==
+                AnswerEncryption.decryptCorrectAnswer(
+                  rawKey: userId,
+                  correctAnswer: element.correctAnswer!,
+                ),
+          )
           .toList();
-      int obtainedMark = 0;
+      var obtainedMark = 0;
 
-      for (var element in correctAnswers) {
-        obtainedMark = obtainedMark + int.parse(element.marks ?? "0");
+      for (final element in correctAnswers) {
+        obtainedMark = obtainedMark + int.parse(element.marks ?? '0');
       }
 
       return obtainedMark;
@@ -224,7 +228,7 @@ class ExamCubit extends Cubit<ExamState> {
     return [];
   }
 
-  void completePendingExams({required String userId}) {
-    _examRepository.completePendingExams(userId: userId);
+  void completePendingExams() {
+    _examRepository.completePendingExams();
   }
 }

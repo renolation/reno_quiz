@@ -1,19 +1,18 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutterquiz/app/app_localization.dart';
 import 'package:flutterquiz/app/routes.dart';
-import 'package:flutterquiz/features/profileManagement/cubits/userDetailsCubit.dart';
 import 'package:flutterquiz/features/quiz/cubits/quizCategoryCubit.dart';
 import 'package:flutterquiz/features/quiz/cubits/subCategoryCubit.dart';
+import 'package:flutterquiz/features/quiz/models/category.dart';
 import 'package:flutterquiz/features/quiz/models/quizType.dart';
 import 'package:flutterquiz/features/systemConfig/cubits/systemConfigCubit.dart';
+import 'package:flutterquiz/ui/widgets/alreadyLoggedInDialog.dart';
 import 'package:flutterquiz/ui/widgets/customAppbar.dart';
-
 import 'package:flutterquiz/ui/widgets/customRoundedButton.dart';
 import 'package:flutterquiz/utils/constants/error_message_keys.dart';
 import 'package:flutterquiz/utils/constants/string_labels.dart';
+import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -37,8 +36,8 @@ class _SelfChallengeScreenState extends State<SelfChallengeScreen> {
   String? selectedSubcategory = _defaultSelectedSubcategoryValue;
 
   //id to pass for selfChallengeQuestionsScreen
-  String? selectedCategoryId = "";
-  String? selectedSubcategoryId = "";
+  String? selectedCategoryId = '';
+  String? selectedSubcategoryId = '';
 
   //minutes for self challenge
   int? selectedMinutes;
@@ -46,18 +45,23 @@ class _SelfChallengeScreenState extends State<SelfChallengeScreen> {
   //nunber of questions
   int? selectedNumberOfQuestions;
 
+  late final _quizType =
+      UiUtils.getCategoryTypeNumberFromQuizType(QuizTypes.selfChallenge);
+  late final _subType = UiUtils.subTypeFromQuizType(QuizTypes.selfChallenge);
+
   @override
   void initState() {
     super.initState();
 
-    Future.delayed(Duration.zero, () {
-      context.read<QuizCategoryCubit>().getQuizCategoryWithUserId(
-            languageId: UiUtils.getCurrentQuestionLanguageId(context),
-            type: UiUtils.getCategoryTypeNumberFromQuizType(
-                QuizTypes.selfChallenge),
-            userId: context.read<UserDetailsCubit>().getUserId(),
-          );
-    });
+    Future.delayed(Duration.zero, _getCategories);
+  }
+
+  void _getCategories() {
+    context.read<QuizCategoryCubit>().getQuizCategoryWithUserId(
+          languageId: UiUtils.getCurrentQuestionLanguageId(context),
+          type: _quizType,
+          subType: _subType,
+        );
   }
 
   void startSelfChallenge() {
@@ -66,7 +70,7 @@ class _SelfChallengeScreenState extends State<SelfChallengeScreen> {
       //If there is not any sub category then fetch the all quesitons from given category
       if ((context.read<SubCategoryCubit>().state as SubCategoryFetchFailure)
               .errorMessage ==
-          "102") {
+          errorCodeDataNotFound) {
         //
 
         if (selectedCategory != _defaultSelectedCategoryValue &&
@@ -74,22 +78,24 @@ class _SelfChallengeScreenState extends State<SelfChallengeScreen> {
             selectedNumberOfQuestions != null) {
           //to see what keys to pass in arguments see static function route of SelfChallengeQuesitonsScreen
 
-          print("Get questions");
-          Navigator.of(context)
-              .pushNamed(Routes.selfChallengeQuestions, arguments: {
-            "numberOfQuestions": selectedNumberOfQuestions.toString(),
-            "categoryId": selectedCategoryId, //
-            "minutes": selectedMinutes,
-            "subcategoryId": "",
-          });
+          Navigator.of(context).pushNamed(
+            Routes.selfChallengeQuestions,
+            arguments: {
+              'numberOfQuestions': selectedNumberOfQuestions.toString(),
+              'categoryId': selectedCategoryId, //
+              'minutes': selectedMinutes,
+              'subcategoryId': '',
+            },
+          );
           return;
         } else {
           ScaffoldMessenger.of(context).removeCurrentSnackBar();
-          UiUtils.setSnackbar(
-              AppLocalization.of(context)!.getTranslatedValues(
-                  convertErrorCodeToLanguageKey(selectAllValuesCode))!,
-              context,
-              false);
+          UiUtils.showSnackBar(
+            context.tr(
+              convertErrorCodeToLanguageKey(errorCodeSelectAllValues),
+            )!,
+            context,
+          );
           return;
         }
       }
@@ -101,28 +107,30 @@ class _SelfChallengeScreenState extends State<SelfChallengeScreen> {
         selectedNumberOfQuestions != null) {
       //to see what keys to pass in arguments see static function route of SelfChallengeQuesitonsScreen
 
-      print("Get questions");
-      Navigator.of(context)
-          .pushNamed(Routes.selfChallengeQuestions, arguments: {
-        "numberOfQuestions": selectedNumberOfQuestions.toString(),
-        "categoryId": "", //catetoryId
-        "minutes": selectedMinutes,
-        "subcategoryId": selectedSubcategoryId,
-      });
+      Navigator.of(context).pushNamed(
+        Routes.selfChallengeQuestions,
+        arguments: {
+          'numberOfQuestions': selectedNumberOfQuestions.toString(),
+          'categoryId': '', //catetoryId
+          'minutes': selectedMinutes,
+          'subcategoryId': selectedSubcategoryId,
+        },
+      );
     } else {
       ScaffoldMessenger.of(context).removeCurrentSnackBar();
-      UiUtils.setSnackbar(
-          AppLocalization.of(context)!.getTranslatedValues(
-              convertErrorCodeToLanguageKey(selectAllValuesCode))!,
-          context,
-          false);
+      UiUtils.showSnackBar(
+        context.tr(
+          convertErrorCodeToLanguageKey(errorCodeSelectAllValues),
+        )!,
+        context,
+      );
     }
   }
 
   Widget _buildDropdownIcon() {
     return DecoratedBox(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(6.0),
+        borderRadius: BorderRadius.circular(6),
         border: Border.all(
           color: Theme.of(context).colorScheme.onTertiary.withOpacity(0.4),
         ),
@@ -143,91 +151,87 @@ class _SelfChallengeScreenState extends State<SelfChallengeScreen> {
     required String keyValue, // need to have this keyValues for fade animation
   }) {
     return DropdownButton<String>(
-        key: Key(keyValue),
-        dropdownColor: Theme.of(context).colorScheme.background,
-        borderRadius: BorderRadius.circular(8.0),
-        //same as background of dropdown color
-        style: GoogleFonts.nunito(
-          textStyle: TextStyle(
-            color: Theme.of(context).colorScheme.onTertiary,
-            fontSize: 16.0,
-          ),
+      key: Key(keyValue),
+      dropdownColor: Theme.of(context).colorScheme.background,
+      borderRadius: BorderRadius.circular(8),
+      //same as background of dropdown color
+      style: GoogleFonts.nunito(
+        textStyle: TextStyle(
+          color: Theme.of(context).colorScheme.onTertiary,
+          fontSize: 16,
         ),
-        isExpanded: true,
-        onChanged: (value) {
-          ScaffoldMessenger.of(context).removeCurrentSnackBar();
-          if (!forCategory) {
-            // if it's for subcategory
+      ),
+      isExpanded: true,
+      onChanged: (value) {
+        ScaffoldMessenger.of(context).removeCurrentSnackBar();
+        if (!forCategory) {
+          // if it's for subcategory
 
-            //if no subcategory selected then do nothing
-            if (value != _defaultSelectedSubcategoryValue) {
-              int index =
-                  values.indexWhere((element) => element['name'] == value);
-              setState(() {
-                selectedSubcategory = value;
-                selectedSubcategoryId = values[index]['id'];
-              });
-            }
-          } else {
-            //if no category selected then do nothing
-            if (value != _defaultSelectedCategoryValue) {
-              int index =
-                  values.indexWhere((element) => element['name'] == value);
-              setState(() {
-                selectedCategory = value;
-                selectedCategoryId = values[index]['id'];
-                selectedSubcategory = _defaultSelectedSubcategoryValue; //
-              });
-
-              context.read<SubCategoryCubit>().fetchSubCategory(
-                    selectedCategoryId!,
-                    context.read<UserDetailsCubit>().getUserId(),
-                  );
-            } else {
-              context.read<QuizCategoryCubit>().getQuizCategoryWithUserId(
-                    languageId: UiUtils.getCurrentQuestionLanguageId(context),
-                    type: UiUtils.getCategoryTypeNumberFromQuizType(
-                        QuizTypes.selfChallenge),
-                    userId: context.read<UserDetailsCubit>().getUserId(),
-                  );
-            }
+          //if no subcategory selected then do nothing
+          if (value != _defaultSelectedSubcategoryValue) {
+            final index =
+                values.indexWhere((element) => element['name'] == value);
+            setState(() {
+              selectedSubcategory = value;
+              selectedSubcategoryId = values[index]['id'];
+            });
           }
-        },
-        icon: _buildDropdownIcon(),
-        underline: const SizedBox(),
-        //values is map of name and id. only passing name to dropdown
-        items: values.map((e) => e['name']).toList().map((name) {
-          return DropdownMenuItem(
-            value: name,
-            child: name! == selectCategoryKey || name == selectSubCategoryKey
-                ? Text(AppLocalization.of(context)!.getTranslatedValues(name)!)
-                : Text(name),
-          );
-        }).toList(),
-        value: forCategory ? selectedCategory : selectedSubcategory);
+        } else {
+          //if no category selected then do nothing
+          if (value != _defaultSelectedCategoryValue) {
+            final index =
+                values.indexWhere((element) => element['name'] == value);
+            setState(() {
+              selectedCategory = value;
+              selectedCategoryId = values[index]['id'];
+              selectedSubcategory = _defaultSelectedSubcategoryValue; //
+            });
+
+            context
+                .read<SubCategoryCubit>()
+                .fetchSubCategory(selectedCategoryId!);
+          } else {
+            _getCategories();
+          }
+        }
+      },
+      icon: _buildDropdownIcon(),
+      underline: const SizedBox(),
+      //values is map of name and id. only passing name to dropdown
+      items: values.map((e) => e['name']).toList().map((name) {
+        return DropdownMenuItem(
+          value: name,
+          child: name! == selectCategoryKey || name == selectSubCategoryKey
+              ? Text(context.tr(name)!)
+              : Text(name),
+        );
+      }).toList(),
+      value: forCategory ? selectedCategory : selectedSubcategory,
+    );
   }
 
   //dropdown container with border
   Widget _buildDropdownContainer(Widget child) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 5.0),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
       alignment: Alignment.center,
       width: MediaQuery.of(context).size.width,
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.background,
-        borderRadius: BorderRadius.circular(8.0),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: child,
     );
   }
 
   //for selecting time and question
-  Widget _buildSelectTimeAndQuestionContainer(
-      {bool? forSelectQuestion,
-      int? value,
-      Color? textColor,
-      Color? backgroundColor,
-      required Color borderColor}) {
+  Widget _buildSelectTimeAndQuestionContainer({
+    required Color borderColor,
+    bool? forSelectQuestion,
+    int? value,
+    Color? textColor,
+    Color? backgroundColor,
+  }) {
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -240,15 +244,15 @@ class _SelfChallengeScreenState extends State<SelfChallengeScreen> {
       },
       child: Container(
         alignment: Alignment.center,
-        margin: const EdgeInsets.only(right: 10.0),
-        height: 30.0,
-        width: 45.0,
+        margin: const EdgeInsets.only(right: 10),
+        height: 30,
+        width: 45,
         decoration: BoxDecoration(
           color: backgroundColor,
-          borderRadius: BorderRadius.circular(5.0),
+          borderRadius: BorderRadius.circular(5),
         ),
         child: Text(
-          "$value",
+          '$value',
           style: TextStyle(
             color: textColor,
             fontWeight: FontWeight.w500,
@@ -264,7 +268,7 @@ class _SelfChallengeScreenState extends State<SelfChallengeScreen> {
       title,
       textAlign: TextAlign.start,
       style: TextStyle(
-        fontSize: 16.0,
+        fontSize: 16,
         fontWeight: FontWeight.w500,
         color: Theme.of(context).colorScheme.onTertiary,
       ),
@@ -274,11 +278,13 @@ class _SelfChallengeScreenState extends State<SelfChallengeScreen> {
   Widget _buildSubCategoryDropdownContainer(SubCategoryState state) {
     if (state is SubCategoryFetchSuccess) {
       return _buildDropdown(
-          forCategory: false,
-          values: state.subcategoryList
-              .map((e) => {"name": e.subcategoryName, "id": e.id})
-              .toList(),
-          keyValue: "selectSubcategorySuccess${state.categoryId}");
+        forCategory: false,
+        values: state.subcategoryList
+            .where((s) => !s.isPremium || (s.isPremium && s.hasUnlocked))
+            .map((e) => {'name': e.subcategoryName, 'id': e.id})
+            .toList(),
+        keyValue: 'selectSubcategorySuccess${state.categoryId}',
+      );
     }
 
     return Opacity(
@@ -286,36 +292,40 @@ class _SelfChallengeScreenState extends State<SelfChallengeScreen> {
       child: _buildDropdown(
         forCategory: false,
         values: [
-          {"name": _defaultSelectedSubcategoryValue}
+          {'name': _defaultSelectedSubcategoryValue},
         ],
-        keyValue: "selectSubcategory",
+        keyValue: 'selectSubcategory',
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        ScaffoldMessenger.of(context).removeCurrentSnackBar();
+    final size = MediaQuery.of(context).size;
 
-        //await Future.delayed(Duration.zero);
-        return Future.value(true);
-      },
+    final config = context.read<SystemConfigCubit>();
+    final maxMinutes = config.selfChallengeMaxMinutes < 3
+        ? 1
+        : config.selfChallengeMaxMinutes ~/ 3;
+    final maxQuestions = config.selfChallengeMaxQuestions < 5
+        ? 1
+        : config.selfChallengeMaxQuestions ~/ 5;
+
+    return PopScope(
+      onPopInvoked: (_) =>
+          ScaffoldMessenger.of(context).removeCurrentSnackBar(),
       child: Scaffold(
         appBar: QAppBar(
           title: Text(
-            AppLocalization.of(context)!.getTranslatedValues("selfChallenge")!,
+            context.tr('selfChallenge')!,
           ),
         ),
         body: Align(
           alignment: Alignment.topCenter,
           child: SingleChildScrollView(
             padding: EdgeInsets.symmetric(
-              vertical:
-                  MediaQuery.of(context).size.height * UiUtils.vtMarginPct,
-              horizontal:
-                  MediaQuery.of(context).size.width * UiUtils.hzMarginPct,
+              vertical: size.height * UiUtils.vtMarginPct,
+              horizontal: size.width * UiUtils.hzMarginPct,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -329,46 +339,41 @@ class _SelfChallengeScreenState extends State<SelfChallengeScreen> {
                         selectedCategory = state.categories.first.categoryName;
                         selectedCategoryId = state.categories.first.id;
                       });
-                      context.read<SubCategoryCubit>().fetchSubCategory(
-                            state.categories.first.id!,
-                            context.read<UserDetailsCubit>().getUserId(),
-                          );
+                      context
+                          .read<SubCategoryCubit>()
+                          .fetchSubCategory(state.categories.first.id!);
                     }
                     if (state is QuizCategoryFailure) {
-                      if (state.errorMessage == unauthorizedAccessCode) {
-                        UiUtils.showAlreadyLoggedInDialog(context: context);
+                      if (state.errorMessage == errorCodeUnauthorizedAccess) {
+                        showAlreadyLoggedInDialog(context);
                         return;
                       }
 
-                      UiUtils.setSnackbar(
-                          AppLocalization.of(context)!.getTranslatedValues(
-                              convertErrorCodeToLanguageKey(
-                                  state.errorMessage))!,
-                          context,
-                          true,
-                          duration: const Duration(days: 365),
-                          onPressedAction: () {
-                        //to get categories
-                        context
-                            .read<QuizCategoryCubit>()
-                            .getQuizCategoryWithUserId(
-                              languageId:
-                                  UiUtils.getCurrentQuestionLanguageId(context),
-                              type: UiUtils.getCategoryTypeNumberFromQuizType(
-                                  QuizTypes.selfChallenge),
-                              userId:
-                                  context.read<UserDetailsCubit>().getUserId(),
-                            );
-                      });
+                      UiUtils.showSnackBar(
+                        context.tr(
+                          convertErrorCodeToLanguageKey(
+                            state.errorMessage,
+                          ),
+                        )!,
+                        context,
+                        showAction: true,
+                        duration: const Duration(days: 365),
+                        onPressedAction: _getCategories,
+                      );
                     }
                   },
                   builder: (context, state) {
+                    var categories = <Category>[];
+                    if (state is QuizCategorySuccess) {
+                      categories = state.categories
+                        ..removeWhere((c) => c.isPremium && !c.hasUnlocked);
+                    }
+
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          AppLocalization.of(context)!
-                              .getTranslatedValues("selectCategory")!,
+                          context.tr('selectCategory')!,
                           style: TextStyle(
                             color: Theme.of(context).colorScheme.onTertiary,
                             fontSize: 16,
@@ -382,13 +387,15 @@ class _SelfChallengeScreenState extends State<SelfChallengeScreen> {
                             child: state is QuizCategorySuccess
                                 ? _buildDropdown(
                                     forCategory: true,
-                                    values: state.categories
-                                        .map((e) => {
-                                              "name": e.categoryName,
-                                              "id": e.id,
-                                            })
+                                    values: categories
+                                        .map(
+                                          (e) => {
+                                            'name': e.categoryName,
+                                            'id': e.id,
+                                          },
+                                        )
                                         .toList(),
-                                    keyValue: "selectCategorySuccess",
+                                    keyValue: 'selectCategorySuccess',
                                   )
                                 : Opacity(
                                     opacity: 0.75,
@@ -396,11 +403,11 @@ class _SelfChallengeScreenState extends State<SelfChallengeScreen> {
                                       forCategory: true,
                                       values: [
                                         {
-                                          "name": _defaultSelectedCategoryValue,
-                                          "id": "0"
+                                          'name': _defaultSelectedCategoryValue,
+                                          'id': '0',
                                         }
                                       ],
-                                      keyValue: "selectCategory",
+                                      keyValue: 'selectCategory',
                                     ),
                                   ),
                           ),
@@ -422,39 +429,38 @@ class _SelfChallengeScreenState extends State<SelfChallengeScreen> {
                         selectedSubcategoryId = state.subcategoryList.first.id;
                       });
                     } else if (state is SubCategoryFetchFailure) {
-                      if (state.errorMessage == unauthorizedAccessCode) {
+                      if (state.errorMessage == errorCodeUnauthorizedAccess) {
                         //
-                        UiUtils.showAlreadyLoggedInDialog(
-                          context: context,
-                        );
+                        showAlreadyLoggedInDialog(context);
                         return;
                       }
 
                       // if no subcategory is available.
-                      if (state.errorMessage == "102") {
+                      if (state.errorMessage == errorCodeDataNotFound) {
                         return;
                       }
 
-                      UiUtils.setSnackbar(
-                          AppLocalization.of(context)!.getTranslatedValues(
-                              convertErrorCodeToLanguageKey(
-                                  state.errorMessage))!,
-                          context,
-                          true,
-                          duration: const Duration(days: 365),
-                          onPressedAction: () {
-                        //load subcategory again
-                        context.read<SubCategoryCubit>().fetchSubCategory(
-                              selectedCategoryId!,
-                              context.read<UserDetailsCubit>().getUserId(),
-                            );
-                      });
+                      UiUtils.showSnackBar(
+                        context.tr(
+                          convertErrorCodeToLanguageKey(
+                            state.errorMessage,
+                          ),
+                        )!,
+                        context,
+                        duration: const Duration(days: 365),
+                        onPressedAction: () {
+                          //load subcategory again
+                          context
+                              .read<SubCategoryCubit>()
+                              .fetchSubCategory(selectedCategoryId!);
+                        },
+                      );
                     }
                   },
                   builder: (context, state) {
                     if (state is SubCategoryFetchFailure) {
                       //if there is no subcategory then show empty sized box
-                      if (state.errorMessage == "102") {
+                      if (state.errorMessage == errorCodeDataNotFound) {
                         return const SizedBox();
                       }
                     }
@@ -462,8 +468,7 @@ class _SelfChallengeScreenState extends State<SelfChallengeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          AppLocalization.of(context)!
-                              .getTranslatedValues("selectSubCategory")!,
+                          context.tr('selectSubCategory')!,
                           style: TextStyle(
                             color: Theme.of(context).colorScheme.onTertiary,
                             fontSize: 16,
@@ -482,69 +487,69 @@ class _SelfChallengeScreenState extends State<SelfChallengeScreen> {
                   },
                 ),
 
-                const SizedBox(height: 25.0),
+                const SizedBox(height: 25),
 
                 /// Select no. of Questions
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildTitleContainer(
-                      AppLocalization.of(context)!
-                          .getTranslatedValues("selectNoQusLbl")!,
+                      context.tr('selectNoQusLbl')!,
                     ),
-                    const SizedBox(height: 15.0),
+                    const SizedBox(height: 15),
                     SizedBox(
                       height: 50,
                       child: ListView(
                         scrollDirection: Axis.horizontal,
-                        children: List.generate(10, (index) => (index + 1) * 5)
-                            .map((e) => _buildSelectTimeAndQuestionContainer(
-                                  forSelectQuestion: true,
-                                  value: e,
-                                  borderColor: selectedNumberOfQuestions == e
-                                      ? Theme.of(context).colorScheme.secondary
-                                      : Colors.grey.shade400,
-                                  backgroundColor:
-                                      selectedNumberOfQuestions == e
-                                          ? Theme.of(context).primaryColor
-                                          : Theme.of(context)
-                                              .colorScheme
-                                              .background,
-                                  textColor: selectedNumberOfQuestions == e
-                                      ? Theme.of(context).colorScheme.background
-                                      : Theme.of(context)
-                                          .colorScheme
-                                          .onTertiary,
-                                ))
+                        children: List.generate(
+                          maxQuestions,
+                          (index) => config.selfChallengeMaxQuestions < 5
+                              ? config.selfChallengeMaxQuestions
+                              : (index + 1) * 5,
+                        )
+                            .map(
+                              (e) => _buildSelectTimeAndQuestionContainer(
+                                forSelectQuestion: true,
+                                value: e,
+                                borderColor: selectedNumberOfQuestions == e
+                                    ? Theme.of(context).primaryColor
+                                    : Colors.grey.shade400,
+                                backgroundColor: selectedNumberOfQuestions == e
+                                    ? Theme.of(context).primaryColor
+                                    : Theme.of(context).colorScheme.background,
+                                textColor: selectedNumberOfQuestions == e
+                                    ? Theme.of(context).colorScheme.background
+                                    : Theme.of(context).colorScheme.onTertiary,
+                              ),
+                            )
                             .toList(),
                       ),
                     ),
                   ],
                 ),
 
-                const SizedBox(height: 25.0),
+                const SizedBox(height: 25),
 
                 /// Select challenge duration in minutes
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildTitleContainer(
-                      AppLocalization.of(context)!
-                          .getTranslatedValues("selectTimeLbl")!,
+                      context.tr('selectTimeLbl')!,
                     ),
-                    const SizedBox(height: 15.0),
+                    const SizedBox(height: 15),
                     SizedBox(
                       height: 50,
                       child: ListView(
                         scrollDirection: Axis.horizontal,
-                        children: List
-                                .generate(
-                                    context
-                                            .read<SystemConfigCubit>()
-                                            .getSelfChallengeTime() ~/
-                                        3,
-                                    (index) => (index + 1) * 3)
-                            .map((e) => _buildSelectTimeAndQuestionContainer(
+                        children: List.generate(
+                          maxMinutes,
+                          (index) => config.selfChallengeMaxMinutes < 3
+                              ? config.selfChallengeMaxMinutes
+                              : (index + 1) * 3,
+                        )
+                            .map(
+                              (e) => _buildSelectTimeAndQuestionContainer(
                                 forSelectQuestion: false,
                                 value: e,
                                 backgroundColor: selectedMinutes == e
@@ -554,25 +559,25 @@ class _SelfChallengeScreenState extends State<SelfChallengeScreen> {
                                     ? Theme.of(context).colorScheme.background
                                     : Theme.of(context).colorScheme.onTertiary,
                                 borderColor: selectedMinutes == e
-                                    ? Theme.of(context).colorScheme.secondary
-                                    : Colors.grey.shade400))
+                                    ? Theme.of(context).primaryColor
+                                    : Colors.grey.shade400,
+                              ),
+                            )
                             .toList(),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 40.0),
+                const SizedBox(height: 40),
 
                 /// Start Challenge
                 CustomRoundedButton(
-                  elevation: 5.0,
-                  widthPercentage: 1.0,
+                  elevation: 5,
+                  widthPercentage: 1,
                   backgroundColor: Theme.of(context).primaryColor,
-                  buttonTitle: AppLocalization.of(context)!
-                      .getTranslatedValues("startLbl")!
-                      .toUpperCase(),
+                  buttonTitle: context.tr('startLbl')!.toUpperCase(),
                   fontWeight: FontWeight.bold,
-                  radius: 8.0,
+                  radius: 8,
                   onTap: startSelfChallenge,
                   showBorder: false,
                   titleColor: Theme.of(context).colorScheme.background,

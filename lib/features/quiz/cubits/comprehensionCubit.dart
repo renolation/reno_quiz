@@ -9,39 +9,35 @@ class ComprehensionInitial extends ComprehensionState {}
 class ComprehensionProgress extends ComprehensionState {}
 
 class ComprehensionSuccess extends ComprehensionState {
-  final List<Comprehension> getComprehension;
-
   ComprehensionSuccess(this.getComprehension);
+
+  final List<Comprehension> getComprehension;
 }
 
 class ComprehensionFailure extends ComprehensionState {
-  final String errorMessage;
   ComprehensionFailure(this.errorMessage);
+
+  final String errorMessage;
 }
 
 class ComprehensionCubit extends Cubit<ComprehensionState> {
-  final QuizRepository _quizRepository;
   ComprehensionCubit(this._quizRepository) : super(ComprehensionInitial());
+  final QuizRepository _quizRepository;
 
-  getComprehension({
+  Future<void> getComprehension({
     required String languageId,
     required String type,
     required String typeId,
-    required String userId,
   }) async {
     emit(ComprehensionProgress());
-    _quizRepository
+    await _quizRepository
         .getComprehension(
           languageId: languageId,
           type: type,
-          userId: userId,
           typeId: typeId,
         )
-        .then(
-          (val) => emit(ComprehensionSuccess(val)),
-        )
-        .catchError((e) {
-      print(e.toString());
+        .then((val) => emit(ComprehensionSuccess(val)))
+        .catchError((Object e) {
       emit(ComprehensionFailure(e.toString()));
     });
   }

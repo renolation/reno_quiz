@@ -1,10 +1,6 @@
 import 'package:flutterquiz/features/settings/settingsLocalDataSource.dart';
 
 class SettingsRepository {
-  static final SettingsRepository _settingsRepository =
-      SettingsRepository._internal();
-  late SettingsLocalDataSource _settingsLocalDataSource;
-
   factory SettingsRepository() {
     _settingsRepository._settingsLocalDataSource = SettingsLocalDataSource();
     return _settingsRepository;
@@ -12,33 +8,48 @@ class SettingsRepository {
 
   SettingsRepository._internal();
 
+  static final SettingsRepository _settingsRepository =
+      SettingsRepository._internal();
+  late SettingsLocalDataSource _settingsLocalDataSource;
+
   Map<String, dynamic> getCurrentSettings() {
     return {
-      "showIntroSlider": _settingsLocalDataSource.showIntroSlider(),
-      "backgroundMusic": _settingsLocalDataSource.backgroundMusic(),
-      "sound": _settingsLocalDataSource.sound(),
-      "rewardEarned": _settingsLocalDataSource.rewardEarned(),
-      "vibration": _settingsLocalDataSource.vibration(),
-      "languageCode": _settingsLocalDataSource.languageCode(),
-      "theme": _settingsLocalDataSource.theme(),
-      "playAreaFontSize": _settingsLocalDataSource.playAreaFontSize()
+      'showIntroSlider': _settingsLocalDataSource.showIntroSlider,
+      'backgroundMusic': _settingsLocalDataSource.backgroundMusic,
+      'sound': _settingsLocalDataSource.sound,
+      'rewardEarned': _settingsLocalDataSource.rewardEarned,
+      'vibration': _settingsLocalDataSource.vibration,
+      'languageCode': _settingsLocalDataSource.languageCode,
+      'theme': _settingsLocalDataSource.theme,
+      'playAreaFontSize': _settingsLocalDataSource.playAreaFontSize,
     };
   }
 
-  void changeIntroSlider(bool value) =>
-      _settingsLocalDataSource.setShowIntroSlider(value);
+  bool get showIntroSlider => _settingsLocalDataSource.showIntroSlider;
 
-  void changeSound(bool value) => _settingsLocalDataSource.setSound(value);
+  set showIntroSlider(bool value) =>
+      _settingsLocalDataSource.showIntroSlider = value;
 
-  void changeVibration(bool value) =>
-      _settingsLocalDataSource.setVibration(value);
+  bool get sound => _settingsLocalDataSource.sound;
 
-  void changeBackgroundMusic(bool value) =>
-      _settingsLocalDataSource.setbackgroundMusic(value);
+  set sound(bool value) => _settingsLocalDataSource.sound = value;
 
-  void changeQuestionLanguageId(String value) =>
-      _settingsLocalDataSource.setLanguageCode(value);
+  bool get vibration => _settingsLocalDataSource.vibration;
 
-  void changePlayAreaFontSize(double value) =>
-      _settingsLocalDataSource.setPlayAreaFontSize(value);
+  set vibration(bool value) => _settingsLocalDataSource.vibration = value;
+
+  bool get backgroundMusic => _settingsLocalDataSource.backgroundMusic;
+
+  set backgroundMusic(bool value) =>
+      _settingsLocalDataSource.backgroundMusic = value;
+
+  String get languageCode => _settingsLocalDataSource.languageCode;
+
+  set languageCode(String value) =>
+      _settingsLocalDataSource.languageCode = value;
+
+  double get playAreaFontSize => _settingsLocalDataSource.playAreaFontSize;
+
+  set playAreaFontSize(double value) =>
+      _settingsLocalDataSource.playAreaFontSize = value;
 }

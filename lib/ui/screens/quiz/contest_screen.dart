@@ -2,7 +2,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutterquiz/app/app_localization.dart';
 import 'package:flutterquiz/app/routes.dart';
 import 'package:flutterquiz/features/profileManagement/cubits/updateScoreAndCoinsCubit.dart';
 import 'package:flutterquiz/features/profileManagement/cubits/userDetailsCubit.dart';
@@ -11,12 +10,14 @@ import 'package:flutterquiz/features/quiz/cubits/contestCubit.dart';
 import 'package:flutterquiz/features/quiz/models/contest.dart';
 import 'package:flutterquiz/features/quiz/models/quizType.dart';
 import 'package:flutterquiz/features/quiz/quizRepository.dart';
+import 'package:flutterquiz/ui/widgets/alreadyLoggedInDialog.dart';
 import 'package:flutterquiz/ui/widgets/circularProgressContainer.dart';
 import 'package:flutterquiz/ui/widgets/customBackButton.dart';
 import 'package:flutterquiz/ui/widgets/errorContainer.dart';
 import 'package:flutterquiz/utils/constants/error_message_keys.dart';
 import 'package:flutterquiz/utils/constants/fonts.dart';
 import 'package:flutterquiz/utils/constants/string_labels.dart';
+import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
 
 /// Contest Type
@@ -56,7 +57,7 @@ class _ContestScreen extends State<ContestScreen>
     super.initState();
     context
         .read<ContestCubit>()
-        .getContest(context.read<UserDetailsCubit>().getUserId());
+        .getContest(languageId: UiUtils.getCurrentQuestionLanguageId(context));
   }
 
   @override
@@ -67,36 +68,15 @@ class _ContestScreen extends State<ContestScreen>
       child: Builder(
         builder: (BuildContext context) {
           return Scaffold(
-            // appBar: QAppBar(
-            //   roundedAppBar: false,
-            //   title: Text(AppLocalization.of(context)!
-            //       .getTranslatedValues("contestLbl")!),
-            //   bottom: TabBar(
-            //     tabs: [
-            //       Tab(
-            //         text: AppLocalization.of(context)!
-            //             .getTranslatedValues("pastLbl"),
-            //       ),
-            //       Tab(
-            //         text: AppLocalization.of(context)!
-            //             .getTranslatedValues("liveLbl"),
-            //       ),
-            //       Tab(
-            //         text: AppLocalization.of(context)!
-            //             .getTranslatedValues("upcomingLbl"),
-            //       ),
-            //     ],
-            //   ),
-            // ),
             appBar: AppBar(
               elevation: 0,
               backgroundColor: Theme.of(context).scaffoldBackgroundColor,
               title: Text(
-                AppLocalization.of(context)!.getTranslatedValues("contestLbl")!,
+                context.tr('contestLbl')!,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  fontSize: 18.0,
+                  fontSize: 18,
                   color: Theme.of(context).colorScheme.onTertiary,
                 ),
               ),
@@ -114,19 +94,11 @@ class _ContestScreen extends State<ContestScreen>
                         .withOpacity(0.08),
                   ),
                   child: TabBar(
+                    tabAlignment: TabAlignment.fill,
                     tabs: [
-                      Tab(
-                        text: AppLocalization.of(context)!
-                            .getTranslatedValues("pastLbl"),
-                      ),
-                      Tab(
-                        text: AppLocalization.of(context)!
-                            .getTranslatedValues("liveLbl"),
-                      ),
-                      Tab(
-                        text: AppLocalization.of(context)!
-                            .getTranslatedValues("upcomingLbl"),
-                      ),
+                      Tab(text: context.tr('pastLbl')),
+                      Tab(text: context.tr('liveLbl')),
+                      Tab(text: context.tr('upcomingLbl')),
                     ],
                   ),
                 ),
@@ -136,27 +108,25 @@ class _ContestScreen extends State<ContestScreen>
               bloc: context.read<ContestCubit>(),
               listener: (context, state) {
                 if (state is ContestFailure) {
-                  if (state.errorMessage == unauthorizedAccessCode) {
-                    UiUtils.showAlreadyLoggedInDialog(context: context);
+                  if (state.errorMessage == errorCodeUnauthorizedAccess) {
+                    showAlreadyLoggedInDialog(context);
                   }
                 }
               },
               builder: (context, state) {
                 if (state is ContestProgress || state is ContestInitial) {
                   return const Center(
-                    child: CircularProgressContainer(whiteLoader: false),
+                    child: CircularProgressContainer(),
                   );
                 }
                 if (state is ContestFailure) {
-                  print(state.errorMessage);
                   return ErrorContainer(
                     errorMessage:
-                        AppLocalization.of(context)!.getTranslatedValues(
-                      convertErrorCodeToLanguageKey(state.errorMessage),
-                    ),
+                        convertErrorCodeToLanguageKey(state.errorMessage),
                     onTapRetry: () {
                       context.read<ContestCubit>().getContest(
-                            context.read<UserDetailsCubit>().getUserId(),
+                            languageId:
+                                UiUtils.getCurrentQuestionLanguageId(context),
                           );
                     },
                     showErrorImage: true,
@@ -167,7 +137,7 @@ class _ContestScreen extends State<ContestScreen>
                   children: [
                     past(contestList.past),
                     live(contestList.live),
-                    future(contestList.upcoming)
+                    future(contestList.upcoming),
                   ],
                 );
               },
@@ -182,7 +152,6 @@ class _ContestScreen extends State<ContestScreen>
     return data.errorMessage.isNotEmpty
         ? contestErrorContainer(data)
         : ListView.builder(
-            shrinkWrap: false,
             physics: const AlwaysScrollableScrollPhysics(),
             itemCount: data.contestDetails.length,
             itemBuilder: (_, i) => _ContestCard(
@@ -196,7 +165,6 @@ class _ContestScreen extends State<ContestScreen>
     return data.errorMessage.isNotEmpty
         ? contestErrorContainer(data)
         : ListView.builder(
-            shrinkWrap: false,
             physics: const AlwaysScrollableScrollPhysics(),
             itemCount: data.contestDetails.length,
             itemBuilder: (_, i) => _ContestCard(
@@ -210,7 +178,6 @@ class _ContestScreen extends State<ContestScreen>
     return data.errorMessage.isNotEmpty
         ? contestErrorContainer(data)
         : ListView.builder(
-            shrinkWrap: false,
             physics: const AlwaysScrollableScrollPhysics(),
             itemCount: data.contestDetails.length,
             itemBuilder: (_, i) => _ContestCard(
@@ -223,11 +190,9 @@ class _ContestScreen extends State<ContestScreen>
   ErrorContainer contestErrorContainer(Contest data) {
     return ErrorContainer(
       showBackButton: false,
-      errorMessage: AppLocalization.of(context)!.getTranslatedValues(
-        convertErrorCodeToLanguageKey(data.errorMessage),
-      )!,
+      errorMessage: convertErrorCodeToLanguageKey(data.errorMessage),
       onTapRetry: () => context.read<ContestCubit>().getContest(
-            context.read<UserDetailsCubit>().getUserId(),
+            languageId: UiUtils.getCurrentQuestionLanguageId(context),
           ),
       showErrorImage: true,
     );
@@ -249,37 +214,38 @@ class _ContestCardState extends State<_ContestCard> {
     if (widget.contestType == _past) {
       Navigator.of(context).pushNamed(
         Routes.contestLeaderboard,
-        arguments: {"contestId": widget.contestDetails.id},
+        arguments: {'contestId': widget.contestDetails.id},
       );
     }
     if (widget.contestType == _live) {
       if (int.parse(context.read<UserDetailsCubit>().getCoins()!) >=
           int.parse(widget.contestDetails.entry!)) {
         context.read<UpdateScoreAndCoinsCubit>().updateCoins(
-              context.read<UserDetailsCubit>().getUserId(),
-              int.parse(widget.contestDetails.entry!),
-              false,
-              localizedValueOf(playedContestKey) ?? "-",
+              coins: int.parse(widget.contestDetails.entry!),
+              addCoin: false,
+              title: localizedValueOf(playedContestKey) ?? '-',
             );
 
         context.read<UserDetailsCubit>().updateCoins(
               addCoin: false,
               coins: int.parse(widget.contestDetails.entry!),
             );
-        Navigator.of(context).pushReplacementNamed(Routes.quiz, arguments: {
-          "numberOfPlayer": 1,
-          "quizType": QuizTypes.contest,
-          "contestId": widget.contestDetails.id,
-          "quizName": "Contest"
-        });
+        Navigator.of(context).pushReplacementNamed(
+          Routes.quiz,
+          arguments: {
+            'numberOfPlayer': 1,
+            'quizType': QuizTypes.contest,
+            'contestId': widget.contestDetails.id,
+            'quizName': 'Contest',
+          },
+        );
       } else {
-        UiUtils.setSnackbar(localizedValueOf("noCoinsMsg")!, context, false);
+        UiUtils.showSnackBar(localizedValueOf('noCoinsMsg')!, context);
       }
     }
   }
 
-  String? localizedValueOf(String key) =>
-      AppLocalization.of(context)!.getTranslatedValues(key);
+  String? localizedValueOf(String key) => context.tr(key);
 
   @override
   Widget build(BuildContext context) {
@@ -309,7 +275,7 @@ class _ContestCardState extends State<_ContestCard> {
         boxShadow: [
           UiUtils.buildBoxShadow(
             offset: const Offset(5, 5),
-            blurRadius: 10.0,
+            blurRadius: 10,
           ),
         ],
         borderRadius: BorderRadius.circular(10),
@@ -317,29 +283,32 @@ class _ContestCardState extends State<_ContestCard> {
       child: GestureDetector(
         onTap: _handleOnTap,
         child: Padding(
-          padding: const EdgeInsets.all(10.0),
+          padding: const EdgeInsets.all(10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              CachedNetworkImage(
-                imageUrl: widget.contestDetails.image!,
-                placeholder: (_, i) => const Center(
-                  child: CircularProgressContainer(),
-                ),
-                imageBuilder: (_, img) {
-                  return Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(10),
-                      image: DecorationImage(image: img, fit: BoxFit.cover),
+              InteractiveViewer(
+                boundaryMargin: const EdgeInsets.all(10),
+                child: CachedNetworkImage(
+                  imageUrl: widget.contestDetails.image!,
+                  placeholder: (_, i) => const Center(
+                    child: CircularProgressContainer(),
+                  ),
+                  imageBuilder: (_, img) {
+                    return Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        image: DecorationImage(image: img, fit: BoxFit.cover),
+                      ),
+                      height: 171,
+                      width: size.width,
+                    );
+                  },
+                  errorWidget: (_, i, e) => Center(
+                    child: Icon(
+                      Icons.error,
+                      color: Theme.of(context).primaryColor,
                     ),
-                    height: 171,
-                    width: size.width,
-                  );
-                },
-                errorWidget: (_, i, e) => Center(
-                  child: Icon(
-                    Icons.error,
-                    color: Theme.of(context).primaryColor,
                   ),
                 ),
               ),
@@ -351,35 +320,36 @@ class _ContestCardState extends State<_ContestCard> {
                     widget.contestDetails.name!,
                     style: boldTextStyle,
                   ),
-                  widget.contestDetails.description!.length > 50
-                      ? Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(5),
-                            border: Border.all(
-                              color: Theme.of(context).scaffoldBackgroundColor,
-                            ),
-                          ),
-                          alignment: Alignment.center,
-                          height: 30,
-                          width: 30,
-                          padding: const EdgeInsets.all(0),
-                          child: InkWell(
-                            onTap: () {
-                              setState(() {
-                                widget.contestDetails.showDescription =
-                                    !widget.contestDetails.showDescription!;
-                              });
-                            },
-                            child: Icon(
-                              widget.contestDetails.showDescription!
-                                  ? Icons.keyboard_arrow_up_rounded
-                                  : Icons.keyboard_arrow_down_rounded,
-                              color: Theme.of(context).colorScheme.onTertiary,
-                              size: 30,
-                            ),
-                          ),
-                        )
-                      : const SizedBox(),
+                  if (widget.contestDetails.description!.length > 50)
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(5),
+                        border: Border.all(
+                          color: Theme.of(context).scaffoldBackgroundColor,
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      height: 30,
+                      width: 30,
+                      padding: EdgeInsets.zero,
+                      child: InkWell(
+                        onTap: () {
+                          setState(() {
+                            widget.contestDetails.showDescription =
+                                !widget.contestDetails.showDescription!;
+                          });
+                        },
+                        child: Icon(
+                          widget.contestDetails.showDescription!
+                              ? Icons.keyboard_arrow_up_rounded
+                              : Icons.keyboard_arrow_down_rounded,
+                          color: Theme.of(context).colorScheme.onTertiary,
+                          size: 30,
+                        ),
+                      ),
+                    )
+                  else
+                    const SizedBox(),
                 ],
               ),
               SizedBox(
@@ -389,7 +359,10 @@ class _ContestCardState extends State<_ContestCard> {
                 child: Text(
                   widget.contestDetails.description!,
                   style: TextStyle(
-                    color: Theme.of(context).canvasColor.withOpacity(0.5),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onTertiary
+                        .withOpacity(0.3),
                   ),
                   maxLines: !widget.contestDetails.showDescription! ? 1 : 3,
                   overflow: TextOverflow.ellipsis,
@@ -408,7 +381,7 @@ class _ContestCardState extends State<_ContestCard> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        localizedValueOf("entryFeesLbl")!,
+                        localizedValueOf('entryFeesLbl')!,
                         style: normalTextStyle,
                       ),
                       Text(
@@ -422,7 +395,7 @@ class _ContestCardState extends State<_ContestCard> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        localizedValueOf("endsOnLbl")!,
+                        localizedValueOf('endsOnLbl')!,
                         style: normalTextStyle,
                       ),
                       Text(
@@ -436,7 +409,7 @@ class _ContestCardState extends State<_ContestCard> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        localizedValueOf("playersLbl")!,
+                        localizedValueOf('playersLbl')!,
                         style: normalTextStyle,
                       ),
                       Text(

@@ -1,120 +1,103 @@
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutterquiz/features/profileManagement/profileManagementException.dart';
-import 'package:flutterquiz/utils/constants/api_body_parameter_labels.dart';
 import 'package:flutterquiz/utils/api_utils.dart';
 import 'package:flutterquiz/utils/constants/constants.dart';
-import 'package:flutterquiz/utils/constants/error_message_keys.dart';
 import 'package:http/http.dart' as http;
 
 class ProfileManagementRemoteDataSource {
-  /*
-  {id: 11, firebase_id: G1thaSiA43WYx29dOXmUd6jqUWS2,
-  name: RAHUL HIRANI, email: rahulhiraniphotoshop@gmail.com, mobile: ,
-  type: gmail, profile: https://lh3.googleusercontent.com/a/AATXAJyzUAfJwUFTV3yE6tM9KdevDnX2rcM8vm3GKHFz=s96-c, fcm_id: dwMNB7WrRbGJ_alB_moZbs:APA91bFuKIMzXGelNem5CqqWPyj2TQaFEB54glL_i-jSgmwERya9be4fZKyLrRwdt28vZWkIYKxXTl8pkWJAcqxWQG_yOvTwVpqB50-owcD9MBxRxzD5tPviMCl0AUJoq5ur1ZsDpnpY,
-  coins: 0, refer_code: , friends_code: , ip_address: , status: 1,
-  date_registered: 2021-06-07 15:27:59, all_time_score: 0, all_time_rank: 0}
-  */
-
-  Future<dynamic> getUserDetailsById(String firebaseId) async {
+  Future<Map<String, dynamic>> getUserDetailsById() async {
     try {
-      //body of post request
-      final body = {
-        accessValueKey: accessValue,
-        firebaseIdKey: firebaseId,
-      };
-      // print(await ApiUtils.getHeaders());
-      final response = await http.post(Uri.parse(getUserDetailsByIdUrl),
-          body: body, headers: await ApiUtils.getHeaders());
+      final response = await http.post(
+        Uri.parse(getUserDetailsByIdUrl),
+        headers: await ApiUtils.getHeaders(),
+      );
 
-      final responseJson = jsonDecode(response.body);
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
 
-      if (responseJson['error']) {
+      if (responseJson['error'] as bool) {
         throw ProfileManagementException(
-            errorMessageCode: responseJson['message']);
+          errorMessageCode: responseJson['message'].toString(),
+        );
       }
-      return responseJson['data'];
+      return responseJson['data'] as Map<String, dynamic>;
     } on SocketException catch (_) {
-      throw ProfileManagementException(errorMessageCode: noInternetCode);
+      throw ProfileManagementException(errorMessageCode: errorCodeNoInternet);
     } on ProfileManagementException catch (e) {
       throw ProfileManagementException(errorMessageCode: e.toString());
     } catch (e) {
-      print(e.toString());
       throw ProfileManagementException(
-          errorMessageCode: defaultErrorMessageCode);
+        errorMessageCode: errorCodeDefaultMessage,
+      );
     }
   }
 
-  /*response ********{"error":false,"message":"Profile uploaded successfully!","data":{profileKey:"http:\/\/flutterquiz.thewrteam.in\/images\/profile\/1623326274.jpg"}}*/
-  Future addProfileImage(File? images, String? userId) async {
+  Future<Map<String, dynamic>> addProfileImage(
+    File? images,
+  ) async {
     try {
-      Map<String, String?> body = {
-        userIdKey: userId,
-        accessValueKey: accessValue
-      };
-      Map<String, File?> fileList = {
+      final fileList = <String, File?>{
         imageKey: images,
       };
-      var response = await postApiFile(
-          Uri.parse(uploadProfileUrl), fileList, body, userId);
-      final res = json.decode(response);
-      if (res['error']) {
-        throw ProfileManagementException(errorMessageCode: res['message']);
+      final response = await postApiFile(
+        Uri.parse(uploadProfileUrl),
+        fileList,
+      );
+      final res = json.decode(response) as Map<String, dynamic>;
+      if (res['error'] as bool) {
+        throw ProfileManagementException(
+          errorMessageCode: res['message'].toString(),
+        );
       }
-      return res['data'];
+
+      return res['data'] as Map<String, dynamic>;
     } on SocketException catch (_) {
-      throw ProfileManagementException(errorMessageCode: noInternetCode);
+      throw ProfileManagementException(errorMessageCode: errorCodeNoInternet);
     } on ProfileManagementException catch (e) {
       throw ProfileManagementException(errorMessageCode: e.toString());
     } catch (e) {
       throw ProfileManagementException(
-          errorMessageCode: defaultErrorMessageCode);
+        errorMessageCode: errorCodeDefaultMessage,
+      );
     }
   }
 
-  Future postApiFile(Uri url, Map<String, File?> fileList,
-      Map<String, String?> body, String? userId) async {
+  Future<String> postApiFile(
+    Uri url,
+    Map<String, File?> fileList,
+  ) async {
     try {
-      var request = http.MultipartRequest('POST', url);
+      final request = http.MultipartRequest('POST', url);
       request.headers.addAll(await ApiUtils.getHeaders());
 
-      body.forEach((key, value) {
-        request.fields[key] = value!;
-      });
-
-      for (var key in fileList.keys.toList()) {
-        var pic = await http.MultipartFile.fromPath(key, fileList[key]!.path);
+      for (final key in fileList.keys.toList()) {
+        final pic = await http.MultipartFile.fromPath(key, fileList[key]!.path);
         request.files.add(pic);
       }
-      var res = await request.send();
-      var responseData = await res.stream.toBytes();
-      var response = String.fromCharCodes(responseData);
+      final res = await request.send();
+      final responseData = await res.stream.toBytes();
+      final response = String.fromCharCodes(responseData);
       if (res.statusCode == 200) {
         return response;
       } else {
         throw ProfileManagementException(
-            errorMessageCode: defaultErrorMessageCode);
+          errorMessageCode: errorCodeDefaultMessage,
+        );
       }
     } on SocketException catch (_) {
-      throw ProfileManagementException(errorMessageCode: noInternetCode);
+      throw ProfileManagementException(errorMessageCode: errorCodeNoInternet);
     } on ProfileManagementException catch (e) {
       throw ProfileManagementException(errorMessageCode: e.toString());
     } catch (e) {
       throw ProfileManagementException(
-          errorMessageCode: defaultErrorMessageCode);
+        errorMessageCode: errorCodeDefaultMessage,
+      );
     }
   }
 
-  /*
-    body of this post request
-    access_key:8525
-    user_id:1
-    coins:10      //if deduct coin than set with minus sign -2
-    score:2
-   */
-  Future<dynamic> updateCoinsAndScore({
-    required String userId,
+  Future<Map<String, dynamic>> updateCoinsAndScore({
     required String score,
     required String coins,
     required String title,
@@ -122,180 +105,225 @@ class ProfileManagementRemoteDataSource {
   }) async {
     try {
       //body of post request
-      Map<String, String> body = {
-        accessValueKey: accessValue,
-        userIdKey: userId,
+      final body = <String, String>{
         coinsKey: coins,
         scoreKey: score,
-        typeKey: type ?? "",
+        typeKey: type ?? '',
         titleKey: title,
-        statusKey: (int.parse(coins) < 0) ? "1" : "0",
+        statusKey: (int.parse(coins) < 0) ? '1' : '0',
       };
 
       if (body[typeKey]!.isEmpty) {
         body.remove(typeKey);
       }
-      final response = await http.post(Uri.parse(updateUserCoinsAndScoreUrl),
-          body: body, headers: await ApiUtils.getHeaders());
-      final responseJson = jsonDecode(response.body);
+      final response = await http.post(
+        Uri.parse(updateUserCoinsAndScoreUrl),
+        body: body,
+        headers: await ApiUtils.getHeaders(),
+      );
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
 
-      if (responseJson['error']) {
+      if (responseJson['error'] as bool) {
         throw ProfileManagementException(
-            errorMessageCode: responseJson['message']);
+          errorMessageCode: responseJson['message'].toString(),
+        );
       }
-      return responseJson['data'];
+      return responseJson['data'] as Map<String, dynamic>;
     } on SocketException catch (_) {
-      throw ProfileManagementException(errorMessageCode: noInternetCode);
+      throw ProfileManagementException(errorMessageCode: errorCodeNoInternet);
     } on ProfileManagementException catch (e) {
       throw ProfileManagementException(errorMessageCode: e.toString());
     } catch (e) {
       throw ProfileManagementException(
-          errorMessageCode: defaultErrorMessageCode);
+        errorMessageCode: errorCodeDefaultMessage,
+      );
     }
   }
 
-  /*
-    body of this post request
-    access_key:8525
-    user_id:1
-    coins:10      //if deduct coin than set with minus sign -2
-    score:2
-   */
-  Future<dynamic> updateCoins({
-    required String userId,
+  Future<Map<String, dynamic>> updateCoins({
     required String coins,
     required String title,
     String? type, //dashing_debut, clash_winner
   }) async {
     try {
-      Map<String, String> body = {
-        accessValueKey: accessValue,
-        userIdKey: userId,
+      final body = <String, String>{
         coinsKey: coins,
         titleKey: title,
-        statusKey: (int.parse(coins) < 0) ? "1" : "0",
-        typeKey: type ?? "",
+        statusKey: (int.parse(coins) < 0) ? '1' : '0',
+        typeKey: type ?? '',
       };
       if (body[typeKey]!.isEmpty) {
         body.remove(typeKey);
       }
 
-      final response = await http.post(Uri.parse(updateUserCoinsAndScoreUrl),
-          body: body, headers: await ApiUtils.getHeaders());
-      final responseJson = jsonDecode(response.body);
+      final response = await http.post(
+        Uri.parse(updateUserCoinsAndScoreUrl),
+        body: body,
+        headers: await ApiUtils.getHeaders(),
+      );
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
 
-      if (responseJson['error']) {
+      if (responseJson['error'] as bool) {
         throw ProfileManagementException(
-            errorMessageCode: responseJson['message']);
+          errorMessageCode: responseJson['message'].toString(),
+        );
       }
-      return responseJson['data'];
+      return responseJson['data'] as Map<String, dynamic>;
     } on SocketException catch (_) {
-      throw ProfileManagementException(errorMessageCode: noInternetCode);
+      throw ProfileManagementException(errorMessageCode: errorCodeNoInternet);
     } on ProfileManagementException catch (e) {
       throw ProfileManagementException(errorMessageCode: e.toString());
     } catch (e) {
       throw ProfileManagementException(
-          errorMessageCode: defaultErrorMessageCode);
+        errorMessageCode: errorCodeDefaultMessage,
+      );
     }
   }
 
-  /*
-    body of this post request
-    access_key:8525
-    user_id:1
-    coins:10      //if deduct coin than set with minus sign -2
-    score:2
-   */
-  Future<dynamic> updateScore({
-    required String userId,
+  Future<Map<String, dynamic>> updateScore({
     required String score,
     String? type,
   }) async {
     try {
-      Map<String, String> body = {
-        accessValueKey: accessValue,
-        userIdKey: userId,
+      final body = <String, String>{
         scoreKey: score,
-        typeKey: type ?? ""
+        typeKey: type ?? '',
       };
       if (body[typeKey]!.isEmpty) {
         body.remove(typeKey);
       }
-      final response = await http.post(Uri.parse(updateUserCoinsAndScoreUrl),
-          body: body, headers: await ApiUtils.getHeaders());
-      final responseJson = jsonDecode(response.body);
-
-      if (responseJson['error']) {
-        throw ProfileManagementException(
-            errorMessageCode: responseJson['message']);
-      }
-      return responseJson['data'];
-    } on SocketException catch (_) {
-      throw ProfileManagementException(errorMessageCode: noInternetCode);
-    } on ProfileManagementException catch (e) {
-      throw ProfileManagementException(errorMessageCode: e.toString());
-    } catch (e) {
-      throw ProfileManagementException(
-          errorMessageCode: defaultErrorMessageCode);
-    }
-  }
-
-  Future<void> updateProfile(
-      {required String userId,
-      required String email,
-      required String name,
-      required String mobile}) async {
-    try {
-      //body of post request
-      Map<String, String> body = {
-        accessValueKey: accessValue,
-        userIdKey: userId,
-        emailKey: email,
-        nameKey: name,
-        mobileKey: mobile
-      };
-
-      final response = await http.post(Uri.parse(updateProfileUrl),
-          body: body, headers: await ApiUtils.getHeaders());
-
-      final responseJson = jsonDecode(response.body);
-      if (responseJson['error']) {
-        throw ProfileManagementException(
-            errorMessageCode: responseJson['message']);
-      }
-    } on SocketException catch (_) {
-      throw ProfileManagementException(errorMessageCode: noInternetCode);
-    } on ProfileManagementException catch (e) {
-      throw ProfileManagementException(errorMessageCode: e.toString());
-    } catch (e) {
-      throw ProfileManagementException(
-          errorMessageCode: defaultErrorMessageCode);
-    }
-  }
-
-  Future<void> deleteAccount({required String userId}) async {
-    try {
-      User? currentUser = FirebaseAuth.instance.currentUser;
-      await currentUser?.delete();
-
-      Map<String, String> body = {
-        accessValueKey: accessValue,
-        userIdKey: userId
-      };
-
-      await http.post(
-        Uri.parse(deleteUserAccountUrl),
+      final response = await http.post(
+        Uri.parse(updateUserCoinsAndScoreUrl),
         body: body,
         headers: await ApiUtils.getHeaders(),
       );
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
+
+      if (responseJson['error'] as bool) {
+        throw ProfileManagementException(
+          errorMessageCode: responseJson['message'].toString(),
+        );
+      }
+      return responseJson['data'] as Map<String, dynamic>;
     } on SocketException catch (_) {
-      throw ProfileManagementException(errorMessageCode: noInternetCode);
-    } on FirebaseAuthException catch (e) {
-      throw ProfileManagementException(
-          errorMessageCode: firebaseErrorCodeToNumber(e.code));
+      throw ProfileManagementException(errorMessageCode: errorCodeNoInternet);
+    } on ProfileManagementException catch (e) {
+      throw ProfileManagementException(errorMessageCode: e.toString());
     } catch (e) {
       throw ProfileManagementException(
-          errorMessageCode: defaultErrorMessageCode);
+        errorMessageCode: errorCodeDefaultMessage,
+      );
+    }
+  }
+
+  Future<void> removeAdsForUser({required bool status}) async {
+    try {
+      final body = <String, String>{
+        removeAdsKey: status ? '1' : '0',
+      };
+
+      final rawRes = await http.post(
+        Uri.parse(updateProfileUrl),
+        body: body,
+        headers: await ApiUtils.getHeaders(),
+      );
+
+      final resJson = jsonDecode(rawRes.body) as Map<String, dynamic>;
+      if (resJson['error'] as bool) {
+        throw ProfileManagementException(
+          errorMessageCode: resJson['message'].toString(),
+        );
+      }
+    } catch (e) {
+      throw ProfileManagementException(
+        errorMessageCode: errorCodeDefaultMessage,
+      );
+    }
+  }
+
+  Future<void> updateProfile({
+    required String email,
+    required String name,
+    required String mobile,
+  }) async {
+    try {
+      final body = <String, String>{
+        emailKey: email,
+        nameKey: name,
+        mobileKey: mobile,
+      };
+
+      final response = await http.post(
+        Uri.parse(updateProfileUrl),
+        body: body,
+        headers: await ApiUtils.getHeaders(),
+      );
+
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
+      if (responseJson['error'] as bool) {
+        throw ProfileManagementException(
+          errorMessageCode: responseJson['message'].toString(),
+        );
+      }
+    } on SocketException catch (_) {
+      throw ProfileManagementException(errorMessageCode: errorCodeNoInternet);
+    } on ProfileManagementException catch (e) {
+      throw ProfileManagementException(errorMessageCode: e.toString());
+    } catch (e) {
+      throw ProfileManagementException(
+        errorMessageCode: errorCodeDefaultMessage,
+      );
+    }
+  }
+
+  Future<void> deleteAccount() async {
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      await currentUser?.delete();
+
+      await http.post(
+        Uri.parse(deleteUserAccountUrl),
+        headers: await ApiUtils.getHeaders(),
+      );
+    } on SocketException catch (_) {
+      throw ProfileManagementException(errorMessageCode: errorCodeNoInternet);
+    } on FirebaseAuthException catch (e) {
+      throw ProfileManagementException(
+        errorMessageCode: firebaseErrorCodeToNumber(e.code),
+      );
+    } catch (e) {
+      throw ProfileManagementException(
+        errorMessageCode: errorCodeDefaultMessage,
+      );
+    }
+  }
+
+  Future<bool> watchedDailyAd() async {
+    try {
+      final rawRes = await http.post(
+        Uri.parse(watchedDailyAdUrl),
+        headers: await ApiUtils.getHeaders(),
+      );
+
+      final jsonRes = jsonDecode(rawRes.body) as Map<String, dynamic>;
+
+      if (jsonRes['error'] as bool) {
+        throw ProfileManagementException(
+          errorMessageCode: jsonRes['message'].toString(),
+        );
+      }
+
+      return jsonRes['message'] == errorCodeDataUpdateSuccess;
+    } on SocketException catch (_) {
+      throw ProfileManagementException(errorMessageCode: errorCodeNoInternet);
+    } on FirebaseAuthException catch (e) {
+      throw ProfileManagementException(
+        errorMessageCode: firebaseErrorCodeToNumber(e.code),
+      );
+    } catch (e) {
+      throw ProfileManagementException(
+        errorMessageCode: errorCodeDefaultMessage,
+      );
     }
   }
 }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutterquiz/app/app_localization.dart';
 import 'package:flutterquiz/ui/screens/battle/widgets/rectangleUserProfileContainer.dart';
 import 'package:flutterquiz/ui/widgets/questionBackgroundCard.dart';
+import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
 
 class WaitForOthersContainer extends StatelessWidget {
@@ -19,31 +19,31 @@ class WaitForOthersContainer extends StatelessWidget {
       child: Stack(
         alignment: Alignment.topCenter,
         children: [
-          QuestionBackgroundCard(
-              heightPercentage:
-                  UiUtils.questionContainerHeightPercentage - 0.045,
-              opacity: 0.7,
-              topMarginPercentage: 0.05,
-              widthPercentage: 0.65),
-          QuestionBackgroundCard(
-              heightPercentage:
-                  UiUtils.questionContainerHeightPercentage - 0.045,
-              opacity: 0.85,
-              topMarginPercentage: 0.03,
-              widthPercentage: 0.75),
+          const QuestionBackgroundCard(
+            heightPercentage: UiUtils.questionContainerHeightPercentage - 0.045,
+            opacity: 0.7,
+            topMarginPercentage: 0.05,
+            widthPercentage: 0.65,
+          ),
+          const QuestionBackgroundCard(
+            heightPercentage: UiUtils.questionContainerHeightPercentage - 0.045,
+            opacity: 0.85,
+            topMarginPercentage: 0.03,
+            widthPercentage: 0.75,
+          ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 25.0),
+            padding: const EdgeInsets.symmetric(horizontal: 25),
             width: MediaQuery.of(context).size.width * (0.85),
             height: MediaQuery.of(context).size.height *
                 UiUtils.questionContainerHeightPercentage,
             decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.background,
-                borderRadius: BorderRadius.circular(25)),
-            child: Center(
-              child: Text(AppLocalization.of(context)!
-                  .getTranslatedValues('waitOtherComplete')!),
+              color: Theme.of(context).colorScheme.background,
+              borderRadius: BorderRadius.circular(25),
             ),
-          )
+            child: Center(
+              child: Text(context.tr('waitOtherComplete')!),
+            ),
+          ),
         ],
       ),
     );

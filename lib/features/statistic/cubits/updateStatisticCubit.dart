@@ -14,28 +14,28 @@ class UpdateStatisticSuccess extends UpdateStatisticState {
 }
 
 class UpdateStatisticFailure extends UpdateStatisticState {
-  final String errorMessageCode;
   UpdateStatisticFailure(this.errorMessageCode);
+
+  final String errorMessageCode;
 }
 
 class UpdateStatisticCubit extends Cubit<UpdateStatisticState> {
-  final StatisticRepository _statisticRepository;
   UpdateStatisticCubit(this._statisticRepository)
       : super(UpdateStatisticInitial());
+  final StatisticRepository _statisticRepository;
 
-  void updateStatistic(
-      {String? userId,
-      int? answeredQuestion,
-      int? correctAnswers,
-      double? winPercentage,
-      String? categoryId}) async {
+  Future<void> updateStatistic({
+    int? answeredQuestion,
+    int? correctAnswers,
+    double? winPercentage,
+    String? categoryId,
+  }) async {
     emit(UpdateStatisticFetchInProgress());
     try {
       await _statisticRepository.updateStatistic(
         answeredQuestion: answeredQuestion,
         categoryId: categoryId,
         correctAnswers: correctAnswers,
-        userId: userId,
         winPercentage: winPercentage,
       );
       emit(UpdateStatisticSuccess());
@@ -52,10 +52,13 @@ class UpdateStatisticCubit extends Cubit<UpdateStatisticState> {
     emit(UpdateStatisticFetchInProgress());
     _statisticRepository
         .updateBattleStatistic(
-            userId1: userId1, userId2: userId2, winnerId: winnerId)
+      userId1: userId1,
+      userId2: userId2,
+      winnerId: winnerId,
+    )
         .then((value) {
       emit(UpdateStatisticSuccess());
-    }).catchError((e) {
+    }).catchError((Object e) {
       emit(UpdateStatisticFailure(e.toString()));
     });
   }

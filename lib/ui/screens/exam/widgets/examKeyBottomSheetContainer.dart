@@ -1,26 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:flutterquiz/app/app_localization.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutterquiz/features/exam/cubits/examCubit.dart';
-
 import 'package:flutterquiz/features/exam/models/exam.dart';
-import 'package:flutterquiz/features/profileManagement/cubits/userDetailsCubit.dart';
 import 'package:flutterquiz/ui/widgets/customRoundedButton.dart';
 import 'package:flutterquiz/utils/constants/constants.dart';
-import 'package:flutterquiz/utils/constants/error_message_keys.dart';
-import 'package:flutterquiz/utils/constants/string_labels.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
 
 class ExamKeyBottomSheetContainer extends StatefulWidget {
-  final Exam exam;
-  final Function navigateToExamScreen;
-
   const ExamKeyBottomSheetContainer({
-    super.key,
     required this.exam,
     required this.navigateToExamScreen,
+    super.key,
   });
+
+  final Exam exam;
+  final VoidCallback navigateToExamScreen;
 
   @override
   State<ExamKeyBottomSheetContainer> createState() =>
@@ -29,9 +25,9 @@ class ExamKeyBottomSheetContainer extends StatefulWidget {
 
 class _ExamKeyBottomSheetContainerState
     extends State<ExamKeyBottomSheetContainer> {
-  late final examKeyController = TextEditingController();
+  late final examKeyController = TextEditingController(text: '1234');
 
-  late String errorMessage = "";
+  late String errorMessage = '';
 
   bool showAllExamRules = false;
 
@@ -39,20 +35,19 @@ class _ExamKeyBottomSheetContainerState
 
   late bool rulesAccepted = false;
 
-  final double horizontalPaddingPercentage = (0.125);
+  final double horizontalPaddingPercentage = 0.125;
 
   Widget _buildAcceptRulesContainer() {
     return Container(
       margin: EdgeInsets.symmetric(
         horizontal:
-            MediaQuery.of(context).size.width * (horizontalPaddingPercentage),
-        vertical: 10.0,
+            MediaQuery.of(context).size.width * horizontalPaddingPercentage,
+        vertical: 10,
       ),
       alignment: Alignment.center,
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const SizedBox(width: 2.0),
+          const SizedBox(width: 2),
           InkWell(
             onTap: () {
               setState(() {
@@ -81,18 +76,17 @@ class _ExamKeyBottomSheetContainerState
                 color: rulesAccepted
                     ? Theme.of(context).colorScheme.background
                     : Theme.of(context).colorScheme.onTertiary,
-                size: 15.0,
+                size: 15,
               ),
             ),
           ),
-          const SizedBox(width: 10.0),
+          const SizedBox(width: 10),
           Text(
-            AppLocalization.of(context)!
-                .getTranslatedValues(iAgreeWithExamRulesKey)!,
+            context.tr(iAgreeWithExamRulesKey)!,
             style: TextStyle(
               color: Theme.of(context).colorScheme.onTertiary,
             ),
-          )
+          ),
         ],
       ),
     );
@@ -100,7 +94,7 @@ class _ExamKeyBottomSheetContainerState
 
   Widget _buildRuleLine(String rule) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5.0),
+      padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -113,22 +107,24 @@ class _ExamKeyBottomSheetContainerState
               borderRadius: BorderRadius.circular(3),
             ),
           ),
-          const SizedBox(width: 10.0),
+          const SizedBox(width: 10),
           Flexible(
-              child: Text(
-            rule,
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onTertiary.withOpacity(0.6),
-              fontSize: 12,
+            child: Text(
+              rule,
+              style: TextStyle(
+                color:
+                    Theme.of(context).colorScheme.onTertiary.withOpacity(0.6),
+                fontSize: 12,
+              ),
             ),
-          ))
+          ),
         ],
       ),
     );
   }
 
   Widget _buildExamRules() {
-    List<String> allExamRules = [];
+    var allExamRules = <String>[];
     if (showAllExamRules) {
       allExamRules = examRules;
     } else {
@@ -137,26 +133,34 @@ class _ExamKeyBottomSheetContainerState
     }
 
     return Column(
-      children: allExamRules.map((e) => _buildRuleLine(e)).toList(),
+      children: allExamRules.map(_buildRuleLine).toList(),
     );
+  }
+
+  late Color _onTertiary;
+  late String _showLessLbl;
+  late String _viewAllRulesLbl;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _onTertiary = Theme.of(context).colorScheme.onTertiary;
+    _showLessLbl = context.tr('showLess')!;
+    _viewAllRulesLbl = context.tr(viewAllRulesKey)!;
   }
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () {
-        if (context.read<ExamCubit>().state is ExamFetchInProgress) {
-          return Future.value(false);
-        }
-        return Future.value(true);
-      },
+    return PopScope(
+      canPop: context.read<ExamCubit>().state is! ExamFetchInProgress,
       child: BlocListener<ExamCubit, ExamState>(
         bloc: context.read<ExamCubit>(),
         listener: (context, state) {
           if (state is ExamFetchFailure) {
             setState(() {
-              errorMessage = AppLocalization.of(context)!.getTranslatedValues(
-                  convertErrorCodeToLanguageKey(state.errorMessage))!;
+              errorMessage = context.tr(
+                convertErrorCodeToLanguageKey(state.errorMessage),
+              )!;
             });
           } else if (state is ExamFetchSuccess) {
             widget.navigateToExamScreen();
@@ -164,8 +168,7 @@ class _ExamKeyBottomSheetContainerState
         },
         child: Container(
           decoration: BoxDecoration(
-            borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(20.0)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
             color: Theme.of(context).scaffoldBackgroundColor,
           ),
           padding: const EdgeInsets.only(top: 20),
@@ -175,29 +178,26 @@ class _ExamKeyBottomSheetContainerState
               children: [
                 /// Title
                 Align(
-                  alignment: Alignment.center,
                   child: Text(
-                    "Enter in Exam",
+                    context.tr('enterExamLbl')!,
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 18,
-                      color: Theme.of(context).colorScheme.onTertiary,
+                      color: _onTertiary,
                     ),
                   ),
                 ),
                 Divider(
-                  color:
-                      Theme.of(context).colorScheme.onTertiary.withOpacity(0.6),
+                  color: _onTertiary.withOpacity(0.6),
                   thickness: 1.5,
                 ),
                 const SizedBox(height: 20),
                 Align(
-                  alignment: Alignment.center,
                   child: Text(
-                    "Please enter the exam key",
+                    context.tr('enterExamKeyLbl')!,
                     style: TextStyle(
                       fontSize: 16,
-                      color: Theme.of(context).colorScheme.onTertiary,
+                      color: _onTertiary,
                     ),
                   ),
                 ),
@@ -205,7 +205,6 @@ class _ExamKeyBottomSheetContainerState
 
                 /// Enter Exam Key
                 Align(
-                  alignment: Alignment.center,
                   child: Padding(
                     padding: EdgeInsets.symmetric(
                       horizontal: MediaQuery.of(context).size.width * 0.2,
@@ -215,27 +214,13 @@ class _ExamKeyBottomSheetContainerState
                       appContext: context,
                       length: 4,
                       keyboardType: TextInputType.number,
-                      obscureText: false,
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      textStyle: TextStyle(
-                          color: Theme.of(context).colorScheme.onTertiary),
+                      textStyle: TextStyle(color: _onTertiary),
                       pinTheme: PinTheme(
-                        selectedFillColor: Theme.of(context)
-                            .colorScheme
-                            .onTertiary
-                            .withOpacity(0.1),
-                        inactiveColor: Theme.of(context)
-                            .colorScheme
-                            .onTertiary
-                            .withOpacity(0.1),
-                        activeColor: Theme.of(context)
-                            .colorScheme
-                            .onTertiary
-                            .withOpacity(0.1),
-                        inactiveFillColor: Theme.of(context)
-                            .colorScheme
-                            .onTertiary
-                            .withOpacity(0.1),
+                        selectedFillColor: _onTertiary.withOpacity(0.1),
+                        inactiveColor: _onTertiary.withOpacity(0.1),
+                        activeColor: _onTertiary.withOpacity(0.1),
+                        inactiveFillColor: _onTertiary.withOpacity(0.1),
                         selectedColor: Theme.of(context)
                             .colorScheme
                             .secondary
@@ -244,12 +229,9 @@ class _ExamKeyBottomSheetContainerState
                         borderRadius: BorderRadius.circular(8),
                         fieldHeight: 45,
                         fieldWidth: 45,
-                        activeFillColor: Theme.of(context)
-                            .colorScheme
-                            .onTertiary
-                            .withOpacity(0.2),
+                        activeFillColor: _onTertiary.withOpacity(0.2),
                       ),
-                      cursorColor: Theme.of(context).colorScheme.onTertiary,
+                      cursorColor: _onTertiary,
                       animationDuration: const Duration(milliseconds: 200),
                       enableActiveFill: true,
                       onChanged: (v) {},
@@ -262,10 +244,7 @@ class _ExamKeyBottomSheetContainerState
                 Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(10),
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onTertiary
-                        .withOpacity(0.1),
+                    color: _onTertiary.withOpacity(0.1),
                   ),
                   width: double.infinity,
                   margin: EdgeInsets.symmetric(
@@ -278,11 +257,10 @@ class _ExamKeyBottomSheetContainerState
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        AppLocalization.of(context)!
-                            .getTranslatedValues(examRulesKey)!,
+                        context.tr(examRulesKey)!,
                         style: TextStyle(
-                          color: Theme.of(context).colorScheme.onTertiary,
-                          fontSize: 16.0,
+                          color: _onTertiary,
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -294,13 +272,10 @@ class _ExamKeyBottomSheetContainerState
                           showAllExamRules = !showAllExamRules;
                         }),
                         child: Text(
-                          showAllExamRules
-                              ? "Show Less"
-                              : AppLocalization.of(context)!
-                                  .getTranslatedValues(viewAllRulesKey)!,
+                          showAllExamRules ? _showLessLbl : _viewAllRulesLbl,
                           style: TextStyle(
                             fontSize: 12,
-                            color: Theme.of(context).colorScheme.onTertiary,
+                            color: _onTertiary,
                             decoration: TextDecoration.underline,
                           ),
                         ),
@@ -315,13 +290,13 @@ class _ExamKeyBottomSheetContainerState
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 250),
                   child: errorMessage.isEmpty
-                      ? const SizedBox(height: 20.0)
+                      ? const SizedBox(height: 20)
                       : SizedBox(
-                          height: 20.0,
+                          height: 20,
                           child: Text(
                             errorMessage,
                             style: TextStyle(
-                              color: Theme.of(context).colorScheme.onTertiary,
+                              color: _onTertiary,
                             ),
                           ),
                         ),
@@ -340,42 +315,37 @@ class _ExamKeyBottomSheetContainerState
                         widthPercentage: MediaQuery.of(context).size.width,
                         backgroundColor: rulesAccepted
                             ? Theme.of(context).primaryColor
-                            : Theme.of(context).colorScheme.onTertiary,
+                            : _onTertiary,
                         buttonTitle: state is ExamFetchInProgress
-                            ? AppLocalization.of(context)!
-                                .getTranslatedValues(submittingButton)!
-                            : AppLocalization.of(context)!
-                                .getTranslatedValues(submitBtn)!,
-                        radius: 8.0,
+                            ? context.tr(submittingButton)!
+                            : context.tr(submitBtn)!,
+                        radius: 8,
                         showBorder: false,
                         onTap: state is ExamFetchInProgress
                             ? () {}
                             : () {
                                 if (!rulesAccepted) {
                                   setState(() {
-                                    errorMessage = AppLocalization.of(context)!
-                                        .getTranslatedValues(
-                                            pleaseAcceptExamRulesKey)!;
+                                    errorMessage = context.tr(
+                                      pleaseAcceptExamRulesKey,
+                                    )!;
                                   });
                                 } else if (examKeyController.text.trim() ==
                                     widget.exam.examKey) {
-                                  context.read<ExamCubit>().startExam(
-                                        exam: widget.exam,
-                                        userId: context
-                                            .read<UserDetailsCubit>()
-                                            .getUserId(),
-                                      );
+                                  context
+                                      .read<ExamCubit>()
+                                      .startExam(exam: widget.exam);
                                 } else {
                                   setState(() {
-                                    errorMessage = AppLocalization.of(context)!
-                                        .getTranslatedValues(
-                                            enterValidExamKey)!;
+                                    errorMessage = context.tr(
+                                      enterValidExamKey,
+                                    )!;
                                   });
                                 }
                               },
                         fontWeight: FontWeight.bold,
                         titleColor: Theme.of(context).colorScheme.background,
-                        height: 45.0,
+                        height: 45,
                       ),
                     );
                   },

@@ -1,17 +1,20 @@
-include: package:flutter_lints/flutter.yaml
-
-analyzer:
-  plugins:
-#    - dart_code_metrics
-#  enable-experiment:
-#    - records
+include: package:very_good_analysis/analysis_options.yaml
 
 linter:
   rules:
-    - cancel_subscriptions
-    - use_super_parameters
+    file_names: false
+    use_build_context_synchronously: false
+    public_member_api_docs: false
+    type_annotate_public_apis: false
+    lines_longer_than_80_chars: false
+
+analyzer:
+  plugins:
+    - dart_code_metrics
 
 dart_code_metrics:
+  extends:
+    - package:dart_code_metrics_presets/all.yaml
   metrics:
     cyclomatic-complexity: 20
     number-of-parameters: 4

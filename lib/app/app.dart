@@ -28,8 +28,9 @@ import 'package:flutterquiz/features/profileManagement/profileManagementReposito
 import 'package:flutterquiz/features/quiz/cubits/comprehensionCubit.dart';
 import 'package:flutterquiz/features/quiz/cubits/contestCubit.dart';
 import 'package:flutterquiz/features/quiz/cubits/quizCategoryCubit.dart';
-import 'package:flutterquiz/features/quiz/cubits/quizoneCategoryCubit.dart';
+import 'package:flutterquiz/features/quiz/cubits/quizzone_category_cubit.dart';
 import 'package:flutterquiz/features/quiz/cubits/subCategoryCubit.dart';
+import 'package:flutterquiz/features/quiz/cubits/unlock_premium_category_cubit.dart';
 import 'package:flutterquiz/features/quiz/cubits/unlockedLevelCubit.dart';
 import 'package:flutterquiz/features/quiz/quizRepository.dart';
 import 'package:flutterquiz/features/settings/settingsCubit.dart';
@@ -39,13 +40,10 @@ import 'package:flutterquiz/features/statistic/cubits/statisticsCubit.dart';
 import 'package:flutterquiz/features/statistic/statisticRepository.dart';
 import 'package:flutterquiz/features/systemConfig/cubits/systemConfigCubit.dart';
 import 'package:flutterquiz/features/systemConfig/system_config_repository.dart';
-import 'package:flutterquiz/features/tournament/cubits/tournamentBattleCubit.dart';
-import 'package:flutterquiz/features/tournament/tournamentRepository.dart';
 import 'package:flutterquiz/ui/styles/theme/appTheme.dart';
 import 'package:flutterquiz/ui/styles/theme/themeCubit.dart';
 import 'package:flutterquiz/utils/constants/constants.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 Future<Widget> initializeApp() async {
@@ -62,14 +60,14 @@ Future<Widget> initializeApp() async {
         const Settings(persistenceEnabled: false);
   }
 
+  // Local phone storage
   await Hive.initFlutter();
-  await Hive.openBox(
-      authBox); //auth box for storing all authentication related details
-  await Hive.openBox(
-      settingsBox); //settings box for storing all settings details
-  await Hive.openBox(
-      userDetailsBox); //userDetails box for storing all userDetails details
-  await Hive.openBox(examBox);
+  await Hive.openBox<dynamic>(authBox);
+  await Hive.openBox<dynamic>(settingsBox);
+  await Hive.openBox<dynamic>(userDetailsBox);
+  await Hive.openBox<dynamic>(examBox);
+
+  // await GdprHelper.initialize();
 
   return const MyApp();
 }
@@ -79,10 +77,9 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    precacheImage(AssetImage(UiUtils.getImagePath("map_finded.png")), context);
-    precacheImage(AssetImage(UiUtils.getImagePath("map_finding.png")), context);
-    precacheImage(
-        AssetImage(UiUtils.getImagePath("scratchCardCover.png")), context);
+    precacheImage(const AssetImage(Assets.mapFinded), context);
+    precacheImage(const AssetImage(Assets.mapFinding), context);
+    precacheImage(const AssetImage(Assets.scratchCardCover), context);
 
     return MultiBlocProvider(
       //providing global providers
@@ -101,9 +98,6 @@ class MyApp extends StatelessWidget {
         ),
         BlocProvider<UserDetailsCubit>(
           create: (_) => UserDetailsCubit(ProfileManagementRepository()),
-        ),
-        BlocProvider<QuizoneCategoryCubit>(
-          create: (_) => QuizoneCategoryCubit(QuizRepository()),
         ),
         //bookmark questions of quiz zone
         BlocProvider<BookmarkCubit>(
@@ -138,15 +132,14 @@ class MyApp extends StatelessWidget {
         ),
         //statistic cubit
         BlocProvider<StatisticCubit>(
-            create: (_) => StatisticCubit(StatisticRepository())),
+          create: (_) => StatisticCubit(StatisticRepository()),
+        ),
         //Interstitial ad cubit
         BlocProvider<InterstitialAdCubit>(create: (_) => InterstitialAdCubit()),
         //Rewarded ad cubit
         BlocProvider<RewardedAdCubit>(create: (_) => RewardedAdCubit()),
         //exam cubit
         BlocProvider<ExamCubit>(create: (_) => ExamCubit(ExamRepository())),
-        BlocProvider<TournamentBattleCubit>(
-            create: (_) => TournamentBattleCubit(TournamentRepository())),
 
         //Setting this cubit globally so we can fetch again once
         //set quiz categories success
@@ -163,28 +156,38 @@ class MyApp extends StatelessWidget {
         BlocProvider<QuizCategoryCubit>(
           create: (_) => QuizCategoryCubit(QuizRepository()),
         ),
+        BlocProvider<QuizoneCategoryCubit>(
+          create: (_) => QuizoneCategoryCubit(QuizRepository()),
+        ),
         BlocProvider<UnlockedLevelCubit>(
-            create: (_) => UnlockedLevelCubit(QuizRepository())),
+          create: (_) => UnlockedLevelCubit(QuizRepository()),
+        ),
         //
         //Setting this cubit globally so we can fetch again once
         //set quiz categories success
         BlocProvider<SubCategoryCubit>(
           create: (_) => SubCategoryCubit(QuizRepository()),
         ),
+        BlocProvider<UnlockPremiumCategoryCubit>(
+          create: (_) => UnlockPremiumCategoryCubit(QuizRepository()),
+        ),
       ],
       child: Builder(
         builder: (context) {
-          //Watching themeCubit means if any change occurs in themeCubit it will rebuild the child
+          // Watching themeCubit means if any change occurs in themeCubit,
+          // it will rebuild the child
           final currentTheme = context.watch<ThemeCubit>().state.appTheme;
 
           final currentLanguage =
               context.watch<AppLocalizationCubit>().state.language;
 
           return AnnotatedRegion<SystemUiOverlayStyle>(
-            value: currentTheme == AppTheme.light
-                ? SystemUiOverlayStyle.dark
-                : SystemUiOverlayStyle.light,
+            value: (currentTheme == AppTheme.light
+                    ? SystemUiOverlayStyle.dark
+                    : SystemUiOverlayStyle.light)
+                .copyWith(statusBarColor: Colors.transparent),
             child: MaterialApp(
+              title: appName,
               builder: (_, widget) {
                 return ScrollConfiguration(
                   behavior: const _GlobalScrollBehavior(),
@@ -192,10 +195,7 @@ class MyApp extends StatelessWidget {
                 );
               },
               locale: currentLanguage,
-              theme: appThemeData[currentTheme]!.copyWith(
-                textTheme:
-                    GoogleFonts.nunitoTextTheme(Theme.of(context).textTheme),
-              ),
+              theme: appThemeData[currentTheme],
               debugShowCheckedModeBanner: false,
               localizationsDelegates: const [
                 AppLocalization.delegate,
@@ -203,9 +203,9 @@ class MyApp extends StatelessWidget {
                 GlobalWidgetsLocalizations.delegate,
                 GlobalCupertinoLocalizations.delegate,
               ],
-              supportedLocales: supportedLocales.map((langCode) {
-                return UiUtils.getLocaleFromLanguageCode(langCode);
-              }).toList(),
+              supportedLocales: supportedLocales
+                  .map(UiUtils.getLocaleFromLanguageCode)
+                  .toList(),
               initialRoute: Routes.splash,
               onGenerateRoute: Routes.onGenerateRouted,
             ),
@@ -220,5 +220,5 @@ class _GlobalScrollBehavior extends ScrollBehavior {
   const _GlobalScrollBehavior();
 
   @override
-  ScrollPhysics getScrollPhysics(context) => const BouncingScrollPhysics();
+  ScrollPhysics getScrollPhysics(_) => const BouncingScrollPhysics();
 }

@@ -10,7 +10,7 @@ class NormalizeNumber {
     required double newMinValue,
   }) {
     // double convertedValue = 0.0;
-    double convertedValue = (currentValue - minValue) /
+    final convertedValue = (currentValue - minValue) /
             (maxValue - minValue) *
             (newMaxValue - newMinValue) +
         newMinValue;

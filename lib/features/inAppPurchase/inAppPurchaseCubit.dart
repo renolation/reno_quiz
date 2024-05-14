@@ -1,8 +1,11 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutterquiz/utils/constants/string_labels.dart';
+import 'package:flutterquiz/utils/constants/constants.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
+// ignore: depend_on_referenced_packages
+import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 
 abstract class InAppPurchaseState {}
 
@@ -13,66 +16,73 @@ class InAppPurchaseLoading extends InAppPurchaseState {}
 class InAppPurchaseNotAvailable extends InAppPurchaseState {}
 
 class InAppPurchaseAvailable extends InAppPurchaseState {
+  InAppPurchaseAvailable({required this.products, required this.notFoundIds});
+
   final List<ProductDetails> products;
 
   final List<String> notFoundIds;
-
-  InAppPurchaseAvailable({required this.products, required this.notFoundIds});
 }
 
 class InAppPurchaseFailure extends InAppPurchaseState {
+  InAppPurchaseFailure({required this.errorMessage, required this.notFoundIds});
+
   final String errorMessage;
   final List<String> notFoundIds;
-
-  InAppPurchaseFailure({required this.errorMessage, required this.notFoundIds});
 }
 
 class InAppPurchaseProcessInProgress extends InAppPurchaseState {
-  final List<ProductDetails> products;
-
   InAppPurchaseProcessInProgress(this.products);
+
+  final List<ProductDetails> products;
 }
 
 class InAppPurchaseProcessFailure extends InAppPurchaseState {
+  InAppPurchaseProcessFailure({
+    required this.errorMessage,
+    required this.products,
+  });
+
   final String errorMessage;
   final List<ProductDetails> products;
-
-  InAppPurchaseProcessFailure(
-      {required this.errorMessage, required this.products});
 }
 
 class InAppPurchaseProcessSuccess extends InAppPurchaseState {
+  InAppPurchaseProcessSuccess({
+    required this.products,
+    required this.purchasedProductId,
+  });
+
   final List<ProductDetails> products;
   final String purchasedProductId;
-
-  InAppPurchaseProcessSuccess(
-      {required this.products, required this.purchasedProductId});
 }
 
 class InAppPurchaseCubit extends Cubit<InAppPurchaseState> {
+  InAppPurchaseCubit() : super(InAppPurchaseInitial());
+
   //product ids of consumable products
-  final List<String> productIds;
+  List<String>? productIds;
   final InAppPurchase inAppPurchase = InAppPurchase.instance;
 
   late StreamSubscription<List<PurchaseDetails>> _subscription;
 
-  InAppPurchaseCubit({required this.productIds})
-      : super(InAppPurchaseInitial()) {
-    initializePurchase(productIds);
-  }
-
   //load product and set up listener for purchase stream
-  Future<void> initializePurchase(List<String> productIds) async {
+  Future<void> initializePurchase(
+    List<String> productIds, {
+    required bool userAlreadyRemovedAds,
+  }) async {
     emit(InAppPurchaseLoading());
-    _subscription =
-        inAppPurchase.purchaseStream.listen(_purchaseUpdate, onDone: () {
-      _subscription.cancel();
-    }, onError: (e) {
-      emit(InAppPurchaseProcessFailure(
-        errorMessage: purchaseErrorKey,
-        products: _getProducts(),
-      ));
-    });
+    _subscription = inAppPurchase.purchaseStream.listen(
+      _purchaseUpdate,
+      onDone: () => _subscription.cancel(),
+      onError: (e) {
+        emit(
+          InAppPurchaseProcessFailure(
+            errorMessage: purchaseErrorKey,
+            products: _getProducts(),
+          ),
+        );
+      },
+    );
 
     //to confirm in-app purchase is available or not
     final isAvailable = await inAppPurchase.isAvailable();
@@ -80,76 +90,103 @@ class InAppPurchaseCubit extends Cubit<InAppPurchaseState> {
       emit(InAppPurchaseNotAvailable());
     } else {
       //if in-app purchase is available then load products with given id
-      _loadProducts(productIds);
+      await _loadProducts(productIds, userAlreadyRemovedAds);
     }
   }
 
   //it will load products form store
-  void _loadProducts(List<String> productIds) async {
+  Future<void> _loadProducts(
+    List<String> productIds,
+    bool userAlreadyRemovedAds,
+  ) async {
     //load products for purchase (consumable product)
-    ProductDetailsResponse productDetailResponse =
+    final productDetailResponse =
         await inAppPurchase.queryProductDetails(productIds.toSet());
     if (productDetailResponse.error != null) {
       //error while getting products from store
-      print(productDetailResponse.error!);
-      emit(InAppPurchaseFailure(
+      emit(
+        InAppPurchaseFailure(
           errorMessage: productsFetchedFailureKey,
-          notFoundIds: productDetailResponse.notFoundIDs));
+          notFoundIds: productDetailResponse.notFoundIDs,
+        ),
+      );
     }
     //if there is not any product to purchase (consumable)
     else if (productDetailResponse.productDetails.isEmpty) {
-      emit(InAppPurchaseFailure(
-        errorMessage: noProductsKey,
-        notFoundIds: productDetailResponse.notFoundIDs,
-      ));
+      emit(
+        InAppPurchaseFailure(
+          errorMessage: noProductsKey,
+          notFoundIds: productDetailResponse.notFoundIDs,
+        ),
+      );
     } else {
-      for (var element in productDetailResponse.productDetails) {
-        print("Product Id : ${element.id}");
+      for (var i = 0; i < productDetailResponse.productDetails.length; i++) {
+        //removing remove_ads products if the user already has purchased it once
+        if (productDetailResponse.productDetails[i].id == removeAdsProductId &&
+            userAlreadyRemovedAds) {
+          productDetailResponse.productDetails.removeAt(i);
+        }
       }
 
       productDetailResponse.productDetails
           .sort((first, second) => first.rawPrice.compareTo(second.rawPrice));
-      emit(InAppPurchaseAvailable(
+      emit(
+        InAppPurchaseAvailable(
           products: productDetailResponse.productDetails,
-          notFoundIds: productDetailResponse.notFoundIDs));
+          notFoundIds: productDetailResponse.notFoundIDs,
+        ),
+      );
     }
+  }
+
+  Future<void> restorePurchases() async {
+    await InAppPurchase.instance.restorePurchases();
+  }
+
+  Future<void> buyNonConsumableProducts(ProductDetails productDetails) async {
+    emit(InAppPurchaseProcessInProgress(_getProducts()));
+    final purchaseParam = PurchaseParam(productDetails: productDetails);
+    //start purchase
+    await InAppPurchase.instance.buyNonConsumable(purchaseParam: purchaseParam);
   }
 
   //to buy product
   Future<void> buyConsumableProducts(ProductDetails productDetails) async {
     emit(InAppPurchaseProcessInProgress(_getProducts()));
-    final PurchaseParam purchaseParam =
-        PurchaseParam(productDetails: productDetails);
+    final purchaseParam = PurchaseParam(productDetails: productDetails);
     //start purchase
-    InAppPurchase.instance.buyConsumable(purchaseParam: purchaseParam);
+    await InAppPurchase.instance.buyConsumable(purchaseParam: purchaseParam);
   }
 
-  //will listen purchase stream
-  void _purchaseUpdate(List<PurchaseDetails> purchaseDetails) {
-    for (var purchaseDetail in purchaseDetails) {
-      //product purchased successfully
-      if (purchaseDetail.status == PurchaseStatus.purchased) {
-        //inAppPurchase
-        emit(InAppPurchaseProcessSuccess(
-          products: _getProducts(),
-          purchasedProductId: purchaseDetail.productID,
-        ));
-      } else if (purchaseDetail.status == PurchaseStatus.pending) {
-        print("Purchase is pending");
-      } else if (purchaseDetail.status == PurchaseStatus.error) {
-        print("Error occurred");
-        print(purchaseDetail.error?.message);
-        //if any error occured while making purchase
-        emit(InAppPurchaseProcessFailure(
-          errorMessage: purchaseErrorKey,
-          products: _getProducts(),
-        ));
+  Future<void> _purchaseUpdate(List<PurchaseDetails> purchaseDetails) async {
+    for (final purchaseDetail in purchaseDetails) {
+      if (purchaseDetail.status == PurchaseStatus.error ||
+          purchaseDetail.status == PurchaseStatus.canceled) {
+        emit(
+          InAppPurchaseProcessFailure(
+            errorMessage: purchaseDetail.error?.message ?? purchaseErrorKey,
+            products: _getProducts(),
+          ),
+        );
+      } else if (purchaseDetail.status == PurchaseStatus.purchased ||
+          purchaseDetail.status == PurchaseStatus.restored) {
+        await inAppPurchase.completePurchase(purchaseDetail);
+        emit(
+          InAppPurchaseProcessSuccess(
+            products: _getProducts(),
+            purchasedProductId: purchaseDetail.productID,
+          ),
+        );
       }
 
-      //
+      if (Platform.isAndroid) {
+        final androidAddition = inAppPurchase
+            .getPlatformAddition<InAppPurchaseAndroidPlatformAddition>();
+        await androidAddition.consumePurchase(purchaseDetail);
+      }
+
       if (purchaseDetail.pendingCompletePurchase) {
-        print("Mark the product delivered to the user");
-        inAppPurchase.completePurchase(purchaseDetail);
+        await inAppPurchase.completePurchase(purchaseDetail);
       }
     }
   }
@@ -172,7 +209,7 @@ class InAppPurchaseCubit extends Cubit<InAppPurchaseState> {
 
   @override
   Future<void> close() async {
-    _subscription.cancel();
+    await _subscription.cancel();
     return super.close();
   }
 }

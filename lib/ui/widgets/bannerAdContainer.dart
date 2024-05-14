@@ -1,25 +1,22 @@
+import 'dart:developer';
 import 'dart:io';
 
-import 'package:facebook_audience_network/ad/ad_banner.dart' as facebook;
 import 'package:flutter/material.dart';
-import 'package:flutterquiz/features/systemConfig/cubits/systemConfigCubit.dart';
-
-import 'package:google_mobile_ads/google_mobile_ads.dart';
-
 import 'package:flutter_bloc/flutter_bloc.dart';
-
+import 'package:flutterquiz/features/profileManagement/cubits/userDetailsCubit.dart';
+import 'package:flutterquiz/features/systemConfig/cubits/systemConfigCubit.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:unity_ads_plugin/unity_ads_plugin.dart';
 
 class BannerAdContainer extends StatefulWidget {
   const BannerAdContainer({super.key});
 
   @override
-  _BannerAdContainer createState() => _BannerAdContainer();
+  State<BannerAdContainer> createState() => _BannerAdContainer();
 }
 
 class _BannerAdContainer extends State<BannerAdContainer> {
   BannerAd? _googleBannerAd;
-  facebook.FacebookBannerAd? _facebookBannerAd;
   UnityBannerAd? _unityBannerAd;
 
   @override
@@ -38,12 +35,11 @@ class _BannerAdContainer extends State<BannerAdContainer> {
   void _initBannerAd() {
     Future.delayed(Duration.zero, () {
       final systemConfigCubit = context.read<SystemConfigCubit>();
-      if (systemConfigCubit.isAdsEnable()) {
+      if (systemConfigCubit.isAdsEnable &&
+          !context.read<UserDetailsCubit>().removeAds()) {
         //is google ad enable or not
-        if (systemConfigCubit.adsType() == 1) {
+        if (systemConfigCubit.adsType == 1) {
           _createGoogleBannerAd();
-        } else if (systemConfigCubit.adsType() == 2) {
-          _createFacebookBannerAd();
         } else {
           _createUnityBannerAd();
         }
@@ -51,56 +47,44 @@ class _BannerAdContainer extends State<BannerAdContainer> {
     });
   }
 
-  void _createFacebookBannerAd() async {
-    print("Create facebook ad");
-    _facebookBannerAd = facebook.FacebookBannerAd(
-      bannerSize: facebook.BannerSize.STANDARD,
-      placementId: context.read<SystemConfigCubit>().faceBookBannerId(),
-      listener: (result, value) {
-        print("$result -> $value");
-      },
-    );
-    setState(() {});
-  }
-
-  void _createUnityBannerAd() async {
+  Future<void> _createUnityBannerAd() async {
     _unityBannerAd = UnityBannerAd(
       placementId: unityBannerAdsPlacement(),
-      onLoad: (placementId) => print('Banner loaded: $placementId'),
-      onClick: (placementId) => print('Banner clicked: $placementId'),
+      onLoad: (placementId) => log('Banner loaded: $placementId'),
+      onClick: (placementId) => log('Banner clicked: $placementId'),
       onFailed: (placementId, error, message) =>
-          print('Banner Ad $placementId failed: $error $message'),
+          log('Banner Ad $placementId failed: $error $message'),
     );
     setState(() {});
   }
 
   Future<void> _createGoogleBannerAd() async {
-    final BannerAd banner = BannerAd(
+    final banner = BannerAd(
       request: const AdRequest(),
-      adUnitId: context.read<SystemConfigCubit>().googleBannerId(),
+      adUnitId: context.read<SystemConfigCubit>().googleBannerId,
       listener: BannerAdListener(
         onAdLoaded: (Ad ad) {
-          print('$BannerAd loaded');
           setState(() {
             _googleBannerAd = ad as BannerAd;
           });
         },
         onAdFailedToLoad: (Ad ad, LoadAdError error) {
-          print('$BannerAd failedToLoad: $error');
+          log('$BannerAd failedToLoad: $error');
         },
-        onAdOpened: (Ad ad) => print('$BannerAd onAdOpened'),
-        onAdClosed: (Ad ad) => print('$BannerAd onAdClosed'),
+        onAdOpened: (Ad ad) => log('$BannerAd onAdOpened'),
+        onAdClosed: (Ad ad) => log('$BannerAd onAdClosed'),
       ),
       size: AdSize.banner,
     );
-    banner.load();
+    await banner.load();
   }
 
   @override
   Widget build(BuildContext context) {
     final sysConfig = context.read<SystemConfigCubit>();
-    if (sysConfig.isAdsEnable()) {
-      if (sysConfig.adsType() == 1) {
+    if (sysConfig.isAdsEnable &&
+        !context.read<UserDetailsCubit>().removeAds()) {
+      if (sysConfig.adsType == 1) {
         return _googleBannerAd != null
             ? SizedBox(
                 width: MediaQuery.of(context).size.width,
@@ -108,8 +92,6 @@ class _BannerAdContainer extends State<BannerAdContainer> {
                 child: AdWidget(ad: _googleBannerAd!),
               )
             : const SizedBox();
-      } else if (sysConfig.adsType() == 2) {
-        return _facebookBannerAd ?? const SizedBox();
       } else {
         return _unityBannerAd ?? const SizedBox();
       }
@@ -120,10 +102,10 @@ class _BannerAdContainer extends State<BannerAdContainer> {
 
 String unityBannerAdsPlacement() {
   if (Platform.isAndroid) {
-    return "Banner_Android";
+    return 'Banner_Android';
   }
   if (Platform.isIOS) {
-    return "Banner_iOS";
+    return 'Banner_iOS';
   }
-  return "";
+  return '';
 }

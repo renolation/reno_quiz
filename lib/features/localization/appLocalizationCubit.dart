@@ -5,22 +5,25 @@ import 'package:flutterquiz/utils/constants/constants.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
 
 class AppLocalizationState {
-  final Locale language;
-
   AppLocalizationState(this.language);
+
+  final Locale language;
 }
 
 class AppLocalizationCubit extends Cubit<AppLocalizationState> {
-  final SettingsLocalDataSource settingsLocalDataSource;
-
   AppLocalizationCubit(this.settingsLocalDataSource)
-      : super(AppLocalizationState(
-            UiUtils.getLocaleFromLanguageCode(defaultLanguageCode))) {
-    changeLanguage(settingsLocalDataSource.languageCode()!);
+      : super(
+          AppLocalizationState(
+            UiUtils.getLocaleFromLanguageCode(defaultLanguageCode),
+          ),
+        ) {
+    changeLanguage(settingsLocalDataSource.languageCode);
   }
 
+  final SettingsLocalDataSource settingsLocalDataSource;
+
   void changeLanguage(String languageCode) {
-    settingsLocalDataSource.setLanguageCode(languageCode);
+    settingsLocalDataSource.languageCode = languageCode;
     emit(AppLocalizationState(UiUtils.getLocaleFromLanguageCode(languageCode)));
   }
 }

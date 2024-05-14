@@ -1,56 +1,80 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:flutterquiz/app/app_localization.dart';
 import 'package:flutterquiz/app/routes.dart';
-import 'package:flutterquiz/utils/constants/string_labels.dart';
-import 'package:flutterquiz/utils/ui_utils.dart';
+import 'package:flutterquiz/features/auth/cubits/authCubit.dart';
+import 'package:flutterquiz/utils/constants/constants.dart';
+import 'package:flutterquiz/utils/extensions.dart';
 
-class AlreadyLoggedInDialog extends StatelessWidget {
-  final Function()? onAlreadyLoggedInCallBack;
+Future<void> showAlreadyLoggedInDialog(BuildContext context) {
+  context.read<AuthCubit>().signOut();
 
-  const AlreadyLoggedInDialog({super.key, this.onAlreadyLoggedInCallBack});
+  return showDialog<void>(
+    context: context,
+    builder: (_) => const PopScope(
+      canPop: false,
+      child: _AlreadyLoggedInDialog(),
+    ),
+  );
+}
+
+class _AlreadyLoggedInDialog extends StatelessWidget {
+  const _AlreadyLoggedInDialog();
 
   @override
   Widget build(BuildContext context) {
-    final okay = AppLocalization.of(context)!.getTranslatedValues(okayLbl)!;
-    final alreadyLoggedIn =
-        AppLocalization.of(context)!.getTranslatedValues(alreadyLoggedInKey)!;
+    final isXSmall = context.isXSmall;
+    final colorScheme = Theme.of(context).colorScheme;
 
-    final width = MediaQuery.of(context).size.width;
-    final primaryColor = Theme.of(context).colorScheme.onTertiary;
+    final alreadyLoginSvg = SvgPicture.asset(
+      Assets.alreadyLogin,
+    );
 
-    return AlertDialog(
-      shadowColor: Colors.transparent,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15.0)),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            width: width * .5,
-            height: width * .5,
-            child: SvgPicture.asset(UiUtils.getImagePath("already_login.svg")),
-          ),
-          const SizedBox(height: 15.0),
-          Text(alreadyLoggedIn, style: TextStyle(color: primaryColor)),
-          const SizedBox(height: 15.0),
-          GestureDetector(
-            onTap: () {
-              onAlreadyLoggedInCallBack?.call();
-              Navigator.of(context).popUntil((route) => route.isFirst);
-              Navigator.of(context).pushReplacementNamed(Routes.login);
-            },
-            child: Container(
-              width: width,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(15.0),
-                border: Border.all(color: primaryColor),
-              ),
-              height: 40.0,
-              child: Text(okay, style: TextStyle(color: primaryColor)),
+    return SizedBox(
+      width: context.shortestSide,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final maxWidth = constraints.maxWidth;
+
+          return AlertDialog(
+            alignment: Alignment.center,
+            actionsAlignment: MainAxisAlignment.center,
+            title: SizedBox(
+              width: maxWidth * (isXSmall ? .4 : .2),
+              height: maxWidth * (isXSmall ? .5 : .3),
+              child: alreadyLoginSvg,
             ),
-          )
-        ],
+            content: Text(
+              context.tr(alreadyLoggedInKey)!,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: colorScheme.onTertiary,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+            actions: [
+              SizedBox(
+                width: maxWidth * (isXSmall ? 1 : .5),
+                child: TextButton(
+                  style: TextButton.styleFrom(
+                    backgroundColor: Theme.of(context).primaryColor,
+                  ),
+                  onPressed: () {
+                    Navigator.of(context)
+                      ..pop()
+                      ..pushReplacementNamed(Routes.login);
+                  },
+                  child: Text(
+                    context.tr(okayLbl)!,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: colorScheme.background,
+                          fontWeight: FontWeights.semiBold,
+                        ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

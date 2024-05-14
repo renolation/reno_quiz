@@ -4,10 +4,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:flutterquiz/app/app_localization.dart';
 import 'package:flutterquiz/app/routes.dart';
 import 'package:flutterquiz/features/ads/interstitial_ad_cubit.dart';
-import 'package:flutterquiz/features/auth/cubits/authCubit.dart';
 import 'package:flutterquiz/features/badges/cubits/badgesCubit.dart';
 import 'package:flutterquiz/features/battleRoom/models/battleRoom.dart';
 import 'package:flutterquiz/features/exam/models/exam.dart';
@@ -18,7 +16,6 @@ import 'package:flutterquiz/features/profileManagement/profileManagementReposito
 import 'package:flutterquiz/features/quiz/cubits/comprehensionCubit.dart';
 import 'package:flutterquiz/features/quiz/cubits/contestCubit.dart';
 import 'package:flutterquiz/features/quiz/cubits/quizCategoryCubit.dart';
-import 'package:flutterquiz/features/quiz/cubits/quizoneCategoryCubit.dart';
 import 'package:flutterquiz/features/quiz/cubits/setCategoryPlayedCubit.dart';
 import 'package:flutterquiz/features/quiz/cubits/setContestLeaderboardCubit.dart';
 import 'package:flutterquiz/features/quiz/cubits/subCategoryCubit.dart';
@@ -28,21 +25,19 @@ import 'package:flutterquiz/features/quiz/models/comprehension.dart';
 import 'package:flutterquiz/features/quiz/models/guessTheWordQuestion.dart';
 import 'package:flutterquiz/features/quiz/models/question.dart';
 import 'package:flutterquiz/features/quiz/models/quizType.dart';
-import 'package:flutterquiz/features/quiz/models/userBattleRoomDetails.dart';
 import 'package:flutterquiz/features/quiz/quizRepository.dart';
 import 'package:flutterquiz/features/statistic/cubits/updateStatisticCubit.dart';
 import 'package:flutterquiz/features/statistic/statisticRepository.dart';
 import 'package:flutterquiz/features/systemConfig/cubits/systemConfigCubit.dart';
 import 'package:flutterquiz/ui/screens/quiz/widgets/radialResultContainer.dart';
-import 'package:flutterquiz/ui/widgets/circularImageContainer.dart';
+import 'package:flutterquiz/ui/widgets/alreadyLoggedInDialog.dart';
 import 'package:flutterquiz/ui/widgets/customAppbar.dart';
 import 'package:flutterquiz/ui/widgets/customRoundedButton.dart';
+import 'package:flutterquiz/ui/widgets/custom_image.dart';
 import 'package:flutterquiz/utils/answer_encryption.dart';
 import 'package:flutterquiz/utils/assets_utils.dart';
 import 'package:flutterquiz/utils/constants/constants.dart';
-import 'package:flutterquiz/utils/constants/error_message_keys.dart';
-import 'package:flutterquiz/utils/constants/fonts.dart';
-import 'package:flutterquiz/utils/constants/string_labels.dart';
+import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
 import 'package:lottie/lottie.dart';
 import 'package:path_provider/path_provider.dart';
@@ -50,14 +45,43 @@ import 'package:screenshot/screenshot.dart';
 import 'package:share_plus/share_plus.dart';
 
 class ResultScreen extends StatefulWidget {
+  const ResultScreen({
+    required this.isPlayed,
+    required this.comprehension,
+    required this.playWithBot,
+    required this.isPremiumCategory,
+    super.key,
+    this.exam,
+    this.correctExamAnswers,
+    this.incorrectExamAnswers,
+    this.obtainedMarks,
+    this.examCompletedInMinutes,
+    this.timeTakenToCompleteQuiz,
+    this.hasUsedAnyLifeline,
+    this.numberOfPlayer,
+    this.myPoints,
+    this.battleRoom,
+    this.questions,
+    this.unlockedLevel,
+    this.quizType,
+    this.subcategoryMaxLevel,
+    this.contestId,
+    this.guessTheWordQuestions,
+    this.entryFee,
+    this.categoryId,
+    this.subcategoryId,
+  });
+
   final QuizTypes?
       quizType; //to show different kind of result data for different quiz type
   final int?
-      numberOfPlayer; //to show different kind of resut data for number of player
+      numberOfPlayer; //to show different kind of result data for number of player
   final int?
-      myPoints; // will be in use when quiz is not tyoe of battle and live battle
-  final List<Question>? questions; //to see reivew answers
+      myPoints; // will be in use when quiz is not type of battle and live battle
+  final List<Question>? questions; //to see review answers
   final BattleRoom? battleRoom; //will be in use for battle
+  final bool
+      playWithBot; // used for random battle with robot, users doesn't get any coins or score for playing with bot.
   final String? contestId;
   final Comprehension comprehension; //
   final List<GuessTheWordQuestion>?
@@ -93,39 +117,16 @@ class ResultScreen extends StatefulWidget {
   // and guess the word
   final bool isPlayed; //
 
-  const ResultScreen({
-    super.key,
-    required this.isPlayed,
-    this.exam,
-    this.correctExamAnswers,
-    this.incorrectExamAnswers,
-    this.obtainedMarks,
-    this.examCompletedInMinutes,
-    this.timeTakenToCompleteQuiz,
-    this.hasUsedAnyLifeline,
-    this.numberOfPlayer,
-    this.myPoints,
-    this.battleRoom,
-    this.questions,
-    this.unlockedLevel,
-    this.quizType,
-    this.subcategoryMaxLevel,
-    this.contestId,
-    required this.comprehension,
-    this.guessTheWordQuestions,
-    this.entryFee,
-    this.categoryId,
-    this.subcategoryId,
-  });
+  final bool isPremiumCategory;
 
   static Route<dynamic> route(RouteSettings routeSettings) {
-    Map arguments = routeSettings.arguments as Map;
+    final args = routeSettings.arguments! as Map;
     //keys of map are numberOfPlayer,quizType,questions (required)
-    //if quizType is not battle and liveBattle need to pass following arguments
+    //if quizType is not battle and liveBattle need to pass following args
     //myPoints
-    //if quizType is quizZone then need to pass following agruments
+    //if quizType is quizZone then need to pass following arguments
     //subcategoryMaxLevel, unlockedLevel
-    //if quizType is battle and liveBattle then need to pass following agruments
+    //if quizType is battle and liveBattle then need to pass following arguments
     //battleRoom
     return CupertinoPageRoute(
       builder: (_) => MultiBlocProvider(
@@ -156,30 +157,31 @@ class ResultScreen extends StatefulWidget {
           ),
         ],
         child: ResultScreen(
-          isPlayed: arguments['isPlayed'] ?? true,
+          battleRoom: args['battleRoom'] as BattleRoom?,
+          categoryId: args['categoryId'] as String? ?? '',
           comprehension:
-              arguments['comprehension'] ?? Comprehension.fromJson({}),
-          correctExamAnswers: arguments['correctExamAnswers'],
-          incorrectExamAnswers: arguments['incorrectExamAnswers'],
-          exam: arguments['exam'],
-          obtainedMarks: arguments['obtainedMarks'],
-          examCompletedInMinutes: arguments['examCompletedInMinutes'],
-          myPoints: arguments['myPoints'],
-          numberOfPlayer: arguments['numberOfPlayer'],
-          questions: arguments['questions'],
-          battleRoom: arguments['battleRoom'],
-          quizType: arguments['quizType'],
-          subcategoryMaxLevel: arguments['subcategoryMaxLevel'],
-          unlockedLevel: arguments['unlockedLevel'],
-          guessTheWordQuestions: arguments['guessTheWordQuestions'],
-          //
-          categoryId: arguments["categoryId"] ?? "",
-
-          subcategoryId: arguments["subcategoryId"] ?? "",
-          hasUsedAnyLifeline: arguments['hasUsedAnyLifeline'],
-          timeTakenToCompleteQuiz: arguments['timeTakenToCompleteQuiz'],
-          contestId: arguments["contestId"],
-          entryFee: arguments['entryFee'],
+              args['comprehension'] as Comprehension? ?? Comprehension.empty(),
+          contestId: args['contestId'] as String?,
+          correctExamAnswers: args['correctExamAnswers'] as int?,
+          entryFee: args['entryFee'] as int?,
+          exam: args['exam'] as Exam?,
+          examCompletedInMinutes: args['examCompletedInMinutes'] as int?,
+          guessTheWordQuestions:
+              args['guessTheWordQuestions'] as List<GuessTheWordQuestion>?,
+          hasUsedAnyLifeline: args['hasUsedAnyLifeline'] as bool?,
+          incorrectExamAnswers: args['incorrectExamAnswers'] as int?,
+          isPlayed: args['isPlayed'] as bool? ?? true,
+          myPoints: args['myPoints'] as int?,
+          numberOfPlayer: args['numberOfPlayer'] as int?,
+          obtainedMarks: args['obtainedMarks'] as int?,
+          playWithBot: args['play_with_bot'] as bool? ?? false,
+          questions: args['questions'] as List<Question>?,
+          quizType: args['quizType'] as QuizTypes?,
+          subcategoryId: args['subcategoryId'] as String? ?? '',
+          subcategoryMaxLevel: args['subcategoryMaxLevel'] as String?,
+          timeTakenToCompleteQuiz: args['timeTakenToCompleteQuiz'] as double?,
+          unlockedLevel: args['unlockedLevel'] as int?,
+          isPremiumCategory: args['isPremiumCategory'] as bool? ?? false,
         ),
       ),
     );
@@ -199,18 +201,25 @@ class _ResultScreenState extends State<ResultScreen> {
 
   bool _displayedAlreadyLoggedInDialog = false;
 
+  late final didSkipQue = widget.quizType == QuizTypes.quizZone &&
+      widget.questions!.map((e) => e.submittedAnswerId).contains('0');
+
   @override
   void initState() {
     super.initState();
 
     Future.delayed(Duration.zero, () {
-      context.read<InterstitialAdCubit>().showAd(context);
+      if (!widget.isPremiumCategory) {
+        context.read<InterstitialAdCubit>().showAd(context);
+      }
     });
-    if (widget.quizType == QuizTypes.battle) {
+    if (widget.quizType == QuizTypes.oneVsOneBattle) {
       battleConfiguration();
+      userName = '';
     } else {
       //decide winner
-      if (winPercentage() >= winPercentageBreakPoint) {
+      if (winPercentage() >=
+          context.read<SystemConfigCubit>().quizWinningPercentage) {
         _isWinner = true;
       } else {
         _isWinner = false;
@@ -233,19 +242,17 @@ class _ResultScreenState extends State<ResultScreen> {
       _earnBadges();
       _updateScoreAndCoinsDetails();
       _updateStatistics();
-      //fetchUpdateUserDetails();
+      fetchUpdateUserDetails();
     });
   }
 
-  fetchUpdateUserDetails() {
+  Future<void> fetchUpdateUserDetails() async {
     if (widget.quizType == QuizTypes.quizZone ||
         widget.quizType == QuizTypes.funAndLearn ||
         widget.quizType == QuizTypes.guessTheWord ||
         widget.quizType == QuizTypes.audioQuestions ||
         widget.quizType == QuizTypes.mathMania) {
-      context
-          .read<UserDetailsCubit>()
-          .fetchUserDetails(context.read<AuthCubit>().getUserFirebaseId());
+      await context.read<UserDetailsCubit>().fetchUserDetails();
     }
   }
 
@@ -255,7 +262,6 @@ class _ResultScreenState extends State<ResultScreen> {
       context.read<UpdateStatisticCubit>().updateStatistic(
             answeredQuestion: attemptedQuestion(),
             categoryId: getCategoryIdOfQuestion(),
-            userId: context.read<UserDetailsCubit>().getUserId(),
             correctAnswers: correctAnswer(),
             winPercentage: winPercentage(),
           );
@@ -263,24 +269,32 @@ class _ResultScreenState extends State<ResultScreen> {
   }
 
   //update stats related to battle, score of user and coins given to winner
-  void battleConfiguration() async {
-    String winnerId = "";
+  Future<void> battleConfiguration() async {
+    var winnerId = '';
 
     if (widget.battleRoom!.user1!.points == widget.battleRoom!.user2!.points) {
       _isWinner = true;
       _winnerId = winnerId;
-      _updateCoinsAndScoreAndStatisticForBattle(widget.battleRoom!.entryFee!);
+
+      /// No Coins & Score when playing with Robot.
+      if (!widget.playWithBot) {
+        _updateCoinsAndScoreAndStatisticForBattle(widget.battleRoom!.entryFee!);
+      }
     } else {
       if (widget.battleRoom!.user1!.points > widget.battleRoom!.user2!.points) {
         winnerId = widget.battleRoom!.user1!.uid;
       } else {
         winnerId = widget.battleRoom!.user2!.uid;
       }
-      await Future.delayed(Duration.zero);
-      _isWinner = context.read<UserDetailsCubit>().getUserId() == winnerId;
+      await Future<void>.delayed(Duration.zero);
+      _isWinner = context.read<UserDetailsCubit>().userId() == winnerId;
       _winnerId = winnerId;
-      _updateCoinsAndScoreAndStatisticForBattle(
-          widget.battleRoom!.entryFee! * 2);
+
+      if (!widget.playWithBot) {
+        _updateCoinsAndScoreAndStatisticForBattle(
+          widget.battleRoom!.entryFee! * 2,
+        );
+      }
       //update winner id and _isWinner in ui
       setState(() {});
     }
@@ -291,17 +305,14 @@ class _ResultScreenState extends State<ResultScreen> {
       Duration.zero,
       () {
         //
-        String currentUserId = context.read<UserDetailsCubit>().getUserId();
-        UserBattleRoomDetails currentUser =
-            widget.battleRoom!.user1!.uid ==currentUserId
-                ? widget.battleRoom!.user1!
-                : widget.battleRoom!.user2!;
+        final currentUserId = context.read<UserDetailsCubit>().userId();
+        final currentUser = widget.battleRoom!.user1!.uid == currentUserId
+            ? widget.battleRoom!.user1!
+            : widget.battleRoom!.user2!;
         if (_isWinner) {
           //update score and coins for user
           context.read<UpdateScoreAndCoinsCubit>().updateCoinsAndScore(
-                currentUserId,
                 currentUser.points,
-                true,
                 earnedCoins,
                 wonBattleKey,
               );
@@ -315,15 +326,17 @@ class _ResultScreenState extends State<ResultScreen> {
           //update battle stats
 
           context.read<UpdateStatisticCubit>().updateBattleStatistic(
-                userId1: currentUserId==widget.battleRoom!.user1!.uid?widget.battleRoom!.user1!.uid:widget.battleRoom!.user2!.uid,
-                userId2: widget.battleRoom!.user1!.uid!=currentUserId?widget.battleRoom!.user1!.uid:widget.battleRoom!.user2!.uid,
+                userId1: currentUserId == widget.battleRoom!.user1!.uid
+                    ? widget.battleRoom!.user1!.uid
+                    : widget.battleRoom!.user2!.uid,
+                userId2: widget.battleRoom!.user1!.uid != currentUserId
+                    ? widget.battleRoom!.user1!.uid
+                    : widget.battleRoom!.user2!.uid,
                 winnerId: _winnerId!,
               );
-
         } else {
           //if user is not winner then update only score
           context.read<UpdateScoreAndCoinsCubit>().updateScore(
-                currentUserId,
                 currentUser.points,
               );
           context.read<UserDetailsCubit>().updateScore(currentUser.points);
@@ -333,22 +346,31 @@ class _ResultScreenState extends State<ResultScreen> {
   }
 
   void _earnBadges() {
-    String userId = context.read<UserDetailsCubit>().getUserId();
-    BadgesCubit badgesCubit = context.read<BadgesCubit>();
-    if (widget.quizType == QuizTypes.battle) {
+    final userId = context.read<UserDetailsCubit>().userId();
+    final badgesCubit = context.read<BadgesCubit>();
+    final config = context.read<SystemConfigCubit>();
+    final quickestCorrectAnswerExtraScore =
+        config.oneVsOneBattleQuickestCorrectAnswerExtraScore;
+    final correctAnswerScore =
+        config.quizCorrectAnswerCreditScore(QuizTypes.oneVsOneBattle);
+    final languageId = UiUtils.getCurrentQuestionLanguageId(context);
+
+    if (widget.quizType == QuizTypes.oneVsOneBattle) {
       //if badges is locked
-      if (badgesCubit.isBadgeLocked("ultimate_player")) {
-        int badgeEarnPoints =
-            (correctAnswerPointsForBattle + extraPointForQuickestAnswer) *
+      if (badgesCubit.isBadgeLocked('ultimate_player')) {
+        final badgeEarnPoints =
+            (correctAnswerScore + quickestCorrectAnswerExtraScore) *
                 totalQuestions();
 
         //if user's points is same as highest points
-        UserBattleRoomDetails currentUser =
-            widget.battleRoom!.user1!.uid == userId
-                ? widget.battleRoom!.user1!
-                : widget.battleRoom!.user2!;
+        final currentUser = widget.battleRoom!.user1!.uid == userId
+            ? widget.battleRoom!.user1!
+            : widget.battleRoom!.user2!;
         if (currentUser.points == badgeEarnPoints) {
-          badgesCubit.setBadge(badgeType: "ultimate_player", userId: userId);
+          badgesCubit.setBadge(
+            badgeType: 'ultimate_player',
+            languageId: languageId,
+          );
         }
       }
     } else if (widget.quizType == QuizTypes.funAndLearn) {
@@ -359,24 +381,30 @@ class _ResultScreenState extends State<ResultScreen> {
       }
 
       //funAndLearn is related to flashback
-      if (badgesCubit.isBadgeLocked("flashback")) {
-        int funNLearnQuestionMinimumTimeForBadge =
-            badgesCubit.getBadgeCounterByType("flashback");
+      if (badgesCubit.isBadgeLocked('flashback')) {
+        final funNLearnQuestionMinimumTimeForBadge =
+            badgesCubit.getBadgeCounterByType('flashback');
         //if badges not loaded some how
         if (funNLearnQuestionMinimumTimeForBadge == -1) {
           return;
         }
-        int badgeEarnTimeInSeconds =
+        final badgeEarnTimeInSeconds =
             totalQuestions() * funNLearnQuestionMinimumTimeForBadge;
         if (correctAnswer() == totalQuestions() &&
             widget.timeTakenToCompleteQuiz! <=
                 badgeEarnTimeInSeconds.toDouble()) {
-          badgesCubit.setBadge(badgeType: "flashback", userId: userId);
+          badgesCubit.setBadge(
+            badgeType: 'flashback',
+            languageId: languageId,
+          );
         }
       }
     } else if (widget.quizType == QuizTypes.quizZone) {
-      if (badgesCubit.isBadgeLocked("dashing_debut")) {
-        badgesCubit.setBadge(badgeType: "dashing_debut", userId: userId);
+      if (badgesCubit.isBadgeLocked('dashing_debut')) {
+        badgesCubit.setBadge(
+          badgeType: 'dashing_debut',
+          languageId: languageId,
+        );
       }
       //
       //if totalQuestion is less than minimum question then do not check for badges
@@ -385,10 +413,13 @@ class _ResultScreenState extends State<ResultScreen> {
         return;
       }
 
-      if (badgesCubit.isBadgeLocked("brainiac")) {
+      if (badgesCubit.isBadgeLocked('brainiac')) {
         if (correctAnswer() == totalQuestions() &&
             !widget.hasUsedAnyLifeline!) {
-          badgesCubit.setBadge(badgeType: "brainiac", userId: userId);
+          badgesCubit.setBadge(
+            badgeType: 'brainiac',
+            languageId: languageId,
+          );
         }
       }
     } else if (widget.quizType == QuizTypes.guessTheWord) {
@@ -397,9 +428,9 @@ class _ResultScreenState extends State<ResultScreen> {
         return;
       }
 
-      if (badgesCubit.isBadgeLocked("super_sonic")) {
-        int guessTheWordQuestionMinimumTimeForBadge =
-            badgesCubit.getBadgeCounterByType("super_sonic");
+      if (badgesCubit.isBadgeLocked('super_sonic')) {
+        final guessTheWordQuestionMinimumTimeForBadge =
+            badgesCubit.getBadgeCounterByType('super_sonic');
 
         //if badges not loaded some how
         if (guessTheWordQuestionMinimumTimeForBadge == -1) {
@@ -407,27 +438,32 @@ class _ResultScreenState extends State<ResultScreen> {
         }
 
         //if user has solved the quiz with in badgeEarnTime then they can earn badge
-        int badgeEarnTimeInSeconds =
+        final badgeEarnTimeInSeconds =
             totalQuestions() * guessTheWordQuestionMinimumTimeForBadge;
         if (correctAnswer() == totalQuestions() &&
             widget.timeTakenToCompleteQuiz! <=
                 badgeEarnTimeInSeconds.toDouble()) {
-          badgesCubit.setBadge(badgeType: "super_sonic", userId: userId);
+          badgesCubit.setBadge(
+            badgeType: 'super_sonic',
+            languageId: languageId,
+          );
         }
       }
     } else if (widget.quizType == QuizTypes.dailyQuiz) {
-      if (badgesCubit.isBadgeLocked("thirsty")) {
+      if (badgesCubit.isBadgeLocked('thirsty')) {
         //
-        badgesCubit.setBadge(badgeType: "thirsty", userId: userId);
+        badgesCubit.setBadge(
+          badgeType: 'thirsty',
+          languageId: languageId,
+        );
       }
     }
   }
 
-  void setContestLeaderboard() async {
-    await Future.delayed(Duration.zero);
+  Future<void> setContestLeaderboard() async {
+    await Future<void>.delayed(Duration.zero);
     if (widget.quizType == QuizTypes.contest) {
-      context.read<SetContestLeaderboardCubit>().setContestLeaderboard(
-            userId: context.read<UserDetailsCubit>().getUserId(),
+      await context.read<SetContestLeaderboardCubit>().setContestLeaderboard(
             questionAttended: attemptedQuestion(),
             correctAns: correctAnswer(),
             contestId: widget.contestId,
@@ -437,36 +473,28 @@ class _ResultScreenState extends State<ResultScreen> {
   }
 
   String _getCoinUpdateTypeBasedOnQuizZone() {
-    if (widget.quizType == QuizTypes.quizZone) {
-      return wonQuizZoneKey;
-    }
-    if (widget.quizType == QuizTypes.mathMania) {
-      return wonMathQuizKey;
-    }
-    if (widget.quizType == QuizTypes.guessTheWord) {
-      return wonGuessTheWordKey;
-    }
-    if (widget.quizType == QuizTypes.trueAndFalse) {
-      return wonTrueFalseKey;
-    }
-    if (widget.quizType == QuizTypes.dailyQuiz) {
-      return wonDailyQuizKey;
-    }
-    if (widget.quizType == QuizTypes.audioQuestions) {
-      return wonAudioQuizKey;
-    }
-    if (widget.quizType == QuizTypes.funAndLearn) {
-      return wonFunNLearnKey;
-    }
-    return "-";
+    return switch (widget.quizType) {
+      QuizTypes.quizZone => wonQuizZoneKey,
+      QuizTypes.mathMania => wonMathQuizKey,
+      QuizTypes.guessTheWord => wonGuessTheWordKey,
+      QuizTypes.trueAndFalse => wonTrueFalseKey,
+      QuizTypes.dailyQuiz => wonDailyQuizKey,
+      QuizTypes.audioQuestions => wonAudioQuizKey,
+      QuizTypes.funAndLearn => wonFunNLearnKey,
+      _ => '-',
+    };
   }
 
   void _updateCoinsAndScore() {
+    var points = widget.myPoints;
+    if (widget.isPremiumCategory) {
+      _earnedCoins = _earnedCoins * 2;
+      points = widget.myPoints! * 2;
+    }
+
     //update score and coins for user
     context.read<UpdateScoreAndCoinsCubit>().updateCoinsAndScore(
-          context.read<UserDetailsCubit>().getUserId(),
-          widget.myPoints!,
-          true,
+          widget.myPoints,
           _earnedCoins,
           _getCoinUpdateTypeBasedOnQuizZone(),
         );
@@ -476,12 +504,12 @@ class _ResultScreenState extends State<ResultScreen> {
           coins: _earnedCoins,
         );
 
-    context.read<UserDetailsCubit>().updateScore(widget.myPoints);
+    context.read<UserDetailsCubit>().updateScore(points);
   }
 
   //
   void _updateScoreAndCoinsDetails() {
-    //if percentage is more than 30 then update socre and coins
+    //if percentage is more than 30 then update score and coins
     if (_isWinner) {
       //
       //if quizType is quizZone we need to update unlocked level,coins and score
@@ -490,31 +518,24 @@ class _ResultScreenState extends State<ResultScreen> {
       if (widget.quizType == QuizTypes.quizZone) {
         //if given level is same as unlocked level then update level
         if (int.parse(widget.questions!.first.level!) == widget.unlockedLevel) {
-          int updatedLevel = int.parse(widget.questions!.first.level!) + 1;
+          final updatedLevel = int.parse(widget.questions!.first.level!) + 1;
           //update level
 
-          print("update level body ${widget.subcategoryId == "0"}");
-          print("update level body ${widget.subcategoryId.runtimeType}");
           context.read<UpdateLevelCubit>().updateLevel(
-                context.read<UserDetailsCubit>().getUserId(),
-                widget.categoryId,
-                widget.subcategoryId,
+                widget.categoryId!,
+                widget.subcategoryId ?? '',
                 updatedLevel.toString(),
               );
 
           _updateCoinsAndScore();
-        } else {
-          print("Level already unlocked so no coins and score updates");
-        }
-        if (widget.subcategoryId == "0") {
+        } else {}
+        if (widget.subcategoryId == '0') {
           context.read<UnlockedLevelCubit>().fetchUnlockLevel(
-                context.read<UserDetailsCubit>().getUserId(),
-                widget.categoryId,
-                "0",
+                widget.categoryId!,
+                '0',
               );
         } else {
-          context.read<SubCategoryCubit>().fetchSubCategory(
-              widget.categoryId!, context.read<UserDetailsCubit>().getUserId());
+          context.read<SubCategoryCubit>().fetchSubCategory(widget.categoryId!);
         }
       }
       //
@@ -522,60 +543,64 @@ class _ResultScreenState extends State<ResultScreen> {
           !widget.comprehension.isPlayed) {
         _updateCoinsAndScore();
         context.read<SetCategoryPlayed>().setCategoryPlayed(
-            quizType: QuizTypes.funAndLearn,
-            userId: context.read<UserDetailsCubit>().getUserId(),
-            categoryId: widget.questions!.first.categoryId!,
-            subcategoryId: widget.questions!.first.subcategoryId! == "0"
-                ? ""
-                : widget.questions!.first.subcategoryId!,
-            typeId: widget.comprehension.id!);
+              quizType: QuizTypes.funAndLearn,
+              categoryId: widget.questions!.first.categoryId!,
+              subcategoryId: widget.questions!.first.subcategoryId! == '0'
+                  ? ''
+                  : widget.questions!.first.subcategoryId!,
+              typeId: widget.comprehension.id,
+            );
       }
       //
       else if (widget.quizType == QuizTypes.guessTheWord && !widget.isPlayed) {
         _updateCoinsAndScore();
         context.read<SetCategoryPlayed>().setCategoryPlayed(
-            quizType: QuizTypes.guessTheWord,
-            userId: context.read<UserDetailsCubit>().getUserId(),
-            categoryId: widget.guessTheWordQuestions!.first.category,
-            subcategoryId:
-                widget.guessTheWordQuestions!.first.subcategory == "0"
-                    ? ""
-                    : widget.guessTheWordQuestions!.first.subcategory,
-            typeId: "");
+              quizType: QuizTypes.guessTheWord,
+              categoryId: widget.guessTheWordQuestions!.first.category,
+              subcategoryId:
+                  widget.guessTheWordQuestions!.first.subcategory == '0'
+                      ? ''
+                      : widget.guessTheWordQuestions!.first.subcategory,
+              typeId: '',
+            );
       } else if (widget.quizType == QuizTypes.audioQuestions &&
           !widget.isPlayed) {
         _updateCoinsAndScore();
         context.read<SetCategoryPlayed>().setCategoryPlayed(
-            quizType: QuizTypes.audioQuestions,
-            userId: context.read<UserDetailsCubit>().getUserId(),
-            categoryId: widget.questions!.first.categoryId!,
-            subcategoryId: widget.questions!.first.subcategoryId! == "0"
-                ? ""
-                : widget.questions!.first.subcategoryId!,
-            typeId: "");
+              quizType: QuizTypes.audioQuestions,
+              categoryId: widget.questions!.first.categoryId!,
+              subcategoryId: widget.questions!.first.subcategoryId! == '0'
+                  ? ''
+                  : widget.questions!.first.subcategoryId!,
+              typeId: '',
+            );
       } else if (widget.quizType == QuizTypes.mathMania && !widget.isPlayed) {
         _updateCoinsAndScore();
         context.read<SetCategoryPlayed>().setCategoryPlayed(
-            quizType: QuizTypes.mathMania,
-            userId: context.read<UserDetailsCubit>().getUserId(),
-            categoryId: widget.questions!.first.categoryId!,
-            subcategoryId: widget.questions!.first.subcategoryId! == "0"
-                ? ""
-                : widget.questions!.first.subcategoryId!,
-            typeId: "");
+              quizType: QuizTypes.mathMania,
+              categoryId: widget.questions!.first.categoryId!,
+              subcategoryId: widget.questions!.first.subcategoryId! == '0'
+                  ? ''
+                  : widget.questions!.first.subcategoryId!,
+              typeId: '',
+            );
       }
     }
-    fetchUpdateUserDetails();
+    // fetchUpdateUserDetails();
   }
 
   void earnCoinsBasedOnWinPercentage() {
     if (_isWinner) {
-      double percentage = winPercentage();
+      final percentage = winPercentage();
       _earnedCoins = UiUtils.coinsBasedOnWinPercentage(
-          percentage,
-          widget.quizType!,
-          context.read<SystemConfigCubit>().getMaxPercentageWinning(),
-          context.read<SystemConfigCubit>().getMaxWinningCoins());
+        guessTheWordMaxWinningCoins:
+            context.read<SystemConfigCubit>().guessTheWordMaxWinningCoins,
+        percentage: percentage,
+        quizType: widget.quizType!,
+        maxCoinsWinningPercentage:
+            context.read<SystemConfigCubit>().maxCoinsWinningPercentage,
+        maxWinningCoins: context.read<SystemConfigCubit>().maxWinningCoins,
+      );
     }
   }
 
@@ -587,94 +612,89 @@ class _ResultScreenState extends State<ResultScreen> {
         !widget.comprehension.isPlayed) {
       context.read<ComprehensionCubit>().getComprehension(
             languageId: UiUtils.getCurrentQuestionLanguageId(context),
-            type: widget.questions!.first.subcategoryId! == "0"
-                ? "category"
-                : "subcategory",
-            typeId: widget.questions!.first.subcategoryId! == "0"
+            type: widget.questions!.first.subcategoryId! == '0'
+                ? 'category'
+                : 'subcategory',
+            typeId: widget.questions!.first.subcategoryId! == '0'
                 ? widget.questions!.first.categoryId!
                 : widget.questions!.first.subcategoryId!,
-            userId: context.read<UserDetailsCubit>().getUserId(),
           );
     } else if (widget.quizType == QuizTypes.audioQuestions &&
         _isWinner &&
         !widget.isPlayed) {
       //
-      if (widget.questions!.first.subcategoryId == "0") {
+      if (widget.questions!.first.subcategoryId == '0') {
         //update category
         context.read<QuizCategoryCubit>().getQuizCategoryWithUserId(
-            languageId: UiUtils.getCurrentQuestionLanguageId(context),
-            type: UiUtils.getCategoryTypeNumberFromQuizType(
-                QuizTypes.audioQuestions),
-            userId: context.read<UserDetailsCubit>().getUserId());
+              languageId: UiUtils.getCurrentQuestionLanguageId(context),
+              type: UiUtils.getCategoryTypeNumberFromQuizType(
+                QuizTypes.audioQuestions,
+              ),
+            );
       } else {
         //update subcategory
         context.read<SubCategoryCubit>().fetchSubCategory(
-            widget.questions!.first.categoryId!,
-            context.read<UserDetailsCubit>().getUserId());
+              widget.questions!.first.categoryId!,
+            );
       }
     } else if (widget.quizType == QuizTypes.guessTheWord &&
         _isWinner &&
         !widget.isPlayed) {
-      if (widget.guessTheWordQuestions!.first.subcategory == "0") {
+      if (widget.guessTheWordQuestions!.first.subcategory == '0') {
         //update category
         context.read<QuizCategoryCubit>().getQuizCategoryWithUserId(
-            languageId: UiUtils.getCurrentQuestionLanguageId(context),
-            type: UiUtils.getCategoryTypeNumberFromQuizType(
-                QuizTypes.guessTheWord),
-            userId: context.read<UserDetailsCubit>().getUserId());
+              languageId: UiUtils.getCurrentQuestionLanguageId(context),
+              type: UiUtils.getCategoryTypeNumberFromQuizType(
+                QuizTypes.guessTheWord,
+              ),
+            );
       } else {
         //update subcategory
         context.read<SubCategoryCubit>().fetchSubCategory(
-            widget.guessTheWordQuestions!.first.category,
-            context.read<UserDetailsCubit>().getUserId());
+              widget.guessTheWordQuestions!.first.category,
+            );
       }
     } else if (widget.quizType == QuizTypes.mathMania &&
         _isWinner &&
         !widget.isPlayed) {
-      if (widget.questions!.first.subcategoryId == "0") {
+      if (widget.questions!.first.subcategoryId == '0') {
         //update category
         context.read<QuizCategoryCubit>().getQuizCategoryWithUserId(
-            languageId: UiUtils.getCurrentQuestionLanguageId(context),
-            type:
-                UiUtils.getCategoryTypeNumberFromQuizType(QuizTypes.mathMania),
-            userId: context.read<UserDetailsCubit>().getUserId());
+              languageId: UiUtils.getCurrentQuestionLanguageId(context),
+              type: UiUtils.getCategoryTypeNumberFromQuizType(
+                QuizTypes.mathMania,
+              ),
+            );
       } else {
         //update subcategory
         context.read<SubCategoryCubit>().fetchSubCategory(
-            widget.questions!.first.categoryId!,
-            context.read<UserDetailsCubit>().getUserId());
+              widget.questions!.first.categoryId!,
+            );
       }
-    } else if(widget.quizType == QuizTypes.quizZone) {
-      context.read<SubCategoryCubit>().fetchSubCategory(
-          widget.categoryId!, context.read<UserDetailsCubit>().getUserId());
-
-      // if (widget.subcategoryId == "") {
-      //   context.read<UnlockedLevelCubit>().fetchUnlockLevel(
-      //         context.read<UserDetailsCubit>().getUserId(),
-      //         widget.categoryId,
-      //         "0",
-      //       );
-      // }
-
-      // context.read<QuizCategoryCubit>().getQuizCategoryWithUserId(
-      //     languageId: UiUtils.getCurrentQuestionLanguageId(context),
-      //     type: UiUtils.getCategoryTypeNumberFromQuizType(widget.quizType!),
-      //     userId: context.read<UserDetailsCubit>().getUserId());
+    } else if (widget.quizType == QuizTypes.quizZone) {
+      if (widget.subcategoryId == '') {
+        context.read<UnlockedLevelCubit>().fetchUnlockLevel(
+              widget.categoryId!,
+              '0',
+            );
+      } else {
+        context.read<SubCategoryCubit>().fetchSubCategory(widget.categoryId!);
+      }
     }
     fetchUpdateUserDetails();
   }
 
   String getCategoryIdOfQuestion() {
-    if (widget.quizType == QuizTypes.battle) {
+    if (widget.quizType == QuizTypes.oneVsOneBattle) {
       return widget.battleRoom!.categoryId!.isEmpty
-          ? "0"
+          ? '0'
           : widget.battleRoom!.categoryId!;
     }
     if (widget.quizType == QuizTypes.guessTheWord) {
       return widget.guessTheWordQuestions!.first.category;
     }
     return widget.questions!.first.categoryId!.isEmpty
-        ? "-"
+        ? '-'
         : widget.questions!.first.categoryId!;
   }
 
@@ -682,19 +702,20 @@ class _ResultScreenState extends State<ResultScreen> {
     if (widget.quizType == QuizTypes.exam) {
       return widget.correctExamAnswers!;
     }
-    int correctAnswer = 0;
+    var correctAnswer = 0;
     if (widget.quizType == QuizTypes.guessTheWord) {
-      for (var question in widget.guessTheWordQuestions!) {
+      for (final question in widget.guessTheWordQuestions!) {
         if (question.answer ==
             UiUtils.buildGuessTheWordQuestionAnswer(question.submittedAnswer)) {
           correctAnswer++;
         }
       }
     } else {
-      for (var question in widget.questions!) {
+      for (final question in widget.questions!) {
         if (AnswerEncryption.decryptCorrectAnswer(
-                rawKey: context.read<UserDetailsCubit>().getUserFirebaseId(),
-                correctAnswer: question.correctAnswer!) ==
+              rawKey: context.read<UserDetailsCubit>().getUserFirebaseId(),
+              correctAnswer: question.correctAnswer!,
+            ) ==
             question.submittedAnswerId) {
           correctAnswer++;
         }
@@ -704,20 +725,20 @@ class _ResultScreenState extends State<ResultScreen> {
   }
 
   int attemptedQuestion() {
-    int attemptedQuestion = 0;
+    var attemptedQuestion = 0;
     if (widget.quizType == QuizTypes.exam) {
       return 0;
     }
     if (widget.quizType == QuizTypes.guessTheWord) {
       //
-      for (var question in widget.guessTheWordQuestions!) {
+      for (final question in widget.guessTheWordQuestions!) {
         if (question.hasAnswered) {
           attemptedQuestion++;
         }
       }
     } else {
       //
-      for (var question in widget.questions!) {
+      for (final question in widget.questions!) {
         if (question.attempted) {
           attemptedQuestion++;
         }
@@ -727,29 +748,27 @@ class _ResultScreenState extends State<ResultScreen> {
   }
 
   double winPercentage() {
+    if (widget.quizType == QuizTypes.oneVsOneBattle) return 0;
+
     if (widget.quizType == QuizTypes.exam) {
       return (widget.obtainedMarks! * 100.0) /
           int.parse(widget.exam!.totalMarks);
     }
-    if (widget.quizType == QuizTypes.guessTheWord) {
-      return (correctAnswer() * 100.0) / widget.guessTheWordQuestions!.length;
-    } else if (widget.quizType == QuizTypes.battle) {
-      return 0.0;
-    } else {
-      return (correctAnswer() * 100.0) / widget.questions!.length;
-    }
+
+    return (correctAnswer() * 100.0) / totalQuestions();
   }
 
   bool showCoinsAndScore() {
     if (widget.quizType == QuizTypes.selfChallenge ||
         widget.quizType == QuizTypes.contest ||
-        widget.quizType == QuizTypes.exam) {
+        widget.quizType == QuizTypes.exam ||
+        widget.quizType == QuizTypes.dailyQuiz) {
       return false;
     }
 
     if (widget.quizType == QuizTypes.quizZone) {
-      return (int.parse(widget.questions!.first.level!) ==
-          widget.unlockedLevel);
+      return _isWinner &&
+          (int.parse(widget.questions!.first.level!) == widget.unlockedLevel);
     }
     if (widget.quizType == QuizTypes.funAndLearn) {
       //if user completed more than 30% and has not played this paragraph yet
@@ -772,40 +791,103 @@ class _ResultScreenState extends State<ResultScreen> {
 
   int totalQuestions() {
     if (widget.quizType == QuizTypes.exam) {
-      return (widget.correctExamAnswers! + widget.incorrectExamAnswers!);
+      return widget.correctExamAnswers! + widget.incorrectExamAnswers!;
     }
     if (widget.quizType == QuizTypes.guessTheWord) {
       return widget.guessTheWordQuestions!.length;
     }
+
+    if (didSkipQue) {
+      return widget.questions!.length - 1;
+    }
+
     return widget.questions!.length;
   }
 
-  Widget _buildGreetingMessage(String title, String message) {
+  Widget _buildGreetingMessage() {
+    final String title;
+    final String message;
+
+    if (widget.quizType == QuizTypes.oneVsOneBattle) {
+      if (_winnerId!.isEmpty) {
+        title = 'matchDrawLbl';
+        message = 'congratulationsLbl';
+      } else if (_isWinner) {
+        title = 'victoryLbl';
+        message = 'congratulationsLbl';
+      } else {
+        title = 'defeatLbl';
+        message = 'betterNextLbl';
+      }
+    } else if (widget.quizType == QuizTypes.exam) {
+      title = widget.exam!.title;
+      message = examResultKey;
+    } else {
+      final scorePct = winPercentage();
+
+      if (scorePct <= 30) {
+        title = goodEffort;
+        message = keepLearning;
+      } else if (scorePct <= 50) {
+        title = wellDone;
+        message = makingProgress;
+      } else if (scorePct <= 70) {
+        title = greatJob;
+        message = closerToMastery;
+      } else if (scorePct <= 90) {
+        title = excellentWork;
+        message = keepGoing;
+      } else {
+        title = fantasticJob;
+        message = achievedMastery;
+      }
+    }
+
+    final titleStyle = TextStyle(
+      fontSize: 26,
+      color: Theme.of(context).colorScheme.onTertiary,
+      fontWeight: FontWeights.bold,
+    );
+
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        const SizedBox(height: 30.0),
+        const SizedBox(height: 30),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 5.0),
+          padding: const EdgeInsets.symmetric(horizontal: 5),
           alignment: Alignment.center,
-          child: Text(
-            title,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 26,
-              color: Theme.of(context).colorScheme.onTertiary,
-              fontWeight: FontWeights.bold,
-            ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                widget.quizType == QuizTypes.exam ? title : context.tr(title)!,
+                textAlign: TextAlign.center,
+                style: titleStyle,
+              ),
+              if (widget.quizType != QuizTypes.exam &&
+                  widget.quizType != QuizTypes.oneVsOneBattle) ...[
+                Text(
+                  " ${userName.split(' ').first}",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 26,
+                    color: Theme.of(context).primaryColor,
+                    fontWeight: FontWeights.bold,
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
-        const SizedBox(height: 5.0),
+        const SizedBox(height: 5),
         Container(
           alignment: Alignment.center,
+          width: MediaQuery.of(context).size.shortestSide * .85,
           child: Text(
-            message,
+            context.tr(message)!,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 19.0,
+              fontSize: 19,
               color: Theme.of(context).colorScheme.onTertiary,
             ),
           ),
@@ -823,18 +905,21 @@ class _ResultScreenState extends State<ResultScreen> {
       margin: margin,
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
-        borderRadius: BorderRadius.circular(10.0),
+        borderRadius: BorderRadius.circular(10),
       ),
       // padding: const EdgeInsets.all(10),
       width: MediaQuery.of(context).size.width * (0.2125),
-      height: 33.0,
+      height: 33,
       alignment: Alignment.center,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           SvgPicture.asset(
-            UiUtils.getImagePath(icon),
-            color: Theme.of(context).colorScheme.onTertiary,
+            icon,
+            colorFilter: ColorFilter.mode(
+              Theme.of(context).colorScheme.onTertiary,
+              BlendMode.srcIn,
+            ),
             width: 19,
             height: 19,
           ),
@@ -854,9 +939,9 @@ class _ResultScreenState extends State<ResultScreen> {
   }
 
   Widget _buildIndividualResultContainer(String userProfileUrl) {
-    String lottieAnimation = _isWinner
-        ? "assets/animations/confetti.json"
-        : "assets/animations/defeats.json";
+    final lottieAnimation = _isWinner
+        ? 'assets/animations/confetti.json'
+        : 'assets/animations/defeats.json';
 
     return Stack(
       clipBehavior: Clip.none,
@@ -872,104 +957,70 @@ class _ResultScreenState extends State<ResultScreen> {
           alignment: Alignment.topCenter,
           child: LayoutBuilder(
             builder: (context, constraints) {
-              double verticalSpacePercentage = 0.0;
-              double profileRadiusPercentage = 0.0;
+              var verticalSpacePercentage = 0.0;
 
-              double radialSizePercentage = 0.0;
+              var radialSizePercentage = 0.0;
               if (constraints.maxHeight <
                   UiUtils.profileHeightBreakPointResultScreen) {
                 verticalSpacePercentage = 0.015;
-                profileRadiusPercentage = 0.35; //test in
                 radialSizePercentage = 0.6;
               } else {
                 verticalSpacePercentage = 0.035;
-                profileRadiusPercentage = 0.375;
                 radialSizePercentage = 0.525;
               }
 
               return Column(
-                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
-                  widget.quizType! == QuizTypes.exam
-                      ? _buildGreetingMessage(
-                          widget.exam!.title,
-                          AppLocalization.of(context)!
-                              .getTranslatedValues(examResultKey)!)
-                      : _isWinner
-                          ? _buildGreetingMessage(
-                              AppLocalization.of(context)!
-                                  .getTranslatedValues("victoryLbl")!,
-                              AppLocalization.of(context)!
-                                  .getTranslatedValues("congratulationsLbl")!)
-                          : _buildGreetingMessage(
-                              AppLocalization.of(context)!
-                                  .getTranslatedValues("defeatLbl")!,
-                              AppLocalization.of(context)!
-                                  .getTranslatedValues("betterNextLbl")!),
+                  _buildGreetingMessage(),
                   SizedBox(
                     height: constraints.maxHeight * verticalSpacePercentage,
                   ),
-                  widget.quizType! == QuizTypes.exam
-                      ? Transform.translate(
-                          offset: const Offset(0.0, -20.0),
-                          child: RadialPercentageResultContainer(
-                            percentage: winPercentage(),
-                            timeTakenToCompleteQuizInSeconds:
-                                widget.examCompletedInMinutes,
-                            size: Size(
-                              constraints.maxHeight * radialSizePercentage,
-                              constraints.maxHeight * radialSizePercentage,
-                            ),
-                          ),
-                        )
-                      : Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            CircularImageContainer(
-                              imagePath: userProfileUrl,
-                              width: 107,
-                              height: 107,
-                              // height: constraints.maxHeight *
-                              //     (profileRadiusPercentage - 0.079),
-                              // width: constraints.maxWidth *
-                              //     (profileRadiusPercentage - 0.079 + 0.15),
-                            ),
-                            SvgPicture.asset(
-                              UiUtils.getImagePath("hexagon_frame.svg"),
-                              width: 132,
-                              height: 132,
-                              // height: constraints.maxHeight *
-                              //     (profileRadiusPercentage),
-                              // width: constraints.maxWidth *
-                              //     (profileRadiusPercentage - 0.05 + 0.15),
-                            ),
-                          ],
+                  if (widget.quizType! == QuizTypes.exam)
+                    Transform.translate(
+                      offset: const Offset(0, -20),
+                      child: RadialPercentageResultContainer(
+                        percentage: winPercentage(),
+                        timeTakenToCompleteQuizInSeconds:
+                            widget.examCompletedInMinutes,
+                        size: Size(
+                          constraints.maxHeight * radialSizePercentage,
+                          constraints.maxHeight * radialSizePercentage,
                         ),
-                  SizedBox(
-                    height: constraints.maxHeight * verticalSpacePercentage,
-                  ),
-                  widget.quizType! == QuizTypes.exam
-                      ? Transform.translate(
-                          offset: const Offset(0, -30.0),
-                          child: Text(
-                            "${widget.obtainedMarks}/${widget.exam!.totalMarks} ${AppLocalization.of(context)!.getTranslatedValues(markKey)!}",
-                            style: TextStyle(
-                              fontSize: 22.0 *
-                                  MediaQuery.of(context).textScaleFactor *
-                                  (1.1),
-                              fontWeight: FontWeight.w400,
-                              color: Theme.of(context).colorScheme.onTertiary,
-                            ),
-                          ),
-                        )
-                      : Text(
-                          userName,
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeights.bold,
-                            color: Theme.of(context).colorScheme.onTertiary,
-                          ),
-                        )
+                      ),
+                    )
+                  else
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        QImage.circular(
+                          imageUrl: userProfileUrl,
+                          width: 107,
+                          height: 107,
+                        ),
+                        SvgPicture.asset(
+                          Assets.hexagonFrame,
+                          width: 132,
+                          height: 132,
+                        ),
+                      ],
+                    ),
+                  if (widget.quizType! == QuizTypes.exam)
+                    Transform.translate(
+                      offset: const Offset(0, -30),
+                      child: Text(
+                        '${widget.obtainedMarks}/${widget.exam!.totalMarks} ${context.tr(markKey)!}',
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: MediaQuery.of(context).textScaler.scale(22),
+                          fontWeight: FontWeight.w400,
+                          color: Theme.of(context).colorScheme.onTertiary,
+                        ),
+                      ),
+                    )
+                  else
+                    const SizedBox(),
                 ],
               );
             },
@@ -981,487 +1032,486 @@ class _ResultScreenState extends State<ResultScreen> {
           alignment: AlignmentDirectional.bottomStart,
           child: _buildResultDataWithIconContainer(
             widget.quizType == QuizTypes.exam
-                ? "${widget.incorrectExamAnswers}/${totalQuestions()}"
-                : "${totalQuestions() - correctAnswer()}/${totalQuestions()}",
-            "wrong.svg",
+                ? '${widget.incorrectExamAnswers}/${totalQuestions()}'
+                : '${totalQuestions() - correctAnswer()}/${totalQuestions()}',
+            Assets.wrong,
             EdgeInsetsDirectional.only(
-              start: 15.0,
+              start: 15,
               bottom: showCoinsAndScore() ? 20.0 : 30.0,
             ),
           ),
         ),
         //correct answer
-        showCoinsAndScore()
-            ? Align(
-                alignment: AlignmentDirectional.bottomStart,
-                child: _buildResultDataWithIconContainer(
-                  "${correctAnswer()}/${totalQuestions()}",
-                  "correct.svg",
-                  const EdgeInsetsDirectional.only(start: 15.0, bottom: 60.0),
-                ),
-              )
-            : Align(
-                alignment: Alignment.bottomRight,
-                child: _buildResultDataWithIconContainer(
-                  "${correctAnswer()}/${totalQuestions()}",
-                  "correct.svg",
-                  const EdgeInsetsDirectional.only(end: 15.0, bottom: 30.0),
-                ),
-              ),
+        if (showCoinsAndScore())
+          Align(
+            alignment: AlignmentDirectional.bottomStart,
+            child: _buildResultDataWithIconContainer(
+              '${correctAnswer()}/${totalQuestions()}',
+              Assets.correct,
+              const EdgeInsetsDirectional.only(start: 15, bottom: 60),
+            ),
+          )
+        else
+          Align(
+            alignment: Alignment.bottomRight,
+            child: _buildResultDataWithIconContainer(
+              '${correctAnswer()}/${totalQuestions()}',
+              Assets.correct,
+              const EdgeInsetsDirectional.only(end: 15, bottom: 30),
+            ),
+          ),
 
         //points
-        showCoinsAndScore()
-            ? Align(
-                alignment: AlignmentDirectional.bottomEnd,
-                child: _buildResultDataWithIconContainer(
-                  "${widget.myPoints}",
-                  "score.svg",
-                  const EdgeInsetsDirectional.only(end: 15.0, bottom: 60.0),
-                ),
-              )
-            : const SizedBox(),
+        if (showCoinsAndScore())
+          Align(
+            alignment: AlignmentDirectional.bottomEnd,
+            child: _buildResultDataWithIconContainer(
+              '${widget.myPoints}',
+              Assets.score,
+              const EdgeInsetsDirectional.only(end: 15, bottom: 60),
+            ),
+          )
+        else
+          const SizedBox(),
 
         //earned coins
-        showCoinsAndScore()
-            ? Align(
-                alignment: AlignmentDirectional.bottomEnd,
-                child: _buildResultDataWithIconContainer(
-                  "$_earnedCoins",
-                  "earnedCoin.svg",
-                  const EdgeInsetsDirectional.only(end: 15.0, bottom: 20.0),
-                ),
-              )
-            : const SizedBox(),
+        if (showCoinsAndScore())
+          Align(
+            alignment: AlignmentDirectional.bottomEnd,
+            child: _buildResultDataWithIconContainer(
+              '$_earnedCoins',
+              Assets.earnedCoin,
+              const EdgeInsetsDirectional.only(end: 15, bottom: 20),
+            ),
+          )
+        else
+          const SizedBox(),
 
-        //build radils percentage container
-        widget.quizType! == QuizTypes.exam
-            ? const SizedBox()
-            : Align(
-                alignment: Alignment.bottomCenter,
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    double radialSizePercentage = 0.0;
-                    if (constraints.maxHeight <
-                        UiUtils.profileHeightBreakPointResultScreen) {
-                      radialSizePercentage = 0.4;
-                    } else {
-                      radialSizePercentage = 0.325;
-                    }
-                    return Transform.translate(
-                      offset: const Offset(0.0, 15.0),
-                      child: RadialPercentageResultContainer(
-                        percentage: winPercentage(),
-                        timeTakenToCompleteQuizInSeconds:
-                            widget.timeTakenToCompleteQuiz?.toInt(),
-                        size: Size(
-                          constraints.maxHeight * radialSizePercentage,
-                          constraints.maxHeight * radialSizePercentage,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
+        //build radial percentage container
+        if (widget.quizType! == QuizTypes.exam)
+          const SizedBox()
+        else
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                var radialSizePercentage = 0.0;
+                if (constraints.maxHeight <
+                    UiUtils.profileHeightBreakPointResultScreen) {
+                  radialSizePercentage = 0.4;
+                } else {
+                  radialSizePercentage = 0.325;
+                }
+                return Transform.translate(
+                  offset: const Offset(0, 15),
+                  child: RadialPercentageResultContainer(
+                    percentage: winPercentage(),
+                    timeTakenToCompleteQuizInSeconds:
+                        widget.timeTakenToCompleteQuiz?.toInt(),
+                    size: Size(
+                      constraints.maxHeight * radialSizePercentage,
+                      constraints.maxHeight * radialSizePercentage,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
       ],
     );
   }
 
   Widget _buildBattleResultDetails() {
-    UserBattleRoomDetails? winnerDetails =
-        widget.battleRoom!.user1!.uid == _winnerId
-            ? widget.battleRoom!.user1
-            : widget.battleRoom!.user2;
-    UserBattleRoomDetails? looserDetails =
-        widget.battleRoom!.user1!.uid != _winnerId
-            ? widget.battleRoom!.user1
-            : widget.battleRoom!.user2;
+    final winnerDetails = widget.battleRoom!.user1!.uid == _winnerId
+        ? widget.battleRoom!.user1
+        : widget.battleRoom!.user2;
+    final looserDetails = widget.battleRoom!.user1!.uid != _winnerId
+        ? widget.battleRoom!.user1
+        : widget.battleRoom!.user2;
 
-    print("WinnerID $_isWinner");
     return _winnerId == null
         ? const SizedBox()
         : LayoutBuilder(
             builder: (context, constraints) {
-              double profileRadiusPercentage = 0.0;
-              double looserProfileRadiusPercentage = 0.0;
-              double verticalSpacePercentage = 0.0;
-              double translateOffsetdy = 0.0;
-              double nameAndProfileSizedBoxHeight = 0.0;
+              var verticalSpacePercentage = 0.0;
               if (constraints.maxHeight <
                   UiUtils.profileHeightBreakPointResultScreen) {
-                profileRadiusPercentage = _winnerId!.isEmpty ? 0.165 : 0.18;
                 verticalSpacePercentage = _winnerId!.isEmpty ? 0.035 : 0.03;
-                looserProfileRadiusPercentage =
-                    _winnerId!.isEmpty ? profileRadiusPercentage : 0.127;
-                translateOffsetdy = -15.0;
-                nameAndProfileSizedBoxHeight = 5.0;
               } else {
-                profileRadiusPercentage = _winnerId!.isEmpty ? 0.15 : 0.17;
                 verticalSpacePercentage = _winnerId!.isEmpty ? 0.075 : 0.05;
-                looserProfileRadiusPercentage =
-                    _winnerId!.isEmpty ? profileRadiusPercentage : 0.11;
-                translateOffsetdy = 25.0;
-                nameAndProfileSizedBoxHeight = 10.0;
               }
               return Column(
                 children: [
-                  _winnerId!.isEmpty
-                      ? _buildGreetingMessage(
-                          AppLocalization.of(context)!
-                              .getTranslatedValues("matchDrawLbl")!,
-                          AppLocalization.of(context)!
-                              .getTranslatedValues("congratulationsLbl")!)
-                      : _isWinner
-                          ? _buildGreetingMessage(
-                              AppLocalization.of(context)!
-                                  .getTranslatedValues("victoryLbl")!,
-                              AppLocalization.of(context)!
-                                  .getTranslatedValues("congratulationsLbl")!)
-                          : _buildGreetingMessage(
-                              AppLocalization.of(context)!
-                                  .getTranslatedValues("defeatLbl")!,
-                              AppLocalization.of(context)!
-                                  .getTranslatedValues("betterNextLbl")!),
-                  widget.entryFee! > 0
-                      ? context.read<UserDetailsCubit>().getUserId() ==
-                              _winnerId
-                          ? Padding(
-                              padding:
-                                  const EdgeInsets.only(top: 20, bottom: 20),
-                              child: Container(
+                  _buildGreetingMessage(),
+                  if (widget.entryFee! > 0)
+                    context.read<UserDetailsCubit>().userId() == _winnerId
+                        ? Padding(
+                            padding: const EdgeInsets.only(top: 20, bottom: 20),
+                            child: Container(
+                              padding: const EdgeInsets.only(
+                                top: 10,
+                                bottom: 10,
+                                right: 30,
+                                left: 30,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context)
+                                    .primaryColor
+                                    .withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                "${context.tr("youWin")!} ${widget.entryFee! * 2} ${context.tr("coinsLbl")!}",
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(context).primaryColor,
+                                ),
+                              ),
+                            ),
+                          )
+                        : _winnerId!.isEmpty
+                            ? const SizedBox()
+                            : Padding(
                                 padding: const EdgeInsets.only(
-                                    top: 10, bottom: 10, right: 30, left: 30),
-                                decoration: BoxDecoration(
+                                  top: 20,
+                                  bottom: 20,
+                                ),
+                                child: Container(
+                                  padding: const EdgeInsets.only(
+                                    top: 10,
+                                    bottom: 10,
+                                    right: 30,
+                                    left: 30,
+                                  ),
+                                  decoration: BoxDecoration(
                                     color: Theme.of(context)
-                                        .primaryColor
+                                        .colorScheme
+                                        .onTertiary
                                         .withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(10)),
-                                child: Text(
-                                  "${AppLocalization.of(context)!.getTranslatedValues("youWin")!} ${widget.entryFee} ${AppLocalization.of(context)!.getTranslatedValues("coinsLbl")!}",
-                                  style: TextStyle(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    "${context.tr("youLossLbl")!} ${widget.entryFee} ${context.tr("coinsLbl")!}",
+                                    style: TextStyle(
                                       fontSize: 20,
                                       fontWeight: FontWeight.bold,
                                       color: Theme.of(context)
                                           .colorScheme
-                                          .secondary),
-                                ),
-                              ),
-                            )
-                          : _winnerId!.isEmpty
-                              ? const SizedBox()
-                              : Padding(
-                                  padding: const EdgeInsets.only(
-                                      top: 20, bottom: 20),
-                                  child: Container(
-                                    padding: const EdgeInsets.only(
-                                        top: 10,
-                                        bottom: 10,
-                                        right: 30,
-                                        left: 30),
-                                    decoration: BoxDecoration(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onTertiary
-                                            .withOpacity(0.2),
-                                        borderRadius:
-                                            BorderRadius.circular(10)),
-                                    child: Text(
-                                      "${AppLocalization.of(context)!.getTranslatedValues("youLossLbl")!} ${widget.entryFee} ${AppLocalization.of(context)!.getTranslatedValues("coinsLbl")!}",
-                                      style: TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold,
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onTertiary),
+                                          .onTertiary,
                                     ),
                                   ),
-                                )
-                      : const SizedBox(
-                          height: 50,
-                        ),
+                                ),
+                              )
+                  else
+                    const SizedBox(height: 50),
                   SizedBox(
                     height:
                         constraints.maxHeight * verticalSpacePercentage - 10.2,
                   ),
-                  _winnerId!.isEmpty
-                      ? Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                  if (_winnerId!.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    QImage.circular(
+                                      width: 80,
+                                      height: 80,
+                                      imageUrl:
+                                          widget.battleRoom!.user1!.profileUrl,
+                                    ),
+                                    Center(
+                                      child: SvgPicture.asset(
+                                        Assets.hexagonFrame,
+                                        height: 90,
+                                        width: 90,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  widget.battleRoom!.user1!.name,
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 2,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontWeight: FontWeights.bold,
+                                    fontSize: 16,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onTertiary,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 18,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context)
+                                        .scaffoldBackgroundColor,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    '${context.tr(scoreLbl)} ${widget.battleRoom!.user1!.points}',
+                                    style: TextStyle(
+                                      fontWeight: FontWeights.bold,
+                                      fontSize: 18,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onTertiary,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 5),
+                          Column(
                             children: [
-                              Column(
-                                children: [
-                                  Stack(
-                                    alignment: Alignment.center,
-                                    children: [
-                                      CircularImageContainer(
-                                        width: 80,
-                                        height: 80,
-                                        imagePath: widget
-                                            .battleRoom!.user1!.profileUrl,
-                                      ),
-                                      Center(
-                                        child: SvgPicture.asset(
-                                          UiUtils.getImagePath(
-                                              "hexagon_frame.svg"),
-                                          height: 90,
-                                          width: 90,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Text(
-                                    widget.battleRoom!.user1!.name,
-                                    style: TextStyle(
-                                      fontWeight: FontWeights.bold,
-                                      fontSize: 16,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onTertiary,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 18,
-                                      vertical: 8,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Theme.of(context)
-                                          .scaffoldBackgroundColor,
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Text(
-                                      "${AppLocalization.of(context)!.getTranslatedValues(scoreLbl)} ${widget.battleRoom!.user1!.points}",
-                                      style: TextStyle(
-                                        fontWeight: FontWeights.bold,
-                                        fontSize: 18,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onTertiary,
-                                      ),
-                                    ),
-                                  )
-                                ],
+                              SvgPicture.asset(
+                                AssetsUtils.getImagePath('versus.svg'),
+                                width: MediaQuery.of(context).size.width * 0.12,
+                                height:
+                                    MediaQuery.of(context).size.height * 0.12,
                               ),
-                              const Spacer(),
-                              Column(
-                                children: [
-                                  SvgPicture.asset(
-                                    AssetsUtils.getImagePath("versus.svg"),
-                                    width: MediaQuery.of(context).size.width *
-                                        0.12,
-                                    height: MediaQuery.of(context).size.height *
-                                        0.12,
-                                  ),
-                                  const SizedBox(
-                                    height: 80,
-                                  ),
-                                  const SizedBox()
-                                ],
+                              const SizedBox(
+                                height: 80,
                               ),
-                              const Spacer(),
-                              Column(
-                                children: [
-                                  Stack(
-                                    alignment: Alignment.center,
-                                    children: [
-                                      CircularImageContainer(
-                                        width: 80,
-                                        height: 80,
-                                        imagePath: widget
-                                            .battleRoom!.user2!.profileUrl,
-                                      ),
-                                      Center(
-                                        child: SvgPicture.asset(
-                                          UiUtils.getImagePath(
-                                              "hexagon_frame.svg"),
-                                          width: 90,
-                                          height: 90,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Text(
-                                    widget.battleRoom!.user2!.name,
-                                    style: TextStyle(
-                                      fontWeight: FontWeights.bold,
-                                      fontSize: 16,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onTertiary,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 18,
-                                      vertical: 8,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Theme.of(context)
-                                          .scaffoldBackgroundColor,
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Text(
-                                      "${AppLocalization.of(context)!.getTranslatedValues(scoreLbl)} ${widget.battleRoom!.user2!.points}",
-                                      style: TextStyle(
-                                        fontWeight: FontWeights.bold,
-                                        fontSize: 18,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onTertiary,
-                                      ),
-                                    ),
-                                  )
-                                ],
-                              ),
+                              const SizedBox(),
                             ],
                           ),
-                        )
-                      : Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                          child: Row(
-                            children: [
-                              SizedBox(
-                                height: constraints.maxHeight *
-                                        verticalSpacePercentage -
-                                    10.2,
-                              ),
-                              Column(
-                                children: [
-                                  Stack(
-                                    alignment: Alignment.center,
-                                    children: [
-                                      CircularImageContainer(
-                                        width: 80,
-                                        height: 80,
-                                        imagePath: winnerDetails!.profileUrl,
+                          const SizedBox(
+                            width: 5,
+                          ),
+                          Expanded(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    QImage.circular(
+                                      width: 80,
+                                      height: 80,
+                                      imageUrl:
+                                          widget.battleRoom!.user2!.profileUrl,
+                                    ),
+                                    Center(
+                                      child: SvgPicture.asset(
+                                        Assets.hexagonFrame,
+                                        width: 90,
+                                        height: 90,
                                       ),
-                                      Center(
-                                        child: SvgPicture.asset(
-                                          UiUtils.getImagePath(
-                                              "hexagon_frame.svg"),
-                                          width: 90,
-                                          height: 90,
-                                        ),
-                                      ),
-                                    ],
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  widget.battleRoom!.user2!.name,
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 2,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontWeight: FontWeights.bold,
+                                    fontSize: 16,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onTertiary,
                                   ),
-                                  const SizedBox(height: 10),
-                                  Text(
-                                    winnerDetails.name,
+                                ),
+                                const SizedBox(height: 10),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 18,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context)
+                                        .scaffoldBackgroundColor,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    '${context.tr(scoreLbl)} ${widget.battleRoom!.user2!.points}',
                                     style: TextStyle(
                                       fontWeight: FontWeights.bold,
-                                      fontSize: 16,
+                                      fontSize: 18,
                                       color: Theme.of(context)
                                           .colorScheme
                                           .onTertiary,
                                     ),
                                   ),
-                                  const SizedBox(height: 10),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 18,
-                                      vertical: 8,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    QImage.circular(
+                                      width: 80,
+                                      height: 80,
+                                      imageUrl: winnerDetails!.profileUrl,
                                     ),
-                                    decoration: BoxDecoration(
+                                    Center(
+                                      child: SvgPicture.asset(
+                                        Assets.hexagonFrame,
+                                        width: 90,
+                                        height: 90,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  winnerDetails.name,
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 2,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontWeight: FontWeights.bold,
+                                    fontSize: 16,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onTertiary,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 18,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context)
+                                        .scaffoldBackgroundColor,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    '${context.tr(scoreLbl)} ${winnerDetails.points}',
+                                    style: TextStyle(
+                                      fontWeight: FontWeights.bold,
+                                      fontSize: 18,
                                       color: Theme.of(context)
-                                          .scaffoldBackgroundColor,
-                                      borderRadius: BorderRadius.circular(10),
+                                          .colorScheme
+                                          .onTertiary,
                                     ),
-                                    child: Text(
-                                      "${AppLocalization.of(context)!.getTranslatedValues(scoreLbl)} ${winnerDetails.points}",
-                                      style: TextStyle(
-                                        fontWeight: FontWeights.bold,
-                                        fontSize: 18,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onTertiary,
-                                      ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(
+                            width: 5,
+                          ),
+                          Column(
+                            children: [
+                              SvgPicture.asset(
+                                AssetsUtils.getImagePath('versus.svg'),
+                                width: MediaQuery.of(context).size.width * 0.12,
+                                height:
+                                    MediaQuery.of(context).size.height * 0.12,
+                              ),
+                              const SizedBox(
+                                height: 80,
+                              ),
+                              const SizedBox(),
+                            ],
+                          ),
+                          const SizedBox(
+                            width: 5,
+                          ),
+                          Expanded(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    QImage.circular(
+                                      width: 80,
+                                      height: 80,
+                                      imageUrl: looserDetails!.profileUrl,
                                     ),
-                                  )
-                                ],
-                              ),
-                              const Spacer(),
-                              Column(
-                                children: [
-                                  SvgPicture.asset(
-                                    AssetsUtils.getImagePath("versus.svg"),
-                                    width: MediaQuery.of(context).size.width *
-                                        0.12,
-                                    height: MediaQuery.of(context).size.height *
-                                        0.12,
-                                  ),
-                                  const SizedBox(
-                                    height: 80,
-                                  ),
-                                  const SizedBox()
-                                ],
-                              ),
-                              const Spacer(),
-                              Column(
-                                children: [
-                                  Stack(
-                                    alignment: Alignment.center,
-                                    children: [
-                                      CircularImageContainer(
-                                        width: 80,
-                                        height: 80,
-                                        imagePath: looserDetails!.profileUrl,
-                                      ),
-                                      Center(
-                                        child: SvgPicture.asset(
-                                          UiUtils.getImagePath(
-                                              "hexagon_frame.svg"),
-                                          color: Theme.of(context)
+                                    Center(
+                                      child: SvgPicture.asset(
+                                        Assets.hexagonFrame,
+                                        colorFilter: ColorFilter.mode(
+                                          Theme.of(context)
                                               .colorScheme
                                               .onTertiary,
-                                          width: 90,
-                                          height: 90,
+                                          BlendMode.srcIn,
                                         ),
+                                        width: 90,
+                                        height: 90,
                                       ),
-                                    ],
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  looserDetails.name,
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 2,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontWeight: FontWeights.bold,
+                                    fontSize: 16,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onTertiary,
                                   ),
-                                  const SizedBox(height: 10),
-                                  Text(
-                                    looserDetails.name,
+                                ),
+                                const SizedBox(height: 10),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 18,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context)
+                                        .scaffoldBackgroundColor,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    '${context.tr(scoreLbl)} ${looserDetails.points}',
                                     style: TextStyle(
                                       fontWeight: FontWeights.bold,
-                                      fontSize: 16,
+                                      fontSize: 18,
                                       color: Theme.of(context)
                                           .colorScheme
                                           .onTertiary,
                                     ),
                                   ),
-                                  const SizedBox(height: 10),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 18,
-                                      vertical: 8,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Theme.of(context)
-                                          .scaffoldBackgroundColor,
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Text(
-                                      "${AppLocalization.of(context)!.getTranslatedValues(scoreLbl)} ${looserDetails.points}",
-                                      style: TextStyle(
-                                        fontWeight: FontWeights.bold,
-                                        fontSize: 18,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onTertiary,
-                                      ),
-                                    ),
-                                  )
-                                ],
-                              ),
-                            ],
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
+                        ],
+                      ),
+                    ),
                 ],
               );
             },
@@ -1470,7 +1520,7 @@ class _ResultScreenState extends State<ResultScreen> {
 
   Widget _buildResultDetails(BuildContext context) {
     final userProfileUrl =
-        context.read<UserDetailsCubit>().getUserProfile().profileUrl ?? "";
+        context.read<UserDetailsCubit>().getUserProfile().profileUrl ?? '';
 
     //build results for 1 user
     if (widget.numberOfPlayer == 1) {
@@ -1492,7 +1542,7 @@ class _ResultScreenState extends State<ResultScreen> {
           color: _isWinner
               ? Theme.of(context).colorScheme.background
               : Theme.of(context).colorScheme.onTertiary.withOpacity(.05),
-          borderRadius: BorderRadius.circular(10.0),
+          borderRadius: BorderRadius.circular(10),
         ),
         child: _buildResultDetails(context),
       ),
@@ -1500,19 +1550,22 @@ class _ResultScreenState extends State<ResultScreen> {
   }
 
   Widget _buildButton(
-      String buttonTitle, Function onTap, BuildContext context) {
+    String buttonTitle,
+    Function onTap,
+    BuildContext context,
+  ) {
     return CustomRoundedButton(
       widthPercentage: 0.90,
       backgroundColor: Theme.of(context).primaryColor,
       buttonTitle: buttonTitle,
       radius: 8,
-      elevation: 5.0,
+      elevation: 5,
       showBorder: false,
       fontWeight: FontWeights.regular,
-      height: 50.0,
-      titleColor: Theme.of(context).colorScheme.onBackground,
-      onTap: onTap,
-      textSize: 20.0,
+      height: 50,
+      titleColor: Theme.of(context).colorScheme.background,
+      onTap: onTap as VoidCallback,
+      textSize: 20,
     );
   }
 
@@ -1522,457 +1575,355 @@ class _ResultScreenState extends State<ResultScreen> {
       return const SizedBox();
     } else if (widget.quizType == QuizTypes.audioQuestions) {
       if (_isWinner) {
+        return const SizedBox.shrink();
+      }
+
+      return _buildButton(
+        context.tr('playAgainBtn')!,
+        () {
+          fetchUpdateUserDetails();
+          Navigator.of(context).pushReplacementNamed(
+            Routes.quiz,
+            arguments: {
+              'numberOfPlayer': 1,
+              'isPlayed': widget.isPlayed,
+              'quizType': QuizTypes.audioQuestions,
+              'subcategoryId': widget.questions!.first.subcategoryId == '0'
+                  ? ''
+                  : widget.questions!.first.subcategoryId,
+              'categoryId': widget.questions!.first.subcategoryId == '0'
+                  ? widget.questions!.first.categoryId
+                  : '',
+            },
+          );
+        },
+        context,
+      );
+    } else if (widget.quizType == QuizTypes.guessTheWord) {
+      if (_isWinner) {
         return const SizedBox();
       }
 
       return _buildButton(
-          AppLocalization.of(context)!.getTranslatedValues("playAgainBtn")!,
-          () {
-        fetchUpdateUserDetails();
-        print(" category id ${widget.questions!.first.subcategoryId}");
-        Navigator.of(context).pushReplacementNamed(
-          Routes.quiz,
-          arguments: {
-            "numberOfPlayer": 1,
-            "isPlayed": widget.isPlayed,
-            "quizType": QuizTypes.audioQuestions,
-            "subcategoryId": widget.questions!.first.subcategoryId == "0"
-                ? ""
-                : widget.questions!.first.subcategoryId,
-            "categoryId": widget.questions!.first.subcategoryId == "0"
-                ? widget.questions!.first.categoryId
-                : "",
-          },
-        );
-      }, context);
-    } else if (widget.quizType == QuizTypes.guessTheWord) {
-      if (_isWinner) {
-        return Container();
-      }
-
-      return _buildButton(
-          AppLocalization.of(context)!.getTranslatedValues("playAgainBtn")!,
-          () {
-        fetchUpdateUserDetails();
-        Navigator.of(context).pushReplacementNamed(
-          Routes.guessTheWord,
-          arguments: {
-            "isPlayed": widget.isPlayed,
-            "type": widget.guessTheWordQuestions!.first.subcategory == "0"
-                ? "category"
-                : "subcategory",
-            "typeId": widget.guessTheWordQuestions!.first.subcategory == "0"
-                ? widget.guessTheWordQuestions!.first.category
-                : widget.guessTheWordQuestions!.first.subcategory,
-          },
-        );
-      }, context);
+        context.tr('playAgainBtn')!,
+        () {
+          fetchUpdateUserDetails();
+          Navigator.of(context).pushReplacementNamed(
+            Routes.guessTheWord,
+            arguments: {
+              'isPlayed': widget.isPlayed,
+              'type': widget.guessTheWordQuestions!.first.subcategory == '0'
+                  ? 'category'
+                  : 'subcategory',
+              'typeId': widget.guessTheWordQuestions!.first.subcategory == '0'
+                  ? widget.guessTheWordQuestions!.first.category
+                  : widget.guessTheWordQuestions!.first.subcategory,
+            },
+          );
+        },
+        context,
+      );
     } else if (widget.quizType == QuizTypes.funAndLearn) {
       return Container();
     } else if (widget.quizType == QuizTypes.quizZone) {
       //if user is winner
       if (_isWinner) {
         //we need to check if currentLevel is last level or not
-        int maxLevel = int.parse(widget.subcategoryMaxLevel!);
-        int currentLevel = int.parse(widget.questions!.first.level!);
+        final maxLevel = int.parse(widget.subcategoryMaxLevel!);
+        final currentLevel = int.parse(widget.questions!.first.level!);
         if (maxLevel == currentLevel) {
-          return Container();
+          return const SizedBox.shrink();
         }
         return _buildButton(
-            AppLocalization.of(context)!.getTranslatedValues("nextLevelBtn")!,
-            () {
-          //if given level is same as unlocked level then we need to update level
-          //else do not update level
-          int? unlockedLevel =
-              int.parse(widget.questions!.first.level!) == widget.unlockedLevel
-                  ? (widget.unlockedLevel! + 1)
-                  : widget.unlockedLevel;
-          //play quiz for next level
-          fetchUpdateUserDetails();
-          Navigator.of(context).pushReplacementNamed(
-            Routes.quiz,
-            arguments: {
-              "numberOfPlayer": widget.numberOfPlayer,
-              "quizType": widget.quizType,
-              //if subcategory id is empty for question means we need to fetch quesitons by it's category
-              "categoryId": widget.categoryId,
-              "subcategoryId": widget.subcategoryId,
-              "level": (currentLevel + 1).toString(),
-              //increase level
-              "subcategoryMaxLevel": widget.subcategoryMaxLevel,
-              "unlockedLevel": unlockedLevel,
-            },
-          );
-        }, context);
+          context.tr('nextLevelBtn')!,
+          () {
+            //if given level is same as unlocked level then we need to update level
+            //else do not update level
+            final unlockedLevel = int.parse(widget.questions!.first.level!) ==
+                    widget.unlockedLevel
+                ? (widget.unlockedLevel! + 1)
+                : widget.unlockedLevel;
+            //play quiz for next level
+            fetchUpdateUserDetails();
+            Navigator.of(context).pushReplacementNamed(
+              Routes.quiz,
+              arguments: {
+                'numberOfPlayer': widget.numberOfPlayer,
+                'quizType': widget.quizType,
+                //if subcategory id is empty for question means we need to fetch question by it's category
+                'categoryId': widget.categoryId,
+                'subcategoryId': widget.subcategoryId,
+                'level': (currentLevel + 1).toString(),
+                //increase level
+                'subcategoryMaxLevel': widget.subcategoryMaxLevel,
+                'unlockedLevel': unlockedLevel,
+              },
+            );
+          },
+          context,
+        );
       }
       //if user failed to complete this level
       return _buildButton(
-          AppLocalization.of(context)!.getTranslatedValues("playAgainBtn")!,
-          () {
-        fetchUpdateUserDetails();
-        //to play this level again (for quizZone quizType)
-        Navigator.of(context).pushReplacementNamed(Routes.quiz, arguments: {
-          "numberOfPlayer": widget.numberOfPlayer,
-          "quizType": widget.quizType,
-          //if subcategory id is empty for question means we need to fetch quesitons by it's category
-          "categoryId": widget.questions!.first.subcategoryId == "0"
-              ? widget.questions!.first.categoryId
-              : "",
-          "subcategoryId": widget.questions!.first.subcategoryId == "0"
-              ? ""
-              : widget.questions!.first.subcategoryId,
-          "level": widget.questions!.first.level,
-          "unlockedLevel": widget.unlockedLevel,
-          "subcategoryMaxLevel": widget.subcategoryMaxLevel,
-        });
-      }, context);
+        context.tr('playAgainBtn')!,
+        () {
+          fetchUpdateUserDetails();
+          //to play this level again (for quizZone quizType)
+          Navigator.of(context).pushReplacementNamed(
+            Routes.quiz,
+            arguments: {
+              'numberOfPlayer': widget.numberOfPlayer,
+              'quizType': widget.quizType,
+              //if subcategory id is empty for question means we need to fetch questions by it's category
+              'categoryId': widget.categoryId,
+              'subcategoryId': widget.subcategoryId,
+              'level': widget.questions!.first.level,
+              'unlockedLevel': widget.unlockedLevel,
+              'subcategoryMaxLevel': widget.subcategoryMaxLevel,
+            },
+          );
+        },
+        context,
+      );
     }
 
-    return const SizedBox();
+    return const SizedBox.shrink();
   }
 
   Widget _buildShareYourScoreButton() {
-    return _buildButton(
-        AppLocalization.of(context)!.getTranslatedValues("shareScoreBtn")!,
-        () async {
-      try {
-        //capturing image
-        final image = await screenshotController.capture();
-        //root directory path
-        final directory = (await getApplicationDocumentsDirectory()).path;
+    return Builder(
+      builder: (context) {
+        return _buildButton(
+          context.tr('shareScoreBtn')!,
+          () async {
+            try {
+              //capturing image
+              final image = await screenshotController.capture();
+              //root directory path
+              final directory = (await getApplicationDocumentsDirectory()).path;
 
-        String fileName = DateTime.now().microsecondsSinceEpoch.toString();
-        //create file with given path
-        File file = await File("$directory/$fileName.png").create();
-        //write as bytes
-        await file.writeAsBytes(image!.buffer.asUint8List());
+              final fileName = DateTime.now().microsecondsSinceEpoch.toString();
+              //create file with given path
+              final file = await File('$directory/$fileName.png').create();
+              //write as bytes
+              await file.writeAsBytes(image!.buffer.asUint8List());
 
-        String appLink = context.read<SystemConfigCubit>().getAppUrl();
+              final appLink = context.read<SystemConfigCubit>().appUrl;
 
-        String referalCode =
-            context.read<UserDetailsCubit>().getUserProfile().referCode ?? "";
+              final referralCode =
+                  context.read<UserDetailsCubit>().getUserProfile().referCode ??
+                      '';
 
-        String scoreText = "Reno Quiz"
-            "\n${AppLocalization.of(context)!.getTranslatedValues('myScoreLbl')!}"
-            "\nApp Link"
-            "\n$appLink"
-            "\nUse my referral code $referalCode to get coins";
+              final scoreText = '$appName'
+                  "\n${context.tr('myScoreLbl')!}"
+                  "\n${context.tr("appLink")!}"
+                  '\n$appLink'
+                  "\n${context.tr("useMyReferral")} $referralCode ${context.tr("toGetCoins")}";
 
-        await Share.shareXFiles(
-          [XFile(file.path)],
-          text: scoreText,
-        );
-      } catch (e) {
-        UiUtils.setSnackbar(
-          AppLocalization.of(context)!.getTranslatedValues(
-              convertErrorCodeToLanguageKey(defaultErrorMessageCode))!,
+              await UiUtils.share(
+                scoreText,
+                files: [XFile(file.path)],
+                context: context,
+              ).onError(
+                (e, s) => ShareResult('$e', ShareResultStatus.dismissed),
+              );
+            } catch (e) {
+              if (!mounted) return;
+
+              UiUtils.showSnackBar(
+                context.tr(
+                  convertErrorCodeToLanguageKey(errorCodeDefaultMessage),
+                )!,
+                context,
+              );
+            }
+          },
           context,
-          false,
         );
-      }
-    }, context);
+      },
+    );
   }
 
+  bool _unlockedReviewAnswersOnce = false;
+
   Widget _buildReviewAnswersButton() {
-    print("widget quiz ${widget.quizType}");
-    if (context.read<SystemConfigCubit>().isPaymentRequestEnable()) {
-      if (widget.quizType == QuizTypes.quizZone ||
-          widget.quizType == QuizTypes.audioQuestions ||
-          widget.quizType == QuizTypes.guessTheWord ||
-          widget.quizType == QuizTypes.funAndLearn ||
-          widget.quizType == QuizTypes.mathMania) {
-        return Column(
-          children: [
-            _buildButton(
-                AppLocalization.of(context)!
-                    .getTranslatedValues("reviewAnsBtn")!, () {
-              //
-              fetchUpdateUserDetails();
-              final updateCoinsCubit = context.read<UpdateScoreAndCoinsCubit>();
-              showDialog(
-                context: context,
-                builder: (_) => AlertDialog(
-                  actions: [
-                    TextButton(
-                      onPressed: () {
-                        //check if user has enough coins
-                        if (int.parse(
-                                context.read<UserDetailsCubit>().getCoins()!) <
-                            reviewAnswersDeductCoins) {
-                          UiUtils.errorMessageDialog(
-                            context,
-                            AppLocalization.of(context)!
-                                .getTranslatedValues(notEnoughCoinsKey),
-                          );
-                          return;
-                        }
-
-                        //update coins
-
-                        updateCoinsCubit.updateCoins(
-                          context.read<UserDetailsCubit>().getUserId(),
-                          reviewAnswersDeductCoins,
-                          false,
-                          reviewAnswerLbl,
-                        );
-
-                        context.read<UserDetailsCubit>().updateCoins(
-                              addCoin: false,
-                              coins: reviewAnswersDeductCoins,
-                            );
-                        //close the dialog
-
-                        Navigator.of(context).pop();
-                        //navigate to review answer
-
-                        Navigator.of(context).pushNamed(
-                          Routes.reviewAnswers,
-                          arguments: {
-                            "quizType": widget.quizType,
-                            "questions":
-                                widget.quizType == QuizTypes.guessTheWord
-                                    ? List<Question>.from([])
-                                    : widget.questions,
-                            "guessTheWordQuestions":
-                                widget.quizType == QuizTypes.guessTheWord
-                                    ? widget.guessTheWordQuestions
-                                    : List<GuessTheWordQuestion>.from([]),
-                          },
-                        );
-                      },
-                      child: Text(
-                        AppLocalization.of(context)!
-                            .getTranslatedValues(continueLbl)!,
-                        style: TextStyle(color: Theme.of(context).colorScheme.onBackground),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                      },
-                      child: Text(
-                        AppLocalization.of(context)!
-                            .getTranslatedValues(cancelButtonKey)!,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onBackground,
-                        ),
-                      ),
-                    ),
-                  ],
-                  content: Text(
-                    "$reviewAnswersDeductCoins ${AppLocalization.of(context)!.getTranslatedValues(coinsWillBeDeductedKey)!}",
-                    style: TextStyle(
-                        color: Theme.of(context).colorScheme.secondary),
-                  ),
-                ),
-              );
-            }, context),
-            const SizedBox(height: 15.0)
-          ],
+    void onTapYesReviewAnswers() {
+      final reviewAnswersDeductCoins =
+          context.read<SystemConfigCubit>().reviewAnswersDeductCoins;
+      //check if user has enough coins
+      if (int.parse(context.read<UserDetailsCubit>().getCoins()!) <
+          reviewAnswersDeductCoins) {
+        UiUtils.errorMessageDialog(
+          context,
+          context.tr(notEnoughCoinsKey),
         );
+        return;
       }
+
+      /// update coins
+      context.read<UpdateScoreAndCoinsCubit>().updateCoins(
+            coins: reviewAnswersDeductCoins,
+            addCoin: false,
+            title: reviewAnswerLbl,
+          );
+      context.read<UserDetailsCubit>().updateCoins(
+            addCoin: false,
+            coins: reviewAnswersDeductCoins,
+          );
+
+      _unlockedReviewAnswersOnce = true;
+      Navigator.of(context).pop();
+
+      Navigator.of(context).pushNamed(
+        Routes.reviewAnswers,
+        arguments: widget.quizType == QuizTypes.guessTheWord
+            ? {
+                'quizType': widget.quizType,
+                'questions': <Question>[],
+                'guessTheWordQuestions': widget.guessTheWordQuestions,
+              }
+            : {
+                'quizType': widget.quizType,
+                'questions': widget.questions,
+                'guessTheWordQuestions': <GuessTheWordQuestion>[],
+              },
+      );
     }
 
-    return Column(
-      children: [
-        _buildButton(
-            AppLocalization.of(context)!.getTranslatedValues("reviewAnsBtn")!,
-            () {
-          //
-          fetchUpdateUserDetails();
-          showDialog(
-            context: context,
-            builder: (_) => AlertDialog(
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    //check if user has enough coins
-                    if (int.parse(
-                            context.read<UserDetailsCubit>().getCoins()!) <
-                        reviewAnswersDeductCoins) {
-                      UiUtils.errorMessageDialog(
-                        context,
-                        AppLocalization.of(context)!
-                            .getTranslatedValues(notEnoughCoinsKey),
-                      );
-                      return;
-                    }
-
-                    //update coins
-
-                    context.read<UpdateScoreAndCoinsCubit>().updateCoins(
-                          context.read<UserDetailsCubit>().getUserId(),
-                          reviewAnswersDeductCoins,
-                          false,
-                          reviewAnswerLbl,
-                        );
-
-                    context.read<UserDetailsCubit>().updateCoins(
-                          addCoin: false,
-                          coins: reviewAnswersDeductCoins,
-                        );
-                    //close the dialog
-
-                    Navigator.of(context).pop();
-                    //navigate to review answer
-
-                    Navigator.of(context).pushNamed(
-                      Routes.reviewAnswers,
-                      arguments: {
-                        "quizType": widget.quizType,
-                        "questions": widget.quizType == QuizTypes.guessTheWord
-                            ? List<Question>.from([])
-                            : widget.questions,
-                        "guessTheWordQuestions":
-                            widget.quizType == QuizTypes.guessTheWord
-                                ? widget.guessTheWordQuestions
-                                : List<GuessTheWordQuestion>.from([]),
-                      },
-                    );
+    return _buildButton(
+      context.tr('reviewAnsBtn')!,
+      () {
+        if (_unlockedReviewAnswersOnce) {
+          Navigator.of(context).pushNamed(
+            Routes.reviewAnswers,
+            arguments: widget.quizType == QuizTypes.guessTheWord
+                ? {
+                    'quizType': widget.quizType,
+                    'questions': <Question>[],
+                    'guessTheWordQuestions': widget.guessTheWordQuestions,
+                  }
+                : {
+                    'quizType': widget.quizType,
+                    'questions': widget.questions,
+                    'guessTheWordQuestions': <GuessTheWordQuestion>[],
                   },
-                  child: Text(
-                    AppLocalization.of(context)!
-                        .getTranslatedValues(continueLbl)!,
-                    style: TextStyle(color: Theme.of(context).colorScheme.onBackground),
-                  ),
-                ),
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: Text(
-                    AppLocalization.of(context)!
-                        .getTranslatedValues(cancelButtonKey)!,
-                    style: TextStyle(
-                      color: Theme.of(context).primaryColor,
-                    ),
-                  ),
-                ),
-              ],
-              content: Text(
-                "$reviewAnswersDeductCoins ${AppLocalization.of(context)!.getTranslatedValues(coinsWillBeDeductedKey)!}",
-                style:
-                    TextStyle(color: Theme.of(context).colorScheme.secondary),
-              ),
-            ),
           );
-        }, context),
-        const SizedBox(height: 15.0)
-      ],
+          return;
+        }
+
+        showDialog<void>(
+          context: context,
+          builder: (_) => AlertDialog(
+            actions: [
+              TextButton(
+                onPressed: onTapYesReviewAnswers,
+                child: Text(
+                  context.tr(continueLbl)!,
+                  style: TextStyle(color: Theme.of(context).primaryColor),
+                ),
+              ),
+
+              /// Cancel Button
+              TextButton(
+                onPressed: Navigator.of(context).pop,
+                child: Text(
+                  context.tr(cancelButtonKey)!,
+                  style: TextStyle(color: Theme.of(context).primaryColor),
+                ),
+              ),
+            ],
+            content: Text(
+              '${context.read<SystemConfigCubit>().reviewAnswersDeductCoins} ${context.tr(coinsWillBeDeductedKey)!}',
+              style: TextStyle(color: Theme.of(context).primaryColor),
+            ),
+          ),
+        );
+      },
+      context,
+    );
+  }
+
+  Widget _buildHomeButton() {
+    void onTapHomeButton() {
+      fetchUpdateUserDetails();
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        Routes.home,
+        (_) => false,
+        arguments: false,
+      );
+    }
+
+    return _buildButton(
+      context.tr('homeBtn')!,
+      onTapHomeButton,
+      context,
     );
   }
 
   Widget _buildResultButtons(BuildContext context) {
-    double betweenButtonSpace = 15.0;
-    if (widget.quizType == QuizTypes.battle) {
-      return Column(
-        children: [
-          SizedBox(height: betweenButtonSpace),
-          _buildReviewAnswersButton(),
-          // SizedBox(height: betweenButtonSpace),
-          _buildShareYourScoreButton(),
-          SizedBox(height: betweenButtonSpace),
-          _buildButton(
-              AppLocalization.of(context)!.getTranslatedValues("homeBtn")!, () {
-            fetchUpdateUserDetails();
-            Navigator.of(context).popUntil((route) => route.isFirst);
-          }, context),
-        ],
-      );
-    }
-
-    if (widget.quizType! == QuizTypes.exam) {
-      return Column(
-        children: [
-          _buildShareYourScoreButton(),
-          SizedBox(height: betweenButtonSpace),
-          _buildButton(
-              AppLocalization.of(context)!.getTranslatedValues("homeBtn")!, () {
-            fetchUpdateUserDetails();
-            Navigator.of(context).popUntil((route) => route.isFirst);
-          }, context),
-        ],
-      );
-    }
+    const buttonSpace = SizedBox(height: 15);
 
     return Column(
       children: [
-        _buildPlayAgainButton(),
-        SizedBox(height: betweenButtonSpace),
-        _buildReviewAnswersButton(),
+        if (widget.quizType! != QuizTypes.exam &&
+            widget.quizType != QuizTypes.oneVsOneBattle) ...[
+          _buildPlayAgainButton(),
+          buttonSpace,
+        ],
+        if (widget.quizType == QuizTypes.quizZone ||
+            widget.quizType == QuizTypes.audioQuestions ||
+            widget.quizType == QuizTypes.guessTheWord ||
+            widget.quizType == QuizTypes.funAndLearn ||
+            widget.quizType == QuizTypes.mathMania) ...[
+          _buildReviewAnswersButton(),
+          buttonSpace,
+        ],
         _buildShareYourScoreButton(),
-        SizedBox(height: betweenButtonSpace),
-        _buildButton(
-          AppLocalization.of(context)!.getTranslatedValues("homeBtn")!,
-          () {
-            fetchUpdateUserDetails();
-            Navigator.of(context).popUntil((route) => route.isFirst);
-          },
-          context,
-        ),
-        SizedBox(height: betweenButtonSpace),
+        buttonSpace,
+        _buildHomeButton(),
+        buttonSpace,
       ],
     );
   }
 
-  String appbarTitle() {
-    String title = "quizResultLbl";
-    switch (widget.quizType) {
-      case QuizTypes.quizZone:
-        title = "quizResultLbl";
-        break;
-      case QuizTypes.selfChallenge:
-        title = "selfChallengeResult";
-        break;
-      case QuizTypes.audioQuestions:
-        title = "audioQuizResult";
-        break;
-      case QuizTypes.mathMania:
-        title = "mathQuizResult";
-        break;
-      case QuizTypes.guessTheWord:
-        title = "guessTheWordResult";
-        break;
-      case QuizTypes.exam:
-        title = "examResult";
-        break;
-      case QuizTypes.dailyQuiz:
-        title = "dailyQuizResult";
-        break;
-      case QuizTypes.battle:
-        title = "randomBattleResult";
-        break;
-      case QuizTypes.funAndLearn:
-        title = "funAndLearnResult";
-        break;
-      case QuizTypes.trueAndFalse:
-        title = "truefalseQuizResult";
-        break;
-      case QuizTypes.bookmarkQuiz:
-        title = "bookmarkQuizResult";
-        break;
-    }
-    return AppLocalization.of(context)!.getTranslatedValues(title)!;
+  String get _appbarTitle {
+    final title = switch (widget.quizType) {
+      QuizTypes.selfChallenge => 'selfChallengeResult',
+      QuizTypes.audioQuestions => 'audioQuizResult',
+      QuizTypes.mathMania => 'mathQuizResult',
+      QuizTypes.guessTheWord => 'guessTheWordResult',
+      QuizTypes.exam => 'examResult',
+      QuizTypes.dailyQuiz => 'dailyQuizResult',
+      QuizTypes.oneVsOneBattle => 'randomBattleResult',
+      QuizTypes.funAndLearn => 'funAndLearnResult',
+      QuizTypes.trueAndFalse => 'truefalseQuizResult',
+      QuizTypes.bookmarkQuiz => 'bookmarkQuizResult',
+      _ => 'quizResultLbl',
+    };
+
+    return context.tr(title)!;
   }
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () {
-        onPageBackCalls();
+    return PopScope(
+      canPop:
+          context.read<UserDetailsCubit>().state is! UserDetailsFetchInProgress,
+      onPopInvoked: (didPop) {
+        if (didPop) return;
 
-        return Future.value(true);
+        onPageBackCalls();
       },
       child: MultiBlocListener(
         listeners: [
           BlocListener<UpdateScoreAndCoinsCubit, UpdateScoreAndCoinsState>(
             listener: (context, state) {
               if (state is UpdateScoreAndCoinsFailure) {
-                if (state.errorMessage == unauthorizedAccessCode) {
+                if (state.errorMessage == errorCodeUnauthorizedAccess) {
                   //already showed already logged in from other api error
                   if (!_displayedAlreadyLoggedInDialog) {
                     _displayedAlreadyLoggedInDialog = true;
-                    UiUtils.showAlreadyLoggedInDialog(context: context);
+                    showAlreadyLoggedInDialog(context);
                     return;
                   }
                 }
@@ -1983,11 +1934,11 @@ class _ResultScreenState extends State<ResultScreen> {
             listener: (context, state) {
               if (state is UpdateStatisticFailure) {
                 //
-                if (state.errorMessageCode == unauthorizedAccessCode) {
+                if (state.errorMessageCode == errorCodeUnauthorizedAccess) {
                   //already showed already logged in from other api error
                   if (!_displayedAlreadyLoggedInDialog) {
                     _displayedAlreadyLoggedInDialog = true;
-                    UiUtils.showAlreadyLoggedInDialog(context: context);
+                    showAlreadyLoggedInDialog(context);
                     return;
                   }
                 }
@@ -1998,18 +1949,18 @@ class _ResultScreenState extends State<ResultScreen> {
             listener: (context, state) {
               if (state is SetContestLeaderboardFailure) {
                 //
-                if (state.errorMessage == unauthorizedAccessCode) {
+                if (state.errorMessage == errorCodeUnauthorizedAccess) {
                   //already showed already logged in from other api error
                   if (!_displayedAlreadyLoggedInDialog) {
                     _displayedAlreadyLoggedInDialog = true;
-                    UiUtils.showAlreadyLoggedInDialog(context: context);
+                    showAlreadyLoggedInDialog(context);
                     return;
                   }
                 }
               }
               if (state is SetContestLeaderboardSuccess) {
                 context.read<ContestCubit>().getContest(
-                      context.read<UserDetailsCubit>().getUserId(),
+                      languageId: UiUtils.getCurrentQuestionLanguageId(context),
                     );
               }
             },
@@ -2018,25 +1969,20 @@ class _ResultScreenState extends State<ResultScreen> {
         child: Scaffold(
           appBar: QAppBar(
             roundedAppBar: false,
-            title: Text(appbarTitle()),
+            title: Text(_appbarTitle),
             onTapBackButton: () {
               onPageBackCalls();
               Navigator.pop(context);
             },
           ),
-          body: Stack(
-            children: [
-              SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Center(child: _buildResultContainer(context)),
-                    const SizedBox(height: 20.0),
-                    _buildResultButtons(context),
-                  ],
-                ),
-              ),
-            ],
+          body: SingleChildScrollView(
+            child: Column(
+              children: [
+                Center(child: _buildResultContainer(context)),
+                const SizedBox(height: 20),
+                _buildResultButtons(context),
+              ],
+            ),
           ),
         ),
       ),

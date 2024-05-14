@@ -1,43 +1,70 @@
 //class Contest {
 class Contests {
+  Contests({required this.live, required this.past, required this.upcoming});
+
+  Contests.fromJson(Map<String, dynamic> json)
+      : live = Contest.fromJson(json['live_contest'] as Map<String, dynamic>),
+        past = Contest.fromJson(json['past_contest'] as Map<String, dynamic>),
+        upcoming =
+            Contest.fromJson(json['upcoming_contest'] as Map<String, dynamic>);
+
   final Contest past;
   final Contest live;
   final Contest upcoming;
-  Contests({required this.live, required this.past, required this.upcoming});
-  static Contests fromJson(var json) {
-    return Contests(
-      live: Contest.fromJson(json['live_contest']),
-      past: Contest.fromJson(json['past_contest']),
-      upcoming: Contest.fromJson(json['upcoming_contest']),
-    );
-  }
 }
 
 class Contest {
-  final String errorMessage;
-  final List<ContestDetails> contestDetails;
   Contest({required this.contestDetails, required this.errorMessage});
 
-  static Contest fromJson(var json) {
+  Contest.fromJson(Map<String, dynamic> json) {
     final hasError = json['error'] as bool;
-    final temContestDetails = hasError ? [] : json['data'] as List;
-    return Contest(
-        contestDetails:
-            temContestDetails.map((e) => ContestDetails.fromJson(e)).toList(),
-        errorMessage: hasError ? json['message'] : "");
+    errorMessage = hasError ? json['message'] as String : '';
+    contestDetails = hasError
+        ? <ContestDetails>[]
+        : (json['data'] as List)
+            .cast<Map<String, dynamic>>()
+            .map(ContestDetails.fromJson)
+            .toList(growable: false);
   }
 
-  Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = <String, dynamic>{};
-    data['error'] = errorMessage;
-
-    data['data'] = contestDetails.map((v) => v.toJson()).toList();
-
-    return data;
-  }
+  late final String errorMessage;
+  late final List<ContestDetails> contestDetails;
 }
 
 class ContestDetails {
+  ContestDetails({
+    this.id,
+    this.name,
+    this.startDate,
+    this.endDate,
+    this.description,
+    this.image,
+    this.entry,
+    this.prizeStatus,
+    this.dateCreated,
+    this.status,
+    this.points,
+    this.topUsers,
+    this.participants,
+    this.showDescription,
+  });
+
+  ContestDetails.fromJson(Map<String, dynamic> json) {
+    id = json['id'] as String?;
+    name = json['name'] as String?;
+    startDate = json['start_date'] as String?;
+    endDate = json['end_date'] as String?;
+    description = json['description'] as String?;
+    image = json['image'] as String?;
+    entry = json['entry'] as String?;
+    prizeStatus = json['prize_status'] as String?;
+    dateCreated = json['date_created'] as String?;
+    status = json['status'] as String?;
+    points = (json['points'] as List?)?.cast<Map<String, dynamic>>();
+    topUsers = json['top_users'] as String?;
+    participants = json['participants'] as String?;
+  }
+
   String? id;
   String? name;
   String? startDate;
@@ -48,58 +75,8 @@ class ContestDetails {
   String? prizeStatus;
   String? dateCreated;
   String? status;
-  List? points;
+  List<Map<String, dynamic>>? points;
   String? topUsers;
   String? participants;
   bool? showDescription = false;
-
-  ContestDetails(
-      {this.id,
-      this.name,
-      this.startDate,
-      this.endDate,
-      this.description,
-      this.image,
-      this.entry,
-      this.prizeStatus,
-      this.dateCreated,
-      this.status,
-      this.points,
-      this.topUsers,
-      this.participants,
-      this.showDescription});
-
-  ContestDetails.fromJson(Map<String, dynamic> json) {
-    id = json['id'];
-    name = json['name'];
-    startDate = json['start_date'];
-    endDate = json['end_date'];
-    description = json['description'];
-    image = json['image'];
-    entry = json['entry'];
-    prizeStatus = json['prize_status'];
-    dateCreated = json['date_created'];
-    status = json['status'];
-    points = json['points'];
-    topUsers = json['top_users'];
-    participants = json['participants'];
-  }
-
-  Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = <String, dynamic>{};
-    data['id'] = id;
-    data['name'] = name;
-    data['start_date'] = startDate;
-    data['end_date'] = endDate;
-    data['description'] = description;
-    data['image'] = image;
-    data['entry'] = entry;
-    data['prize_status'] = prizeStatus;
-    data['date_created'] = dateCreated;
-    data['status'] = status;
-    data['points'] = points;
-    data['top_users'] = topUsers;
-    data['participants'] = participants;
-    return data;
-  }
 }

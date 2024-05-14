@@ -1,31 +1,8 @@
-import 'dart:math';
-
 import 'package:flutterquiz/features/auth/authLocalDataSource.dart';
 import 'package:flutterquiz/features/quiz/models/correctAnswer.dart';
 import 'package:flutterquiz/utils/answer_encryption.dart';
 
-String getRandomAlphabet() {
-  String alphabets = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  Random random = Random.secure();
-  int randomIndex = random.nextInt(alphabets.length);
-  return alphabets.substring(randomIndex, randomIndex + 1);
-}
-
 class GuessTheWordQuestion {
-  late String id;
-  late String languageId;
-  late String image;
-  late String question;
-  late String answer;
-  late String subcategory;
-
-  late String category;
-
-  //it store option letter index
-  late List<String> submittedAnswer;
-  late List<String> options; //to build options
-  late bool hasAnswered;
-
   GuessTheWordQuestion({
     required this.id,
     required this.languageId,
@@ -40,28 +17,30 @@ class GuessTheWordQuestion {
   });
 
   GuessTheWordQuestion.fromJson(Map<String, dynamic> json) {
-    List<String> submittedAns = [];
-    List<String> initialOptions = [];
+    final submittedAns = <String>[];
+    final initialOptions = <String>[];
 
-    String correctAnswer = AnswerEncryption.decryptCorrectAnswer(
-        rawKey: AuthLocalDataSource.getUserFirebaseId(),
-        correctAnswer: CorrectAnswer.fromJson(Map.from(json['answer'])));
+    var correctAnswer = AnswerEncryption.decryptCorrectAnswer(
+      rawKey: AuthLocalDataSource.getUserFirebaseId(),
+      correctAnswer:
+          CorrectAnswer.fromJson(json['answer'] as Map<String, dynamic>),
+    );
 
-    print(correctAnswer);
     correctAnswer = correctAnswer.toUpperCase();
-    for (int i = 0; i < correctAnswer.length; i++) {
-      submittedAns.add("");
+    for (var i = 0; i < correctAnswer.length; i++) {
+      submittedAns.add('');
       initialOptions.add(correctAnswer.substring(i, i + 1));
     }
-    initialOptions.shuffle();
-    initialOptions.add("!");
+    initialOptions
+      ..shuffle()
+      ..add('!');
 
-    id = json['id'];
-    languageId = json['language_id'];
-    image = json['image'];
-    question = json['question'];
-    subcategory = json['subcategory'];
-    category = json['category'];
+    id = json['id'] as String;
+    languageId = json['language_id'] as String;
+    image = json['image'] as String;
+    question = json['question'] as String;
+    subcategory = json['subcategory'] as String;
+    category = json['category'] as String;
     answer = correctAnswer;
     submittedAnswer = submittedAns;
     options = initialOptions;
@@ -69,31 +48,48 @@ class GuessTheWordQuestion {
   }
 
   GuessTheWordQuestion.fromBookmarkJson(Map<String, dynamic> json) {
-    List<String> submittedAns = [];
-    List<String> initialOptions = [];
-    String correctAnswer = json['answer'].toString().split(" ").join();
+    final submittedAns = <String>[];
+    final initialOptions = <String>[];
+    var correctAnswer = json['answer'].toString().split(' ').join();
     correctAnswer = correctAnswer.toUpperCase();
-    for (int i = 0; i < correctAnswer.length; i++) {
-      submittedAns.add("");
+    for (var i = 0; i < correctAnswer.length; i++) {
+      submittedAns.add('');
       initialOptions.add(correctAnswer.substring(i, i + 1));
     }
-    initialOptions.shuffle();
-    initialOptions.add("!");
+    initialOptions
+      ..shuffle()
+      ..add('!');
 
-    id = json['question_id'];
-    languageId = json['language_id'];
-    image = json['image'];
-    question = json['question'];
-    subcategory = json['subcategory'];
-    category = json['category'];
+    id = json['question_id'] as String;
+    languageId = json['language_id'] as String;
+    image = json['image'] as String;
+    question = json['question'] as String;
+    subcategory = json['subcategory'] as String;
+    category = json['category'] as String;
     answer = correctAnswer;
     submittedAnswer = submittedAns;
     options = initialOptions;
     hasAnswered = false;
   }
 
-  GuessTheWordQuestion copyWith(
-      {List<String>? updatedAnswer, bool? hasAnswerGiven}) {
+  late String id;
+  late String languageId;
+  late String image;
+  late String question;
+  late String answer;
+  late String subcategory;
+
+  late String category;
+
+  //it store option letter index
+  late List<String> submittedAnswer;
+  late List<String> options; //to build options
+  late bool hasAnswered;
+
+  GuessTheWordQuestion copyWith({
+    List<String>? updatedAnswer,
+    bool? hasAnswerGiven,
+  }) {
     return GuessTheWordQuestion(
       category: category,
       subcategory: subcategory,

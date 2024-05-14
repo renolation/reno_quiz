@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:flutterquiz/app/app_localization.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutterquiz/features/exam/cubits/examCubit.dart';
 import 'package:flutterquiz/features/quiz/models/question.dart';
 import 'package:flutterquiz/ui/widgets/customRoundedButton.dart';
 import 'package:flutterquiz/utils/constants/string_labels.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
 
 class ExamQuestionStatusBottomSheetContainer extends StatelessWidget {
-  final PageController pageController;
-  final Function navigateToResultScreen;
-
   const ExamQuestionStatusBottomSheetContainer({
-    super.key,
     required this.pageController,
     required this.navigateToResultScreen,
+    super.key,
   });
+
+  final PageController pageController;
+  final Function navigateToResultScreen;
 
   Widget _buildQuestionAttemptedByMarksContainer({
     required BuildContext context,
@@ -29,20 +29,23 @@ class ExamQuestionStatusBottomSheetContainer extends StatelessWidget {
       child: Column(
         children: [
           Text(
-            "$questionMark ${AppLocalization.of(context)!.getTranslatedValues(markKey)!} (${questions.length})",
+            '$questionMark ${context.tr(markKey)!} (${questions.length})',
             style: TextStyle(
               color: Theme.of(context).colorScheme.onTertiary,
-              fontSize: 16.0,
+              fontSize: 16,
             ),
           ),
           Wrap(
             children: List.generate(questions.length, (index) => index)
-                .map((index) => hasQuestionAttemptedContainer(
+                .map(
+                  (index) => hasQuestionAttemptedContainer(
                     attempted: questions[index].attempted,
                     context: context,
                     questionIndex: context
                         .read<ExamCubit>()
-                        .getQuetionIndexById(questions[index].id!)))
+                        .getQuestionIndexById(questions[index].id!),
+                  ),
+                )
                 .toList(),
           ),
           Divider(color: Theme.of(context).colorScheme.onTertiary),
@@ -77,11 +80,11 @@ class ExamQuestionStatusBottomSheetContainer extends StatelessWidget {
               ? Theme.of(context).primaryColor
               : Theme.of(context).colorScheme.background,
         ),
-        margin: const EdgeInsets.all(5.0),
-        height: 40.0,
-        width: 40.0,
+        margin: const EdgeInsets.all(5),
+        height: 40,
+        width: 40,
         child: Text(
-          "${questionIndex + 1}",
+          '${questionIndex + 1}',
           style: TextStyle(
             color: attempted
                 ? Theme.of(context).colorScheme.background
@@ -107,14 +110,13 @@ class ExamQuestionStatusBottomSheetContainer extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Align(
-              alignment: Alignment.center,
               child: Padding(
-                padding: const EdgeInsets.only(top: 18.0),
+                padding: const EdgeInsets.only(top: 18),
                 child: Text(
-                  "${AppLocalization.of(context)!.getTranslatedValues(totalQuestionsKey)!} : ${context.read<ExamCubit>().getQuestions().length}",
+                  '${context.tr(totalQuestionsKey)!} : ${context.read<ExamCubit>().getQuestions().length}',
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.onTertiary,
-                    fontSize: 18.0,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -130,31 +132,30 @@ class ExamQuestionStatusBottomSheetContainer extends StatelessWidget {
                 questions:
                     context.read<ExamCubit>().getQuestionsByMark(questionMark),
               );
-            }).toList(),
+            }),
             Padding(
               padding: EdgeInsets.symmetric(
                 horizontal:
                     MediaQuery.of(context).size.width * UiUtils.hzMarginPct,
               ),
               child: CustomRoundedButton(
-                onTap: navigateToResultScreen,
+                onTap: navigateToResultScreen as VoidCallback,
                 widthPercentage: MediaQuery.of(context).size.width,
                 backgroundColor: Theme.of(context).primaryColor,
-                buttonTitle: AppLocalization.of(context)!
-                    .getTranslatedValues("submitBtn")!,
+                buttonTitle: context.tr('submitBtn'),
                 radius: 8,
                 showBorder: false,
                 titleColor: Theme.of(context).colorScheme.background,
                 fontWeight: FontWeight.w600,
-                height: 50.0,
+                height: 50,
                 textSize: 18,
               ),
             ),
 
             ///
-            const SizedBox(height: 20.0),
+            const SizedBox(height: 20),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 15.0),
+              padding: const EdgeInsets.symmetric(horizontal: 15),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -163,10 +164,9 @@ class ExamQuestionStatusBottomSheetContainer extends StatelessWidget {
                     color: Theme.of(context).primaryColor,
                     size: 22,
                   ),
-                  const SizedBox(width: 10.0),
+                  const SizedBox(width: 10),
                   Text(
-                    AppLocalization.of(context)!
-                        .getTranslatedValues("attemptedLbl")!,
+                    context.tr('attemptedLbl')!,
                     style: TextStyle(
                       fontSize: 14,
                       color: Theme.of(context).colorScheme.onTertiary,
@@ -178,10 +178,9 @@ class ExamQuestionStatusBottomSheetContainer extends StatelessWidget {
                     color: Theme.of(context).colorScheme.onTertiary,
                     size: 22,
                   ),
-                  const SizedBox(width: 10.0),
+                  const SizedBox(width: 10),
                   Text(
-                    AppLocalization.of(context)!
-                        .getTranslatedValues("unAttemptedLbl")!,
+                    context.tr('unAttemptedLbl')!,
                     style: TextStyle(
                       fontSize: 14,
                       color: Theme.of(context).colorScheme.onTertiary,

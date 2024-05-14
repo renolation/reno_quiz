@@ -1,11 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutterquiz/features/badges/badgesExecption.dart';
-import 'package:flutterquiz/utils/constants/api_body_parameter_labels.dart';
+import 'package:flutterquiz/features/badges/badgesException.dart';
 import 'package:flutterquiz/utils/api_utils.dart';
 import 'package:flutterquiz/utils/constants/constants.dart';
-import 'package:flutterquiz/utils/constants/error_message_keys.dart';
 import 'package:http/http.dart' as http;
 
 class BadgesRemoteDataSource {
@@ -22,50 +20,61 @@ class BadgesRemoteDataSource {
           }
         }
        */
-  Future<Map<String, dynamic>> getBadges({required String userId}) async {
+  Future<List<Map<String, dynamic>>> getBadges({
+    required String languageId,
+  }) async {
     try {
-      //body of post request
-      final body = {accessValueKey: accessValue, userIdKey: userId};
-      print(getUserBadgesUrl);
-      final response = await http.post(Uri.parse(getUserBadgesUrl),
-          body: body, headers: await ApiUtils.getHeaders());
-      final responseJson = jsonDecode(response.body);
+      final response = await http.post(
+        Uri.parse(getUserBadgesUrl),
+        body: {languageIdKey: languageId},
+        headers: await ApiUtils.getHeaders(),
+      );
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
 
-      if (responseJson['error']) {
-        throw BadgesException(errorMessageCode: responseJson['message']);
+      if (responseJson['error'] as bool) {
+        throw BadgesException(
+          errorMessageCode: responseJson['message'] as String,
+        );
       }
-      return Map.from(responseJson['message']);
+
+      return (responseJson['data'] as List).cast<Map<String, dynamic>>();
     } on SocketException catch (_) {
-      throw BadgesException(errorMessageCode: noInternetCode);
+      throw BadgesException(errorMessageCode: errorCodeNoInternet);
     } on BadgesException catch (e) {
       throw BadgesException(errorMessageCode: e.toString());
     } catch (e) {
-      throw BadgesException(errorMessageCode: defaultErrorMessageCode);
+      throw BadgesException(errorMessageCode: errorCodeDefaultMessage);
     }
   }
 
-  Future<void> setBadges(
-      {required String userId, required String badgeType}) async {
+  Future<void> setBadges({
+    required String badgeType,
+    required String languageId,
+  }) async {
     try {
-      final body = {
-        accessValueKey: accessValue,
-        userIdKey: userId,
-        typeKey: badgeType
+      final body = <String, String>{
+        typeKey: badgeType,
+        languageIdKey: languageId,
       };
 
-      final response = await http.post(Uri.parse(setUserBadgesUrl),
-          body: body, headers: await ApiUtils.getHeaders());
-      final responseJson = jsonDecode(response.body);
+      final response = await http.post(
+        Uri.parse(setUserBadgesUrl),
+        body: body,
+        headers: await ApiUtils.getHeaders(),
+      );
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
 
-      if (responseJson['error']) {
-        throw BadgesException(errorMessageCode: responseJson['message']);
+      if (responseJson['error'] as bool) {
+        throw BadgesException(
+          errorMessageCode: responseJson['message'].toString(),
+        );
       }
     } on SocketException catch (_) {
-      throw BadgesException(errorMessageCode: noInternetCode);
+      throw BadgesException(errorMessageCode: errorCodeNoInternet);
     } on BadgesException catch (e) {
       throw BadgesException(errorMessageCode: e.toString());
     } catch (e) {
-      throw BadgesException(errorMessageCode: defaultErrorMessageCode);
+      throw BadgesException(errorMessageCode: errorCodeDefaultMessage);
     }
   }
 }

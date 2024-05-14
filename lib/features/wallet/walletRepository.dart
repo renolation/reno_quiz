@@ -3,11 +3,6 @@ import 'package:flutterquiz/features/wallet/walletException.dart';
 import 'package:flutterquiz/features/wallet/walletRemoteDataSource.dart';
 
 class WalletRepository {
-  static final WalletRepository _walletRepository =
-      WalletRepository._internal();
-
-  late WalletRemoteDataSource _walletRemoteDataSource;
-
   factory WalletRepository() {
     _walletRepository._walletRemoteDataSource = WalletRemoteDataSource();
     return _walletRepository;
@@ -15,8 +10,12 @@ class WalletRepository {
 
   WalletRepository._internal();
 
+  static final WalletRepository _walletRepository =
+      WalletRepository._internal();
+
+  late WalletRemoteDataSource _walletRemoteDataSource;
+
   Future<void> makePaymentRequest({
-    required String userId,
     required String paymentType,
     required String paymentAddress,
     required String paymentAmount,
@@ -25,31 +24,41 @@ class WalletRepository {
   }) async {
     try {
       await _walletRemoteDataSource.makePaymentRequest(
-          userId: userId,
-          paymentType: paymentType,
-          paymentAddress: paymentAddress,
-          paymentAmount: paymentAmount,
-          coinUsed: coinUsed,
-          details: details);
+        paymentType: paymentType,
+        paymentAddress: paymentAddress,
+        paymentAmount: paymentAmount,
+        coinUsed: coinUsed,
+        details: details,
+      );
     } catch (e) {
       throw WalletException(errorMessageCode: e.toString());
     }
   }
 
-  Future<Map<String, dynamic>> getTransactions({
-    required String userId,
+  Future<({int total, List<PaymentRequest> data})> getTransactions({
     required String limit,
     required String offset,
   }) async {
     try {
-      final result = await _walletRemoteDataSource.getTransactions(
-          userId: userId, limit: limit, offset: offset);
-      return {
-        "total": result['total'],
-        "transactions": (result['data'] as List)
-            .map((e) => PaymentRequest.fromJson(e))
-            .toList(),
-      };
+      final (:total, :data) = await _walletRemoteDataSource.getTransactions(
+        limit: limit,
+        offset: offset,
+      );
+
+      return (
+        total: total,
+        data: data.map(PaymentRequest.fromJson).toList(),
+      );
+    } catch (e) {
+      throw WalletException(errorMessageCode: e.toString());
+    }
+  }
+
+  Future<bool> cancelPaymentRequest({required String paymentId}) async {
+    try {
+      return await _walletRemoteDataSource.cancelPaymentRequest(
+        paymentId: paymentId,
+      );
     } catch (e) {
       throw WalletException(errorMessageCode: e.toString());
     }

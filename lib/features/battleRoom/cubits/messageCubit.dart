@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutterquiz/features/battleRoom/battleRoomRepository.dart';
@@ -11,22 +12,23 @@ class MessageInitial extends MessageState {}
 class MessageAddInProgress extends MessageState {}
 
 class MessageFetchedSuccess extends MessageState {
-  final List<Message> messages;
-
   MessageFetchedSuccess(this.messages);
+
+  final List<Message> messages;
 }
 
 class MessageAddedFailure extends MessageState {
-  String errorCode;
   MessageAddedFailure(this.errorCode);
+
+  String errorCode;
 }
 
 class MessageCubit extends Cubit<MessageState> {
-  final BattleRoomRepository _battleRoomRepository;
   MessageCubit(this._battleRoomRepository)
       : super(MessageFetchedSuccess(List<Message>.from([])));
+  final BattleRoomRepository _battleRoomRepository;
 
-  late StreamSubscription streamSubscription;
+  late StreamSubscription<List<Message>> streamSubscription;
 
   //subscribe to messages stream
   void subscribeToMessages(String roomId) {
@@ -38,21 +40,23 @@ class MessageCubit extends Cubit<MessageState> {
     });
   }
 
-  void addMessage(
-      {required String message,
-      required by,
-      required roomId,
-      required isTextMessage}) async {
+  Future<void> addMessage({
+    required String message,
+    required String by,
+    required String roomId,
+    required bool isTextMessage,
+  }) async {
     try {
-      Message messageModel = Message(
-        by: by,
-        isTextMessage: isTextMessage,
-        message: message,
-        messageId: "",
-        roomId: roomId,
-        timestamp: Timestamp.now(),
+      await _battleRoomRepository.addMessage(
+        Message(
+          by: by,
+          isTextMessage: isTextMessage,
+          message: message,
+          messageId: '',
+          roomId: roomId,
+          timestamp: Timestamp.now(),
+        ),
       );
-      await _battleRoomRepository.addMessage(messageModel);
     } catch (e) {
       emit(MessageAddedFailure(e.toString()));
     }
@@ -69,7 +73,7 @@ class MessageCubit extends Cubit<MessageState> {
       final messagesByUser = messages.where((element) => element.by == userId);
 
       if (messagesByUser.isEmpty) {
-        return Message.buildEmptyMessage();
+        return Message.empty();
       }
       //If message id is passed that means we are checking for latest message
       //else we are fetching latest message to diplay
@@ -83,15 +87,15 @@ class MessageCubit extends Cubit<MessageState> {
 
       //
       return messagesByUser.first.messageId == messageId
-          ? Message.buildEmptyMessage()
+          ? Message.empty()
           : messagesByUser.first;
     }
-    return Message.buildEmptyMessage();
+    return Message.empty();
   }
 
   @override
   Future<void> close() async {
-    streamSubscription.cancel();
-    super.close();
+    await streamSubscription.cancel();
+    await super.close();
   }
 }

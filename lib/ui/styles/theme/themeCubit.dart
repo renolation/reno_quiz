@@ -4,24 +4,26 @@ import 'package:flutterquiz/ui/styles/theme/appTheme.dart';
 import 'package:flutterquiz/utils/constants/string_labels.dart';
 
 class ThemeState {
-  final AppTheme appTheme;
-
   const ThemeState(this.appTheme);
+
+  final AppTheme appTheme;
 }
 
 class ThemeCubit extends Cubit<ThemeState> {
+  ThemeCubit(this.settingsLocalDataSource)
+      : super(
+          ThemeState(
+            settingsLocalDataSource.theme == darkThemeKey
+                ? AppTheme.dark
+                : AppTheme.light,
+          ),
+        );
+
   SettingsLocalDataSource settingsLocalDataSource;
 
-  ThemeCubit(this.settingsLocalDataSource)
-      : super(ThemeState(
-          settingsLocalDataSource.theme() == darkThemeKey
-              ? AppTheme.dark
-              : AppTheme.light,
-        ));
-
   void changeTheme(AppTheme appTheme) {
-    settingsLocalDataSource
-        .setTheme(appTheme == AppTheme.dark ? darkThemeKey : lightThemeKey);
+    settingsLocalDataSource.theme =
+        appTheme == AppTheme.dark ? darkThemeKey : lightThemeKey;
     emit(ThemeState(appTheme));
   }
 }

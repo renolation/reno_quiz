@@ -1,117 +1,96 @@
-import 'package:flutterquiz/utils/constants/constants.dart';
-import 'package:hive/hive.dart';
+import 'package:flutterquiz/utils/constants/hive_constants.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfileManagementLocalDataSource {
-  String getName() {
-    return Hive.box(userDetailsBox).get(nameBoxKey, defaultValue: "");
-  }
+  Box<dynamic> get _box => Hive.box<dynamic>(userDetailsBox);
 
-  String getUserUID() {
-    return Hive.box(userDetailsBox).get(userUIdBoxKey, defaultValue: "");
-  }
+  String getName() => _box.get(nameBoxKey, defaultValue: '') as String;
 
-  String getEmail() {
-    return Hive.box(userDetailsBox).get(emailBoxKey, defaultValue: "");
-  }
+  String getUserUID() => _box.get(userUIdBoxKey, defaultValue: '') as String;
 
-  String getMobileNumber() {
-    return Hive.box(userDetailsBox).get(mobileNumberBoxKey, defaultValue: "");
-  }
+  String getEmail() => _box.get(emailBoxKey, defaultValue: '') as String;
 
-  String getRank() {
-    return Hive.box(userDetailsBox).get(rankBoxKey, defaultValue: "");
-  }
+  String getMobileNumber() =>
+      _box.get(mobileNumberBoxKey, defaultValue: '') as String;
 
-  String getCoins() {
-    return Hive.box(userDetailsBox).get(coinsBoxKey, defaultValue: "");
-  }
+  String getRank() => _box.get(rankBoxKey, defaultValue: '') as String;
 
-  String getScore() {
-    return Hive.box(userDetailsBox).get(scoreBoxKey, defaultValue: "");
-  }
+  String getCoins() => _box.get(coinsBoxKey, defaultValue: '') as String;
 
-  String getProfileUrl() {
-    return Hive.box(userDetailsBox).get(profileUrlBoxKey, defaultValue: "");
-  }
+  String getScore() => _box.get(scoreBoxKey, defaultValue: '') as String;
 
-  String getFirebaseId() {
-    return Hive.box(userDetailsBox).get(firebaseIdBoxKey, defaultValue: "");
-  }
+  String getProfileUrl() =>
+      _box.get(profileUrlBoxKey, defaultValue: '') as String;
 
-  String getStatus() {
-    return Hive.box(userDetailsBox).get(statusBoxKey, defaultValue: "1");
-  }
+  String getFirebaseId() =>
+      _box.get(firebaseIdBoxKey, defaultValue: '') as String;
 
-  String getReferCode() {
-    return Hive.box(userDetailsBox).get(referCodeBoxKey, defaultValue: "");
-  }
+  String getStatus() => _box.get(statusBoxKey, defaultValue: '1') as String;
 
-  String getFCMToken() {
-    return Hive.box(userDetailsBox).get(fcmTokenBoxKey, defaultValue: "");
-  }
+  String getReferCode() =>
+      _box.get(referCodeBoxKey, defaultValue: '') as String;
 
-  //
+  String getFCMToken() => _box.get(fcmTokenBoxKey, defaultValue: '') as String;
 
   Future<void> setEmail(String email) async {
-    Hive.box(userDetailsBox).put(emailBoxKey, email);
+    await _box.put(emailBoxKey, email);
   }
 
   Future<void> setUserUId(String userId) async {
-    Hive.box(userDetailsBox).put(userUIdBoxKey, userId);
+    await _box.put(userUIdBoxKey, userId);
   }
 
   Future<void> setName(String name) async {
-    Hive.box(userDetailsBox).put(nameBoxKey, name);
+    await _box.put(nameBoxKey, name);
   }
 
   Future<void> serProfileUrl(String profileUrl) async {
-    Hive.box(userDetailsBox).put(profileUrlBoxKey, profileUrl);
+    await _box.put(profileUrlBoxKey, profileUrl);
   }
 
   Future<void> setRank(String rank) async {
-    Hive.box(userDetailsBox).put(rankBoxKey, rank);
+    await _box.put(rankBoxKey, rank);
   }
 
   Future<void> setCoins(String coins) async {
-    Hive.box(userDetailsBox).put(coinsBoxKey, coins);
+    await _box.put(coinsBoxKey, coins);
   }
 
   Future<void> setMobileNumber(String mobileNumber) async {
-    Hive.box(userDetailsBox).put(mobileNumberBoxKey, mobileNumber);
+    await _box.put(mobileNumberBoxKey, mobileNumber);
   }
 
   Future<void> setScore(String score) async {
-    Hive.box(userDetailsBox).put(scoreBoxKey, score);
+    await _box.put(scoreBoxKey, score);
   }
 
   Future<void> setStatus(String status) async {
-    Hive.box(userDetailsBox).put(statusBoxKey, status);
+    await _box.put(statusBoxKey, status);
   }
 
   Future<void> setFirebaseId(String firebaseId) async {
-    Hive.box(userDetailsBox).put(firebaseIdBoxKey, firebaseId);
+    await _box.put(firebaseIdBoxKey, firebaseId);
   }
 
   Future<void> setReferCode(String referCode) async {
-    Hive.box(userDetailsBox).put(referCodeBoxKey, referCode);
+    await _box.put(referCodeBoxKey, referCode);
   }
 
   Future<void> setFCMToken(String fcmToken) async {
-    Hive.box(userDetailsBox).put(fcmTokenBoxKey, fcmToken);
+    await _box.put(fcmTokenBoxKey, fcmToken);
   }
 
   static Future<void> updateReversedCoins(int coins) async {
-    SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
-    sharedPreferences.setInt("reversedCoins", coins);
+    final sharedPreferences = await SharedPreferences.getInstance();
+    await sharedPreferences.setInt('reversedCoins', coins);
   }
 
   static Future<int> getUpdateReversedCoins() async {
     try {
-      SharedPreferences sharedPreferences =
-          await SharedPreferences.getInstance();
+      final sharedPreferences = await SharedPreferences.getInstance();
       await sharedPreferences.reload();
-      return sharedPreferences.getInt("reversedCoins") ?? 0;
+      return sharedPreferences.getInt('reversedCoins') ?? 0;
     } catch (e) {
       return 0;
     }

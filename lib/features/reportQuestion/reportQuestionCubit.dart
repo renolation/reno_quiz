@@ -10,26 +10,23 @@ class ReportQuestionInProgress extends ReportQuestionState {}
 class ReportQuestionSuccess extends ReportQuestionState {}
 
 class ReportQuestionFailure extends ReportQuestionState {
-  final String errorMessageCode;
   ReportQuestionFailure(this.errorMessageCode);
+
+  final String errorMessageCode;
 }
 
 class ReportQuestionCubit extends Cubit<ReportQuestionState> {
-  ReportQuestionRepository reportQuestionRepository;
   ReportQuestionCubit(this.reportQuestionRepository)
       : super(ReportQuestionInitial());
+  ReportQuestionRepository reportQuestionRepository;
 
-  void reportQuestion(
-      {required String questionId,
-      required String message,
-      required String userId}) {
+  void reportQuestion({required String questionId, required String message}) {
     emit(ReportQuestionInProgress());
     reportQuestionRepository
-        .reportQuestion(
-            message: message, questionId: questionId, userId: userId)
+        .reportQuestion(message: message, questionId: questionId)
         .then((value) {
       emit(ReportQuestionSuccess());
-    }).catchError((e) {
+    }).catchError((Object e) {
       emit(ReportQuestionFailure(e.toString()));
     });
   }

@@ -14,35 +14,34 @@ class SetCategoryPlayedInProgress extends SetCategoryPlayedState {}
 class SetCategoryPlayedSuccess extends SetCategoryPlayedState {}
 
 class SetCategoryPlayedFailure extends SetCategoryPlayedState {
-  final String errorMessage;
-
   SetCategoryPlayedFailure(this.errorMessage);
+
+  final String errorMessage;
 }
 
 class SetCategoryPlayed extends Cubit<SetCategoryPlayedState> {
+  SetCategoryPlayed(this._quizRepository) : super(SetCategoryPlayedInitial());
   final QuizRepository _quizRepository;
 
-  SetCategoryPlayed(this._quizRepository) : super(SetCategoryPlayedInitial());
-
   //to update level
-  void setCategoryPlayed(
-      {required QuizTypes quizType,
-      required String userId,
-      required String categoryId,
-      required String subcategoryId,
-      required String typeId}) async {
+  Future<void> setCategoryPlayed({
+    required QuizTypes quizType,
+    required String categoryId,
+    required String subcategoryId,
+    required String typeId,
+  }) async {
     emit(SetCategoryPlayedInProgress());
-    _quizRepository
+    await _quizRepository
         .setQuizCategoryPlayed(
-            type: UiUtils.getCategoryTypeNumberFromQuizType(quizType),
-            userId: userId,
-            categoryId: categoryId,
-            subcategoryId: subcategoryId,
-            typeId: typeId)
-        .then(
-          (val) => emit((SetCategoryPlayedSuccess())),
+          type: UiUtils.getCategoryTypeNumberFromQuizType(quizType),
+          categoryId: categoryId,
+          subcategoryId: subcategoryId,
+          typeId: typeId,
         )
-        .catchError((e) {
+        .then(
+          (val) => emit(SetCategoryPlayedSuccess()),
+        )
+        .catchError((Object e) {
       emit(SetCategoryPlayedFailure(e.toString()));
     });
   }

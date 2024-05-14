@@ -3,10 +3,8 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutterquiz/app/app_localization.dart';
 import 'package:flutterquiz/app/routes.dart';
 import 'package:flutterquiz/features/battleRoom/battleRoomRepository.dart';
-import 'package:flutterquiz/features/battleRoom/cubits/battleRoomCubit.dart';
 import 'package:flutterquiz/features/battleRoom/cubits/messageCubit.dart';
 import 'package:flutterquiz/features/battleRoom/cubits/multiUserBattleRoomCubit.dart';
 import 'package:flutterquiz/features/battleRoom/models/battleRoom.dart';
@@ -24,19 +22,17 @@ import 'package:flutterquiz/ui/screens/battle/widgets/messageBoxContainer.dart';
 import 'package:flutterquiz/ui/screens/battle/widgets/messageContainer.dart';
 import 'package:flutterquiz/ui/screens/battle/widgets/rectangleUserProfileContainer.dart';
 import 'package:flutterquiz/ui/screens/battle/widgets/waitForOthersContainer.dart';
-import 'package:flutterquiz/ui/widgets/circularImageContainer.dart';
+import 'package:flutterquiz/ui/widgets/alreadyLoggedInDialog.dart';
 import 'package:flutterquiz/ui/widgets/customAppbar.dart';
+import 'package:flutterquiz/ui/widgets/custom_image.dart';
 import 'package:flutterquiz/ui/widgets/exitGameDialog.dart';
 import 'package:flutterquiz/ui/widgets/questionsContainer.dart';
 import 'package:flutterquiz/utils/answer_encryption.dart';
 import 'package:flutterquiz/utils/constants/constants.dart';
-import 'package:flutterquiz/utils/constants/error_message_keys.dart';
-import 'package:flutterquiz/utils/constants/fonts.dart';
+import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/internet_connectivity.dart';
-import 'package:flutterquiz/utils/normalize_number.dart';
-import 'package:flutterquiz/utils/constants/string_labels.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
-import 'package:wakelock/wakelock.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 class MultiUserBattleRoomQuizScreen extends StatefulWidget {
   const MultiUserBattleRoomQuizScreen({super.key});
@@ -70,9 +66,11 @@ class _MultiUserBattleRoomQuizScreenState
     extends State<MultiUserBattleRoomQuizScreen>
     with WidgetsBindingObserver, TickerProviderStateMixin {
   late AnimationController timerAnimationController = AnimationController(
-      vsync: this,
-      duration:
-          Duration(seconds: context.read<SystemConfigCubit>().getQuizTime()))
+    vsync: this,
+    duration: Duration(
+      seconds: context.read<SystemConfigCubit>().quizTimer(QuizTypes.groupPlay),
+    ),
+  )
     ..addStatusListener(currentUserTimerAnimationStatusListener)
     ..forward();
 
@@ -93,12 +91,17 @@ class _MultiUserBattleRoomQuizScreenState
   late Animation<double> questionContentAnimation;
 
   late AnimationController messageAnimationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-      reverseDuration: const Duration(milliseconds: 300));
-  late Animation<double> messageAnimation = Tween<double>(begin: 0.0, end: 1.0)
-      .animate(CurvedAnimation(
-          parent: messageAnimationController, curve: Curves.easeOutBack));
+    vsync: this,
+    duration: const Duration(milliseconds: 300),
+    reverseDuration: const Duration(milliseconds: 300),
+  );
+  late Animation<double> messageAnimation =
+      Tween<double>(begin: 0, end: 1).animate(
+    CurvedAnimation(
+      parent: messageAnimationController,
+      curve: Curves.easeOutBack,
+    ),
+  );
 
   late List<AnimationController> opponentMessageAnimationControllers = [];
   late List<Animation<double>> opponentMessageAnimations = [];
@@ -106,10 +109,16 @@ class _MultiUserBattleRoomQuizScreenState
   late List<AnimationController> opponentProgressAnimationControllers = [];
 
   late AnimationController messageBoxAnimationController = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 350));
+    vsync: this,
+    duration: const Duration(milliseconds: 350),
+  );
   late Animation<double> messageBoxAnimation =
-      Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(
-          parent: messageBoxAnimationController, curve: Curves.easeInOut));
+      Tween<double>(begin: 0, end: 1).animate(
+    CurvedAnimation(
+      parent: messageBoxAnimationController,
+      curve: Curves.easeInOut,
+    ),
+  );
 
   int currentQuestionIndex = 0;
 
@@ -138,56 +147,53 @@ class _MultiUserBattleRoomQuizScreenState
 
   @override
   void initState() {
+    super.initState();
     //add empty messages ofr every user
-    Wakelock.enable();
+    WakelockPlus.enable();
     for (var i = 0; i < maxUsersInGroupBattle; i++) {
-      latestMessagesByUsers.add(Message.buildEmptyMessage());
-
+      latestMessagesByUsers.add(Message.empty());
     }
-
-
 
     //deduct coins of entry fee
     Future.delayed(Duration.zero, () {
       context.read<UpdateScoreAndCoinsCubit>().updateCoins(
-            context.read<UserDetailsCubit>().getUserId(),
-            context.read<MultiUserBattleRoomCubit>().getEntryFee(),
-            false,
-            playedGroupBattleKey,
+            coins: context.read<MultiUserBattleRoomCubit>().getEntryFee(),
+            addCoin: false,
+            title: playedGroupBattleKey,
           );
       context.read<UserDetailsCubit>().updateCoins(
-          addCoin: false,
-          coins: context.read<MultiUserBattleRoomCubit>().getEntryFee());
+            addCoin: false,
+            coins: context.read<MultiUserBattleRoomCubit>().getEntryFee(),
+          );
       context.read<MessageCubit>().subscribeToMessages(
-          context.read<MultiUserBattleRoomCubit>().getRoomId());
+            context.read<MultiUserBattleRoomCubit>().getRoomId(),
+          );
       //Get join user length
-
     });
     initializeAnimation();
     initOpponentConfig();
     questionContentAnimationController.forward();
     //add observer to track app lifecycle activity
     WidgetsBinding.instance.addObserver(this);
-    userLength=context.read<MultiUserBattleRoomCubit>().getUsers().length.toInt();
-    super.initState();
+    userLength = context.read<MultiUserBattleRoomCubit>().getUsers().length;
   }
 
   @override
   void dispose() {
-    Wakelock.disable();
+    WakelockPlus.disable();
     timerAnimationController
-        .removeStatusListener(currentUserTimerAnimationStatusListener);
-    timerAnimationController.dispose();
+      ..removeStatusListener(currentUserTimerAnimationStatusListener)
+      ..dispose();
     questionAnimationController.dispose();
     questionContentAnimationController.dispose();
     messageAnimationController.dispose();
-    for (var element in opponentMessageAnimationControllers) {
+    for (final element in opponentMessageAnimationControllers) {
       element.dispose();
     }
-    for (var element in opponentProgressAnimationControllers) {
+    for (final element in opponentProgressAnimationControllers) {
       element.dispose();
     }
-    for (var element in opponentsMessageDisappearTimer) {
+    for (final element in opponentsMessageDisappearTimer) {
       element?.cancel();
     }
     messageBoxAnimationController.dispose();
@@ -197,27 +203,28 @@ class _MultiUserBattleRoomQuizScreenState
     super.dispose();
   }
 
+  bool appWasPaused = false;
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
     //remove user from room
     if (state == AppLifecycleState.paused) {
-      MultiUserBattleRoomCubit multiUserBattleRoomCubit =
-          context.read<MultiUserBattleRoomCubit>();
+      appWasPaused = true;
+      final multiUserBattleRoomCubit = context.read<MultiUserBattleRoomCubit>();
       //if user has already won the game then do nothing
       if (multiUserBattleRoomCubit.getUsers().length != 1) {
         deleteMessages(multiUserBattleRoomCubit);
         multiUserBattleRoomCubit
-            .deleteUserFromRoom(context.read<UserDetailsCubit>().getUserId());
+            .deleteUserFromRoom(context.read<UserDetailsCubit>().userId());
       }
       //
-    } else if (state == AppLifecycleState.resumed) {
-      MultiUserBattleRoomCubit multiUserBattleRoomCubit =
-          context.read<MultiUserBattleRoomCubit>();
+    } else if (state == AppLifecycleState.resumed && appWasPaused) {
+      final multiUserBattleRoomCubit = context.read<MultiUserBattleRoomCubit>();
       //if user has won the game already
       if (multiUserBattleRoomCubit.getUsers().length == 1 &&
           multiUserBattleRoomCubit.getUsers().first!.uid ==
-              context.read<UserDetailsCubit>().getUserId()) {
+              context.read<UserDetailsCubit>().userId()) {
         setState(() {
           showUserLeftTheGame = false;
         });
@@ -235,21 +242,31 @@ class _MultiUserBattleRoomQuizScreenState
 
   void deleteMessages(MultiUserBattleRoomCubit battleRoomCubit) {
     //to delete messages by given user
-    context.read<MessageCubit>().deleteMessages(battleRoomCubit.getRoomId(),
-        context.read<UserDetailsCubit>().getUserId());
+    context.read<MessageCubit>().deleteMessages(
+          battleRoomCubit.getRoomId(),
+          context.read<UserDetailsCubit>().userId(),
+        );
   }
 
   void initOpponentConfig() {
     //
     for (var i = 0; i < (maxUsersInGroupBattle - 1); i++) {
-      opponentMessageAnimationControllers.add(AnimationController(
-          vsync: this, duration: const Duration(milliseconds: 300)));
+      opponentMessageAnimationControllers.add(
+        AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 300),
+        ),
+      );
       opponentProgressAnimationControllers
           .add(AnimationController(vsync: this));
-      opponentMessageAnimations.add(Tween<double>(begin: 0.0, end: 1.0).animate(
+      opponentMessageAnimations.add(
+        Tween<double>(begin: 0, end: 1).animate(
           CurvedAnimation(
-              parent: opponentMessageAnimationControllers[i],
-              curve: Curves.easeOutBack)));
+            parent: opponentMessageAnimationControllers[i],
+            curve: Curves.easeOutBack,
+          ),
+        ),
+      );
       opponentsMessageDisappearTimer.add(null);
       opponentsMessageDisappearTimeInSeconds.add(4);
     }
@@ -258,25 +275,38 @@ class _MultiUserBattleRoomQuizScreenState
   //
   void initializeAnimation() {
     questionAnimationController = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 500));
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
     questionContentAnimationController = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 250));
+      vsync: this,
+      duration: const Duration(milliseconds: 250),
+    );
 
-    questionSlideAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-        CurvedAnimation(
-            parent: questionAnimationController, curve: Curves.easeInOut));
-    questionScaleUpAnimation = Tween<double>(begin: 0.0, end: 0.1).animate(
-        CurvedAnimation(
-            parent: questionAnimationController,
-            curve: const Interval(0.0, 0.5, curve: Curves.easeInQuad)));
-    questionScaleDownAnimation = Tween<double>(begin: 0.0, end: 0.05).animate(
-        CurvedAnimation(
-            parent: questionAnimationController,
-            curve: const Interval(0.5, 1.0, curve: Curves.easeOutQuad)));
-    questionContentAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-        CurvedAnimation(
-            parent: questionContentAnimationController,
-            curve: Curves.easeInQuad));
+    questionSlideAnimation = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(
+        parent: questionAnimationController,
+        curve: Curves.easeInOut,
+      ),
+    );
+    questionScaleUpAnimation = Tween<double>(begin: 0, end: 0.1).animate(
+      CurvedAnimation(
+        parent: questionAnimationController,
+        curve: const Interval(0, 0.5, curve: Curves.easeInQuad),
+      ),
+    );
+    questionScaleDownAnimation = Tween<double>(begin: 0, end: 0.05).animate(
+      CurvedAnimation(
+        parent: questionAnimationController,
+        curve: const Interval(0.5, 1, curve: Curves.easeOutQuad),
+      ),
+    );
+    questionContentAnimation = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(
+        parent: questionContentAnimationController,
+        curve: Curves.easeInQuad,
+      ),
+    );
   }
 
   void toggleSettingDialog() {
@@ -286,12 +316,12 @@ class _MultiUserBattleRoomQuizScreenState
   //listener for current user timer
   void currentUserTimerAnimationStatusListener(AnimationStatus status) {
     if (status == AnimationStatus.completed) {
-      submitAnswer("-1");
+      submitAnswer('-1');
     }
   }
 
   //update answer locally and on cloud
-  void submitAnswer(String submittedAnswer) async {
+  Future<void> submitAnswer(String submittedAnswer) async {
     //
     timerAnimationController.stop();
     final battleRoomCubit = context.read<MultiUserBattleRoomCubit>();
@@ -299,36 +329,39 @@ class _MultiUserBattleRoomQuizScreenState
 
     if (!questions[currentQuestionIndex].attempted) {
       //updated answer locally
-      battleRoomCubit.updateQuestionAnswer(
-          questions[currentQuestionIndex].id!, submittedAnswer);
-      //update answer on cloud
-      battleRoomCubit.submitAnswer(
-        context.read<UserDetailsCubit>().getUserId(),
-        submittedAnswer,
-        submittedAnswer ==
-            AnswerEncryption.decryptCorrectAnswer(
-              rawKey: context.read<UserDetailsCubit>().getUserFirebaseId(),
-              correctAnswer: questions[currentQuestionIndex].correctAnswer!,
-            ),
-      );
+      battleRoomCubit
+        ..updateQuestionAnswer(
+          questions[currentQuestionIndex].id!,
+          submittedAnswer,
+        )
+        ..submitAnswer(
+          context.read<UserDetailsCubit>().userId(),
+          submittedAnswer,
+          isCorrectAnswer: submittedAnswer ==
+              AnswerEncryption.decryptCorrectAnswer(
+                rawKey: context.read<UserDetailsCubit>().getUserFirebaseId(),
+                correctAnswer: questions[currentQuestionIndex].correctAnswer!,
+              ),
+        );
 
       //change question
-      await Future.delayed(
-          const Duration(seconds: inBetweenQuestionTimeInSeconds));
+      await Future<void>.delayed(
+        const Duration(seconds: inBetweenQuestionTimeInSeconds),
+      );
       if (currentQuestionIndex == (questions.length - 1)) {
         setState(() {
           showWaitForOthers = true;
         });
       } else {
         changeQuestion();
-        timerAnimationController.forward(from: 0.0);
+        await timerAnimationController.forward(from: 0);
       }
     }
   }
 
   //next question
   void changeQuestion() {
-    questionAnimationController.forward(from: 0.0).then((value) {
+    questionAnimationController.forward(from: 0).then((value) {
       //need to dispose the animation controllers
       questionAnimationController.dispose();
       questionContentAnimationController.dispose();
@@ -350,37 +383,37 @@ class _MultiUserBattleRoomQuizScreenState
         .attempted;
   }
 
-  void battleRoomListener(BuildContext context, MultiUserBattleRoomState state,
-      MultiUserBattleRoomCubit battleRoomCubit) {
-
+  void battleRoomListener(
+    BuildContext context,
+    MultiUserBattleRoomState state,
+    MultiUserBattleRoomCubit battleRoomCubit,
+  ) {
     Future.delayed(Duration.zero, () async {
-      if(await InternetConnectivity.isUserOffline()){
-        showDialog<bool>(
+      if (await InternetConnectivity.isUserOffline()) {
+        await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
             shadowColor: Colors.transparent,
             actions: [
               TextButton(
                 onPressed: () async {
-                  if(!await InternetConnectivity.isUserOffline()){
+                  if (!await InternetConnectivity.isUserOffline()) {
                     Navigator.of(context).pop(true);
                   }
                 },
                 child: Text(
-                  AppLocalization.of(context)!
-                      .getTranslatedValues("retryLbl")!,
+                  context.tr('retryLbl')!,
                   style: TextStyle(
-                    color: Theme.of(context)
-                        .primaryColor,
+                    color: Theme.of(context).primaryColor,
                   ),
                 ),
               ),
             ],
             content: Text(
-              AppLocalization.of(context)!
-                  .getTranslatedValues("noInternet")!,
+              context.tr('noInternet')!,
             ),
-          ),);
+          ),
+        );
       }
     });
 
@@ -428,14 +461,14 @@ class _MultiUserBattleRoomQuizScreenState
         timer.cancel();
         opponentMessageAnimationControllers[opponentUserIndex].reverse();
       } else {
-        //print("Opponent $opponentUserMessageDisappearTimeInSeconds");
+        //
         opponentsMessageDisappearTimeInSeconds[opponentUserIndex] =
             opponentsMessageDisappearTimeInSeconds[opponentUserIndex] - 1;
       }
     });
   }
 
-  void messagesListener(MessageState state) async {
+  Future<void> messagesListener(MessageState state) async {
     if (state is MessageFetchedSuccess) {
       if (state.messages.isNotEmpty) {
         //current user message
@@ -443,21 +476,19 @@ class _MultiUserBattleRoomQuizScreenState
         if (context
             .read<MessageCubit>()
             .getUserLatestMessage(
-                //fetch user id
-                context.read<UserDetailsCubit>().getUserId(),
-                messageId: latestMessagesByUsers[0].messageId
-                //latest user message id
-                )
+              //fetch user id
+              context.read<UserDetailsCubit>().userId(),
+              messageId: latestMessagesByUsers[0].messageId,
+              //latest user message id
+            )
             .messageId
             .isNotEmpty) {
           //Assign latest message
-          latestMessagesByUsers[0] = context
-              .read<MessageCubit>()
-              .getUserLatestMessage(
-                  context.read<UserDetailsCubit>().getUserId(),
-                  messageId: latestMessagesByUsers[0].messageId);
-          print(
-              "Current user latest message : ${latestMessagesByUsers[0].message}");
+          latestMessagesByUsers[0] =
+              context.read<MessageCubit>().getUserLatestMessage(
+                    context.read<UserDetailsCubit>().userId(),
+                    messageId: latestMessagesByUsers[0].messageId,
+                  );
 
           //Display latest message by current user
           //means timer is running
@@ -466,34 +497,34 @@ class _MultiUserBattleRoomQuizScreenState
             currentUserMessageDisappearTimer?.cancel();
             setCurrentUserMessageDisappearTimer();
           } else {
-            messageAnimationController.forward();
+            await messageAnimationController.forward();
             setCurrentUserMessageDisappearTimer();
           }
         }
 
         //display opponent user messages
 
-        List<UserBattleRoomDetails?> opponentUsers = context
+        final opponentUsers = context
             .read<MultiUserBattleRoomCubit>()
-            .getOpponentUsers(context.read<UserDetailsCubit>().getUserId());
+            .getOpponentUsers(context.read<UserDetailsCubit>().userId());
 
         for (var i = 0; i < opponentUsers.length; i++) {
           if (context
               .read<MessageCubit>()
               .getUserLatestMessage(
-                  //opponent user id
-                  opponentUsers[i]!.uid,
-                  messageId: latestMessagesByUsers[i + 1].messageId
-                  //latest user message id
-                  )
+                //opponent user id
+                opponentUsers[i]!.uid,
+                messageId: latestMessagesByUsers[i + 1].messageId,
+                //latest user message id
+              )
               .messageId
               .isNotEmpty) {
             //Assign latest message
-            latestMessagesByUsers[i + 1] = context
-                .read<MessageCubit>()
-                .getUserLatestMessage(
-                    context.read<UserDetailsCubit>().getUserId(),
-                    messageId: latestMessagesByUsers[i + 1].messageId);
+            latestMessagesByUsers[i + 1] =
+                context.read<MessageCubit>().getUserLatestMessage(
+                      context.read<UserDetailsCubit>().userId(),
+                      messageId: latestMessagesByUsers[i + 1].messageId,
+                    );
 
             //if new message by opponent
             if (opponentsMessageDisappearTimeInSeconds[i] > 0 &&
@@ -502,7 +533,7 @@ class _MultiUserBattleRoomQuizScreenState
               opponentsMessageDisappearTimer[i]?.cancel();
               setOpponentUserMessageDisappearTimer(i);
             } else {
-              opponentMessageAnimationControllers[i].forward();
+              await opponentMessageAnimationControllers[i].forward();
               setOpponentUserMessageDisappearTimer(i);
             }
           }
@@ -511,21 +542,24 @@ class _MultiUserBattleRoomQuizScreenState
     }
   }
 
-  void navigateToResultScreen(List<UserBattleRoomDetails?> users,
-      BattleRoom? battleRoom, List<Question>? questions) {
-    bool navigateToResult = true;
+  void navigateToResultScreen(
+    List<UserBattleRoomDetails?> users,
+    BattleRoom? battleRoom,
+    List<Question>? questions,
+  ) {
+    var navigateToResult = true;
 
     if (users.isEmpty) {
       return;
     }
 
     //checking if every user has given all question's answer
-    for (var element in users) {
+    for (final user in users) {
       //if user uid is not empty means user has not left the game so
       //we will check for it's answer completion
-      if (element!.uid.isNotEmpty) {
+      if (user!.uid.isNotEmpty) {
         //if every user has submitted the answer then move user to result screen
-        if (element.answers.length != questions!.length) {
+        if (user.answers.length != questions!.length) {
           navigateToResult = false;
         }
       }
@@ -534,14 +568,11 @@ class _MultiUserBattleRoomQuizScreenState
     //if all users has submitted the answer
     if (navigateToResult) {
       //giving delay
-      Future.delayed(
-          const Duration(
-            milliseconds: 1000,
-          ), () {
+      Future.delayed(const Duration(milliseconds: 1000), () {
         try {
           //delete battle room by creator of this room
           if (battleRoom!.user1!.uid ==
-              context.read<UserDetailsCubit>().getUserId()) {
+              context.read<UserDetailsCubit>().userId()) {
             context
                 .read<MultiUserBattleRoomCubit>()
                 .deleteMultiUserBattleRoom();
@@ -568,11 +599,17 @@ class _MultiUserBattleRoomQuizScreenState
             context,
             Routes.multiUserBattleRoomQuizResult,
             arguments: {
-              "user": context.read<MultiUserBattleRoomCubit>().getUsers(),
-              "entryFee": battleRoom.entryFee,
+              'user': context.read<MultiUserBattleRoomCubit>().getUsers(),
+              'entryFee': battleRoom.entryFee,
+              'totalQuestions': context
+                  .read<MultiUserBattleRoomCubit>()
+                  .getQuestions()
+                  .length,
             },
           );
-        } catch (e) {}
+        } catch (e) {
+          rethrow;
+        }
       });
     }
   }
@@ -584,7 +621,7 @@ class _MultiUserBattleRoomQuizScreenState
         if (state is MultiUserBattleRoomSuccess) {
           if (battleRoomCubit.getUsers().length == 1 &&
               state.battleRoom.user1!.uid ==
-                  context.read<UserDetailsCubit>().getUserId()) {
+                  context.read<UserDetailsCubit>().userId()) {
             timerAnimationController.stop();
             return Container(
               width: MediaQuery.of(context).size.width,
@@ -594,16 +631,12 @@ class _MultiUserBattleRoomQuizScreenState
               child: AlertDialog(
                 shadowColor: Colors.transparent,
                 title: Text(
-                  AppLocalization.of(context)!
-                      .getTranslatedValues('youWonLbl')!,
-                  style:
-                      TextStyle(color: Theme.of(context).colorScheme.secondary),
+                  context.tr('youWonLbl')!,
+                  style: TextStyle(color: Theme.of(context).primaryColor),
                 ),
                 content: Text(
-                  AppLocalization.of(context)!
-                      .getTranslatedValues('everyOneLeftLbl')!,
-                  style:
-                      TextStyle(color: Theme.of(context).colorScheme.secondary),
+                  context.tr('everyOneLeftLbl')!,
+                  style: TextStyle(color: Theme.of(context).primaryColor),
                 ),
                 actions: [
                   TextButton(
@@ -613,16 +646,16 @@ class _MultiUserBattleRoomQuizScreenState
 
                       //add coins locally
 
-                      print("length of user${userLength}");
                       context.read<UserDetailsCubit>().updateCoins(
-                          addCoin: true, coins: battleRoomCubit.getEntryFee()*userLength );
+                            addCoin: true,
+                            coins: battleRoomCubit.getEntryFee() * userLength,
+                          );
                       //add coins in database
 
                       context.read<UpdateScoreAndCoinsCubit>().updateCoins(
-                            context.read<UserDetailsCubit>().getUserId(),
-                            battleRoomCubit.getEntryFee() *userLength,
-                            true,
-                            wonGroupBattleKey,
+                            coins: battleRoomCubit.getEntryFee() * userLength,
+                            addCoin: true,
+                            title: wonGroupBattleKey,
                           );
 
                       //delete room
@@ -630,13 +663,12 @@ class _MultiUserBattleRoomQuizScreenState
                       Navigator.of(context).pop();
                     },
                     child: Text(
-                      AppLocalization.of(context)!
-                          .getTranslatedValues('okayLbl')!,
+                      context.tr('okayLbl')!,
                       style: TextStyle(
                         color: Theme.of(context).primaryColor,
                       ),
                     ),
-                  )
+                  ),
                 ],
               ),
             );
@@ -658,14 +690,14 @@ class _MultiUserBattleRoomQuizScreenState
         child: AlertDialog(
           shadowColor: Colors.transparent,
           content: Text(
-            AppLocalization.of(context)!.getTranslatedValues("youLeftLbl")!,
-            style: TextStyle(color: Theme.of(context).colorScheme.secondary),
+            context.tr('youLeftLbl')!,
+            style: TextStyle(color: Theme.of(context).primaryColor),
           ),
           actions: [
             TextButton(
               onPressed: Navigator.of(context).pop,
               child: Text(
-                AppLocalization.of(context)!.getTranslatedValues("okayLbl")!,
+                context.tr('okayLbl')!,
                 style: TextStyle(
                   color: Theme.of(context).primaryColor,
                 ),
@@ -678,13 +710,16 @@ class _MultiUserBattleRoomQuizScreenState
     return const SizedBox();
   }
 
-  Widget _buildCurrentUserDetails(UserBattleRoomDetails userBattleRoomDetails) {
+  Widget _buildCurrentUserDetails(
+    UserBattleRoomDetails userBattleRoomDetails,
+    String totalQues,
+  ) {
     return Align(
       alignment: AlignmentDirectional.bottomStart,
       child: Padding(
         padding: EdgeInsetsDirectional.only(
           start: MediaQuery.of(context).size.width *
-              (userDetaislHorizontalPaddingPercentage),
+              userDetaislHorizontalPaddingPercentage,
           bottom: MediaQuery.of(context).size.height *
               RectangleUserProfileContainer.userDetailsHeightPercentage *
               0.25,
@@ -693,6 +728,7 @@ class _MultiUserBattleRoomQuizScreenState
         child: ImageCircularProgressIndicator(
           userBattleRoomDetails: userBattleRoomDetails,
           animationController: timerAnimationController,
+          totalQues: totalQues,
           // opponentProgressAnimationControllers[opponentUserIndex],
         ),
         // child: RectangleUserProfileContainer(
@@ -710,8 +746,7 @@ class _MultiUserBattleRoomQuizScreenState
     required List<UserBattleRoomDetails?> opponentUsers,
     required int opponentUserIndex,
   }) {
-    UserBattleRoomDetails userBattleRoomDetails =
-        opponentUsers[opponentUserIndex]!;
+    final userBattleRoomDetails = opponentUsers[opponentUserIndex]!;
     // double progressPercentage =
     //     (100.0 * userBattleRoomDetails.answers.length) / questionsLength;
     // opponentProgressAnimationControllers[opponentUserIndex].value =
@@ -748,6 +783,7 @@ class _MultiUserBattleRoomQuizScreenState
           userBattleRoomDetails: userBattleRoomDetails,
           animationController:
               opponentProgressAnimationControllers[opponentUserIndex],
+          totalQues: questionsLength.toString(),
         ),
         // child: RectangleUserProfileContainer(
         //   userBattleRoomDetails: userBattleRoomDetails,
@@ -765,20 +801,20 @@ class _MultiUserBattleRoomQuizScreenState
     return AnimatedBuilder(
       animation: messageBoxAnimationController,
       builder: (context, child) {
-        return Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.background,
-            borderRadius: BorderRadius.circular(5),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 4.5, vertical: 4),
-          child: InkWell(
-            onTap: () {
-              if (messageBoxAnimationController.isCompleted) {
-                messageBoxAnimationController.reverse();
-              } else {
-                messageBoxAnimationController.forward();
-              }
-            },
+        return InkWell(
+          onTap: () {
+            if (messageBoxAnimationController.isCompleted) {
+              messageBoxAnimationController.reverse();
+            } else {
+              messageBoxAnimationController.forward();
+            }
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.background,
+              borderRadius: BorderRadius.circular(5),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 4.5, vertical: 4),
             child: Icon(
               CupertinoIcons.ellipses_bubble_fill,
               color: Theme.of(context).primaryColor,
@@ -795,7 +831,8 @@ class _MultiUserBattleRoomQuizScreenState
       alignment: Alignment.topCenter,
       child: SlideTransition(
         position: messageBoxAnimation.drive(
-            Tween<Offset>(begin: const Offset(1.5, 0), end: Offset.zero)),
+          Tween<Offset>(begin: const Offset(1.5, 0), end: Offset.zero),
+        ),
         child: MessageBoxContainer(
           quizType: QuizTypes.groupPlay,
           battleRoomId: context.read<MultiUserBattleRoomCubit>().getRoomId(),
@@ -817,7 +854,7 @@ class _MultiUserBattleRoomQuizScreenState
           2.9,
       child: ScaleTransition(
         scale: messageAnimation,
-        alignment: const Alignment(-0.5, -1.0),
+        alignment: const Alignment(-0.5, -1),
         child: const MessageContainer(
           quizType: QuizTypes.groupPlay,
           isCurrentUser: true,
@@ -827,13 +864,13 @@ class _MultiUserBattleRoomQuizScreenState
   }
 
   Widget _buildOpponentUserMessageContainer(int opponentUserIndex) {
-    Alignment alignment = const Alignment(-0.5, 1.0);
+    var alignment = const Alignment(-0.5, 1);
     if (opponentUserIndex == 0) {
-      alignment = const Alignment(0.5, 1.0);
+      alignment = const Alignment(0.5, 1);
     } else if (opponentUserIndex == 1) {
-      alignment = const Alignment(-0.5, -1.0);
+      alignment = const Alignment(-0.5, -1);
     } else {
-      alignment = const Alignment(0.5, -1.0);
+      alignment = const Alignment(0.5, -1);
     }
 
     return PositionedDirectional(
@@ -872,51 +909,46 @@ class _MultiUserBattleRoomQuizScreenState
   Widget build(BuildContext context) {
     final battleRoomCubit = context.read<MultiUserBattleRoomCubit>();
 
-    List<UserBattleRoomDetails?> opponentUsers = battleRoomCubit
-        .getOpponentUsers(context.read<UserDetailsCubit>().getUserId());
+    final opponentUsers = battleRoomCubit
+        .getOpponentUsers(context.read<UserDetailsCubit>().userId());
 
-    return WillPopScope(
-      onWillPop: () {
-        //if user hasleft the game
-        if (showUserLeftTheGame) {
-          return Future.value(true);
-        }
-        //
-        if (battleRoomCubit.getUsers().length == 1 &&
-            battleRoomCubit.getUsers().first!.uid ==
-                context.read<UserDetailsCubit>().getUserId()) {
-          return Future.value(false);
-        }
+    return PopScope(
+      canPop: showUserLeftTheGame,
+      onPopInvoked: (didPop) {
+        if (didPop) return;
 
-        //if user is playing game then show
-        //exit game dialog
+        // Close Message Box Before
+        if (messageBoxAnimationController.isCompleted) {
+          messageBoxAnimationController.reverse();
+          return;
+        }
 
         isExitDialogOpen = true;
-        showDialog(
-            context: context,
-            builder: (_) => ExitGameDialog(
-                  onTapYes: () {
-                    if (battleRoomCubit.getUsers().length == 1) {
-                      battleRoomCubit.deleteMultiUserBattleRoom();
-                    } else {
-                      //delete user from game room
-                      battleRoomCubit.deleteUserFromRoom(
-                          context.read<UserDetailsCubit>().getUserId());
-                    }
-                    deleteMessages(battleRoomCubit);
-                    Navigator.of(context).pop();
-                    Navigator.of(context).pop();
-                  },
-                )).then((value) => isExitDialogOpen = true);
-        return Future.value(false);
+        showDialog<void>(
+          context: context,
+          builder: (_) => ExitGameDialog(
+            onTapYes: () {
+              if (battleRoomCubit.getUsers().length == 1) {
+                battleRoomCubit.deleteMultiUserBattleRoom();
+              } else {
+                //delete user from game room
+                battleRoomCubit.deleteUserFromRoom(
+                  context.read<UserDetailsCubit>().userId(),
+                );
+              }
+              deleteMessages(battleRoomCubit);
+              Navigator.of(context).pop();
+              Navigator.of(context).pop();
+            },
+          ),
+        ).then((value) => isExitDialogOpen = true);
       },
       child: Scaffold(
         appBar: QAppBar(
           roundedAppBar: false,
           title: _buildMessageButton(),
           onTapBackButton: () {
-            MultiUserBattleRoomCubit battleRoomCubit =
-                context.read<MultiUserBattleRoomCubit>();
+            final battleRoomCubit = context.read<MultiUserBattleRoomCubit>();
 
             //if user hasleft the game
             if (showUserLeftTheGame) {
@@ -925,7 +957,7 @@ class _MultiUserBattleRoomQuizScreenState
             //
             if (battleRoomCubit.getUsers().length == 1 &&
                 battleRoomCubit.getUsers().first!.uid ==
-                    context.read<UserDetailsCubit>().getUserId()) {
+                    context.read<UserDetailsCubit>().userId()) {
               return;
             }
 
@@ -933,22 +965,24 @@ class _MultiUserBattleRoomQuizScreenState
             //exit game dialog
 
             isExitDialogOpen = true;
-            showDialog(
-                context: context,
-                builder: (_) => ExitGameDialog(
-                      onTapYes: () {
-                        if (battleRoomCubit.getUsers().length == 1) {
-                          battleRoomCubit.deleteMultiUserBattleRoom();
-                        } else {
-                          //delete user from game room
-                          battleRoomCubit.deleteUserFromRoom(
-                              context.read<UserDetailsCubit>().getUserId());
-                        }
-                        deleteMessages(battleRoomCubit);
-                        Navigator.of(context).pop();
-                        Navigator.of(context).pop();
-                      },
-                    )).then((value) => isExitDialogOpen = true);
+            showDialog<void>(
+              context: context,
+              builder: (_) => ExitGameDialog(
+                onTapYes: () {
+                  if (battleRoomCubit.getUsers().length == 1) {
+                    battleRoomCubit.deleteMultiUserBattleRoom();
+                  } else {
+                    //delete user from game room
+                    battleRoomCubit.deleteUserFromRoom(
+                      context.read<UserDetailsCubit>().userId(),
+                    );
+                  }
+                  deleteMessages(battleRoomCubit);
+                  Navigator.of(context).pop();
+                  Navigator.of(context).pop();
+                },
+              ),
+            ).then((value) => isExitDialogOpen = true);
           },
         ),
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -971,9 +1005,9 @@ class _MultiUserBattleRoomQuizScreenState
             BlocListener<UpdateScoreAndCoinsCubit, UpdateScoreAndCoinsState>(
               listener: (context, state) {
                 if (state is UpdateScoreAndCoinsFailure) {
-                  if (state.errorMessage == unauthorizedAccessCode) {
+                  if (state.errorMessage == errorCodeUnauthorizedAccess) {
                     timerAnimationController.stop();
-                    UiUtils.showAlreadyLoggedInDialog(context: context);
+                    showAlreadyLoggedInDialog(context);
                   }
                 }
               },
@@ -990,35 +1024,45 @@ class _MultiUserBattleRoomQuizScreenState
                     duration: const Duration(milliseconds: 500),
                     child: showWaitForOthers
                         ? const WaitForOthersContainer(
-                            key: Key("waitForOthers"))
-                        : QuestionsContainer(
-                            topPadding: MediaQuery.of(context).size.height *
-                                RectangleUserProfileContainer
-                                    .userDetailsHeightPercentage *
-                                3.5,
-                            timerAnimationController: timerAnimationController,
-                            quizType: QuizTypes.groupPlay,
-                            showAnswerCorrectness: context
-                                .read<SystemConfigCubit>()
-                                .getShowCorrectAnswerMode(),
-                            lifeLines: const {},
-                            guessTheWordQuestionContainerKeys: const [],
-                            key: const Key("questions"),
-                            guessTheWordQuestions: const [],
-                            hasSubmittedAnswerForCurrentQuestion:
-                                hasSubmittedAnswerForCurrentQuestion,
-                            questions: battleRoomCubit.getQuestions(),
-                            submitAnswer: submitAnswer,
-                            questionContentAnimation: questionContentAnimation,
-                            questionScaleDownAnimation:
-                                questionScaleDownAnimation,
-                            questionScaleUpAnimation: questionScaleUpAnimation,
-                            questionSlideAnimation: questionSlideAnimation,
-                            currentQuestionIndex: currentQuestionIndex,
-                            questionAnimationController:
-                                questionAnimationController,
-                            questionContentAnimationController:
-                                questionContentAnimationController,
+                            key: Key('waitForOthers'),
+                          )
+                        : BlocBuilder<MultiUserBattleRoomCubit,
+                            MultiUserBattleRoomState>(
+                            bloc: battleRoomCubit,
+                            builder: (context, state) {
+                              return QuestionsContainer(
+                                topPadding: MediaQuery.of(context).size.height *
+                                    RectangleUserProfileContainer
+                                        .userDetailsHeightPercentage *
+                                    3.5,
+                                timerAnimationController:
+                                    timerAnimationController,
+                                quizType: QuizTypes.groupPlay,
+                                answerMode: context
+                                    .read<SystemConfigCubit>()
+                                    .answerMode,
+                                lifeLines: const {},
+                                guessTheWordQuestionContainerKeys: const [],
+                                key: const Key('questions'),
+                                guessTheWordQuestions: const [],
+                                hasSubmittedAnswerForCurrentQuestion:
+                                    hasSubmittedAnswerForCurrentQuestion,
+                                questions: battleRoomCubit.getQuestions(),
+                                submitAnswer: submitAnswer,
+                                questionContentAnimation:
+                                    questionContentAnimation,
+                                questionScaleDownAnimation:
+                                    questionScaleDownAnimation,
+                                questionScaleUpAnimation:
+                                    questionScaleUpAnimation,
+                                questionSlideAnimation: questionSlideAnimation,
+                                currentQuestionIndex: currentQuestionIndex,
+                                questionAnimationController:
+                                    questionAnimationController,
+                                questionContentAnimationController:
+                                    questionContentAnimationController,
+                              );
+                            },
                           ),
                   ),
                 ),
@@ -1027,8 +1071,12 @@ class _MultiUserBattleRoomQuizScreenState
               ...showUserLeftTheGame
                   ? []
                   : [
-                      _buildCurrentUserDetails(battleRoomCubit.getUser(
-                          context.read<UserDetailsCubit>().getUserId())!),
+                      _buildCurrentUserDetails(
+                        battleRoomCubit.getUser(
+                          context.read<UserDetailsCubit>().userId(),
+                        )!,
+                        battleRoomCubit.getQuestions().length.toString(),
+                      ),
                       _buildCurrentUserMessageContainer(),
 
                       //Optimize for more user code
@@ -1038,10 +1086,10 @@ class _MultiUserBattleRoomQuizScreenState
                         bloc: battleRoomCubit,
                         builder: (context, state) {
                           if (state is MultiUserBattleRoomSuccess) {
-                            List<UserBattleRoomDetails?> opponentUsers =
-                                battleRoomCubit.getOpponentUsers(context
-                                    .read<UserDetailsCubit>()
-                                    .getUserId());
+                            final opponentUsers =
+                                battleRoomCubit.getOpponentUsers(
+                              context.read<UserDetailsCubit>().userId(),
+                            );
                             return opponentUsers.isNotEmpty
                                 ? _buildOpponentUserDetails(
                                     questionsLength: state.questions.length,
@@ -1060,10 +1108,10 @@ class _MultiUserBattleRoomQuizScreenState
                         bloc: battleRoomCubit,
                         builder: (context, state) {
                           if (state is MultiUserBattleRoomSuccess) {
-                            List<UserBattleRoomDetails?> opponentUsers =
-                                battleRoomCubit.getOpponentUsers(context
-                                    .read<UserDetailsCubit>()
-                                    .getUserId());
+                            final opponentUsers =
+                                battleRoomCubit.getOpponentUsers(
+                              context.read<UserDetailsCubit>().userId(),
+                            );
                             return opponentUsers.length >= 2
                                 ? _buildOpponentUserDetails(
                                     questionsLength: state.questions.length,
@@ -1081,10 +1129,10 @@ class _MultiUserBattleRoomQuizScreenState
                         bloc: battleRoomCubit,
                         builder: (context, state) {
                           if (state is MultiUserBattleRoomSuccess) {
-                            List<UserBattleRoomDetails?> opponentUsers =
-                                battleRoomCubit.getOpponentUsers(context
-                                    .read<UserDetailsCubit>()
-                                    .getUserId());
+                            final opponentUsers =
+                                battleRoomCubit.getOpponentUsers(
+                              context.read<UserDetailsCubit>().userId(),
+                            );
                             return opponentUsers.length >= 2
                                 ? _buildOpponentUserMessageContainer(1)
                                 : const SizedBox();
@@ -1097,10 +1145,10 @@ class _MultiUserBattleRoomQuizScreenState
                         bloc: battleRoomCubit,
                         builder: (context, state) {
                           if (state is MultiUserBattleRoomSuccess) {
-                            List<UserBattleRoomDetails?> opponentUsers =
-                                battleRoomCubit.getOpponentUsers(context
-                                    .read<UserDetailsCubit>()
-                                    .getUserId());
+                            final opponentUsers =
+                                battleRoomCubit.getOpponentUsers(
+                              context.read<UserDetailsCubit>().userId(),
+                            );
                             return opponentUsers.length >= 3
                                 ? _buildOpponentUserDetails(
                                     questionsLength: state.questions.length,
@@ -1118,10 +1166,10 @@ class _MultiUserBattleRoomQuizScreenState
                         bloc: battleRoomCubit,
                         builder: (context, state) {
                           if (state is MultiUserBattleRoomSuccess) {
-                            List<UserBattleRoomDetails?> opponentUsers =
-                                battleRoomCubit.getOpponentUsers(context
-                                    .read<UserDetailsCubit>()
-                                    .getUserId());
+                            final opponentUsers =
+                                battleRoomCubit.getOpponentUsers(
+                              context.read<UserDetailsCubit>().userId(),
+                            );
                             return opponentUsers.length >= 3
                                 ? _buildOpponentUserMessageContainer(2)
                                 : Container();
@@ -1144,13 +1192,15 @@ class _MultiUserBattleRoomQuizScreenState
 
 class ImageCircularProgressIndicator extends StatelessWidget {
   const ImageCircularProgressIndicator({
-    super.key,
     required this.userBattleRoomDetails,
     required this.animationController,
+    required this.totalQues,
+    super.key,
   });
 
   final UserBattleRoomDetails userBattleRoomDetails;
   final AnimationController animationController;
+  final String totalQues;
 
   @override
   Widget build(BuildContext context) {
@@ -1168,8 +1218,8 @@ class ImageCircularProgressIndicator extends StatelessWidget {
                 children: [
                   Align(
                     alignment: Alignment.topCenter,
-                    child: CircularImageContainer(
-                      imagePath: userBattleRoomDetails.profileUrl,
+                    child: QImage.circular(
+                      imageUrl: userBattleRoomDetails.profileUrl,
                       height: 48,
                       width: 48,
                     ),
@@ -1223,7 +1273,7 @@ class ImageCircularProgressIndicator extends StatelessWidget {
                       ),
                       alignment: Alignment.center,
                       child: Text(
-                        '${userBattleRoomDetails.correctAnswers}/10',
+                        '${userBattleRoomDetails.correctAnswers}/$totalQues',
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.background,
                           fontSize: 10,
@@ -1231,7 +1281,7 @@ class ImageCircularProgressIndicator extends StatelessWidget {
                         ),
                       ),
                     ),
-                  )
+                  ),
                 ],
               ),
             ),
@@ -1254,10 +1304,10 @@ class ImageCircularProgressIndicator extends StatelessWidget {
 }
 
 class _CircleCustomPainter extends CustomPainter {
+  const _CircleCustomPainter({required this.color, required this.strokeWidth});
+
   final Color color;
   final double strokeWidth;
-
-  const _CircleCustomPainter({required this.color, required this.strokeWidth});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1275,15 +1325,15 @@ class _CircleCustomPainter extends CustomPainter {
 }
 
 class _ArcCustomPainter extends CustomPainter {
-  final Color color;
-  final double strokeWidth;
-  final double sweepDegree;
-
   const _ArcCustomPainter({
     required this.color,
     required this.strokeWidth,
     required this.sweepDegree,
   });
+
+  final Color color;
+  final double strokeWidth;
+  final double sweepDegree;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1295,10 +1345,10 @@ class _ArcCustomPainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
 
     /// The PI constant.
-    const double pi = 3.1415926535897932;
+    const pi = 3.1415926535897932;
 
-    const double startAngle = 3 * (pi / 2);
-    final double sweepAngle = (sweepDegree * pi) / 180.0;
+    const startAngle = 3 * (pi / 2);
+    final sweepAngle = (sweepDegree * pi) / 180.0;
 
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: size.width * 0.5),

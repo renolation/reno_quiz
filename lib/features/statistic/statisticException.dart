@@ -1,7 +1,6 @@
 class StatisticException implements Exception {
-  final String errorMessageCode;
-
   StatisticException({required this.errorMessageCode});
+  final String errorMessageCode;
 
   @override
   String toString() => errorMessageCode;

@@ -8,28 +8,27 @@ class AppSettingsIntial extends AppSettingsState {}
 class AppSettingsFetchInProgress extends AppSettingsState {}
 
 class AppSettingsFetchSuccess extends AppSettingsState {
-  final String settingsData;
-
   AppSettingsFetchSuccess(this.settingsData);
+
+  final String settingsData;
 }
 
 class AppSettingsFetchFailure extends AppSettingsState {
-  final String errorCode;
-
   AppSettingsFetchFailure(this.errorCode);
+
+  final String errorCode;
 }
 
 class AppSettingsCubit extends Cubit<AppSettingsState> {
-  final SystemConfigRepository _systemConfigRepository;
-
   AppSettingsCubit(this._systemConfigRepository) : super(AppSettingsIntial());
+  final SystemConfigRepository _systemConfigRepository;
 
   void getAppSetting(String type) {
     emit(AppSettingsFetchInProgress());
     _systemConfigRepository
         .getAppSettings(type)
         .then((value) => emit(AppSettingsFetchSuccess(value)))
-        .catchError((e) {
+        .catchError((Object e) {
       emit(AppSettingsFetchFailure(e.toString()));
     });
   }

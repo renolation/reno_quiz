@@ -4,7 +4,7 @@ import 'package:flutterquiz/features/auth/authModel.dart';
 import 'package:flutterquiz/features/auth/authRepository.dart';
 
 //authentication provider
-enum AuthProvider { gmail, fb, email, mobile, apple }
+enum AuthProviders { gmail, fb, email, mobile, apple }
 
 //State
 @immutable
@@ -13,48 +13,33 @@ abstract class AuthState {}
 class AuthInitial extends AuthState {}
 
 class Authenticated extends AuthState {
+  Authenticated({required this.authModel});
+
   //to store authDetials
   final AuthModel authModel;
-
-  Authenticated({required this.authModel});
 }
 
 class Unauthenticated extends AuthState {}
 
 class AuthCubit extends Cubit<AuthState> {
-  final AuthRepository _authRepository;
   AuthCubit(this._authRepository) : super(AuthInitial()) {
     _checkAuthStatus();
   }
 
-  AuthRepository get authRepository => _authRepository;
+  final AuthRepository _authRepository;
 
-  String getUserFirebaseId() {
-    if (state is Authenticated) {
-      return (state as Authenticated).authModel.firebaseId;
-    }
-    return "";
-  }
-
-  bool getIsNewUser() {
-    if (state is Authenticated) {
-      return (state as Authenticated).authModel.isNewUser;
-    }
-    return false;
-  }
-
-  AuthProvider getAuthProvider() {
+  AuthProviders getAuthProvider() {
     if (state is Authenticated) {
       return (state as Authenticated).authModel.authProvider;
     }
-    return AuthProvider.email;
+    return AuthProviders.email;
   }
 
   void _checkAuthStatus() {
     //authDetails is map. keys are isLogin,userId,authProvider,jwtToken
     final authDetails = _authRepository.getLocalAuthDetails();
 
-    if (authDetails['isLogin']) {
+    if (authDetails['isLogin'] as bool) {
       emit(Authenticated(authModel: AuthModel.fromJson(authDetails)));
     } else {
       emit(Unauthenticated());
@@ -62,16 +47,17 @@ class AuthCubit extends Cubit<AuthState> {
   }
 
   //to update auth status
-  void updateAuthDetails(
-      {String? firebaseId,
-      AuthProvider? authProvider,
-      bool? authStatus,
-      bool? isNewUser}) {
+  void updateAuthDetails({
+    String? firebaseId,
+    AuthProviders? authProvider,
+    bool? authStatus,
+    bool? isNewUser,
+  }) {
     //updating authDetails locally
     _authRepository.setLocalAuthDetails(
-      jwtToken: "",
+      jwtToken: '',
       firebaseId: firebaseId,
-      authType: _authRepository.getAuthTypeString(authProvider!),
+      authType: authProvider!.name,
       authStatus: authStatus,
       isNewUser: isNewUser,
     );
@@ -79,12 +65,13 @@ class AuthCubit extends Cubit<AuthState> {
     //emitting new state in cubit
     emit(
       Authenticated(
-          authModel: AuthModel(
-        jwtToken: "",
-        firebaseId: firebaseId!,
-        authProvider: authProvider,
-        isNewUser: isNewUser!,
-      )),
+        authModel: AuthModel(
+          jwtToken: '',
+          firebaseId: firebaseId!,
+          authProvider: authProvider,
+          isNewUser: isNewUser!,
+        ),
+      ),
     );
   }
 
@@ -93,7 +80,6 @@ class AuthCubit extends Cubit<AuthState> {
     if (state is Authenticated) {
       _authRepository.signOut((state as Authenticated).authModel.authProvider);
       emit(Unauthenticated());
-      print("signoutSucessfull");
     }
   }
 }

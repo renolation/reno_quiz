@@ -1,36 +1,36 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutterquiz/app/app_localization.dart';
 import 'package:flutterquiz/app/routes.dart';
 import 'package:flutterquiz/features/battleRoom/cubits/battleRoomCubit.dart';
 import 'package:flutterquiz/features/profileManagement/cubits/userDetailsCubit.dart';
-import 'package:flutterquiz/features/profileManagement/models/userProfile.dart';
-import 'package:flutterquiz/features/quiz/models/userBattleRoomDetails.dart';
-import 'package:flutterquiz/ui/screens/battle/widgets/findingOpponentLetterAnimation.dart';
+import 'package:flutterquiz/features/quiz/models/quizType.dart';
+import 'package:flutterquiz/features/systemConfig/cubits/systemConfigCubit.dart';
+import 'package:flutterquiz/ui/screens/battle/widgets/finding_opponent_animation.dart';
 import 'package:flutterquiz/ui/screens/battle/widgets/userFoundMapContainer.dart';
-import 'package:flutterquiz/ui/widgets/circularImageContainer.dart';
+import 'package:flutterquiz/ui/widgets/alreadyLoggedInDialog.dart';
 import 'package:flutterquiz/ui/widgets/customBackButton.dart';
 import 'package:flutterquiz/ui/widgets/customRoundedButton.dart';
+import 'package:flutterquiz/ui/widgets/custom_image.dart';
 import 'package:flutterquiz/ui/widgets/errorContainer.dart';
 import 'package:flutterquiz/ui/widgets/exitGameDialog.dart';
 import 'package:flutterquiz/utils/constants/constants.dart';
-import 'package:flutterquiz/utils/constants/error_message_keys.dart';
+import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
-import 'package:wakelock/wakelock.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 class BattleRoomFindOpponentScreen extends StatefulWidget {
-  const BattleRoomFindOpponentScreen({super.key, required this.categoryId});
+  const BattleRoomFindOpponentScreen({required this.categoryId, super.key});
 
   final String categoryId;
 
   static Route<dynamic> route(RouteSettings routeSettings) {
     return CupertinoPageRoute(
       builder: (_) => BattleRoomFindOpponentScreen(
-          categoryId: routeSettings.arguments as String),
+        categoryId: routeSettings.arguments! as String,
+      ),
     );
   }
 
@@ -50,20 +50,29 @@ class _BattleRoomFindOpponentScreenState
   late Animation<int> quizCountDownAnimation =
       IntTween(begin: 3, end: 0).animate(quizCountDownAnimationController);
   late AnimationController animationController = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 950))
-    ..forward();
-  late Animation<double> mapAnimation = Tween<double>(begin: 0.0, end: 1.0)
-      .animate(CurvedAnimation(
-          parent: animationController,
-          curve: const Interval(0.0, 0.4, curve: Curves.easeInOut)));
+    vsync: this,
+    duration: const Duration(milliseconds: 950),
+  )..forward();
+  late Animation<double> mapAnimation = Tween<double>(begin: 0, end: 1).animate(
+    CurvedAnimation(
+      parent: animationController,
+      curve: const Interval(0, 0.4, curve: Curves.easeInOut),
+    ),
+  );
   late Animation<double> playerDetailsAnimation =
-      Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(
-          parent: animationController,
-          curve: const Interval(0.4, 0.7, curve: Curves.easeInOut)));
+      Tween<double>(begin: 0, end: 1).animate(
+    CurvedAnimation(
+      parent: animationController,
+      curve: const Interval(0.4, 0.7, curve: Curves.easeInOut),
+    ),
+  );
   late Animation<double> findingOpponentStatusAnimation =
-      Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(
-          parent: animationController,
-          curve: const Interval(0.7, 1.0, curve: Curves.easeInOut)));
+      Tween<double>(begin: 0, end: 1).animate(
+    CurvedAnimation(
+      parent: animationController,
+      curve: const Interval(0.7, 1, curve: Curves.easeInOut),
+    ),
+  );
 
   //to store images of map so we can simulate the mapSlideAnimation
   late List<String> images = [];
@@ -72,21 +81,24 @@ class _BattleRoomFindOpponentScreenState
   late bool waitForOpponent = true;
 
   //waiting time to find opponent to join
-  late int waitingTime = waitForOpponentDurationInSeconds;
+  late int waitingTime =
+      context.read<SystemConfigCubit>().randomBattleOpponentSearchDuration;
   Timer? waitForOpponentTimer;
+
+  bool playWithBot = false;
 
   @override
   void initState() {
+    super.initState();
     addImages();
-    Wakelock.enable();
+    WakelockPlus.enable();
     Future.delayed(const Duration(milliseconds: 1000), () {
       //search for battle room after initial animation completed
       searchBattleRoom();
       startScrollImageAnimation();
-      letterAnimationController.repeat(reverse: false);
+      letterAnimationController.repeat();
     });
     WidgetsBinding.instance.addObserver(this);
-    super.initState();
   }
 
   @override
@@ -94,14 +106,13 @@ class _BattleRoomFindOpponentScreenState
     super.didChangeAppLifecycleState(state);
     //delete battle room if user press home button or move from battleOpponentFind screen
     if (state == AppLifecycleState.paused) {
-      context.read<BattleRoomCubit>().deleteBattleRoom(false);
+      context.read<BattleRoomCubit>().deleteBattleRoom(isGroupBattle: false);
       Navigator.of(context).pop();
     }
   }
 
   @override
   void dispose() {
-     Wakelock.disable();
     scrollController.dispose();
     letterAnimationController.dispose();
     quizCountDownAnimationController.dispose();
@@ -114,24 +125,26 @@ class _BattleRoomFindOpponentScreenState
     //room created afterwards
     if (Routes.currentRoute == Routes.battleRoomFindOpponent) {
       Routes.currentRoute = Routes.home;
+      WakelockPlus.disable();
     }
     super.dispose();
   }
 
   void searchBattleRoom() {
-    UserProfile userProfile = context.read<UserDetailsCubit>().getUserProfile();
+    final userProfile = context.read<UserDetailsCubit>().getUserProfile();
     context.read<BattleRoomCubit>().searchRoom(
           categoryId: widget.categoryId,
           name: userProfile.name!,
           profileUrl: userProfile.profileUrl!,
           uid: userProfile.userId!,
           questionLanguageId: UiUtils.getCurrentQuestionLanguageId(context),
+          entryFee: context.read<SystemConfigCubit>().randomBattleEntryCoins,
         );
   }
 
   void addImages() {
     for (var i = 0; i < 20; i++) {
-      images.add(UiUtils.getImagePath("map_finding.png"));
+      images.add(Assets.mapFinding);
     }
   }
 
@@ -142,7 +155,7 @@ class _BattleRoomFindOpponentScreenState
     waitForOpponentTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (waitingTime == 0) {
         //delete room so other user can not join
-        context.read<BattleRoomCubit>().deleteBattleRoom(false);
+        context.read<BattleRoomCubit>().deleteBattleRoom(isGroupBattle: false);
         //stop other activities
         letterAnimationController.stop();
         if (scrollController.hasClients) {
@@ -162,14 +175,17 @@ class _BattleRoomFindOpponentScreenState
   Future<void> startScrollImageAnimation() async {
     //if scroll controller is attached to any scrollable widgets
     if (scrollController.hasClients) {
-      double maxScroll = scrollController.position.maxScrollExtent;
+      final maxScroll = scrollController.position.maxScrollExtent;
 
       if (maxScroll == 0) {
-        startScrollImageAnimation();
+        await startScrollImageAnimation();
       }
 
-      scrollController.animateTo(scrollController.position.maxScrollExtent,
-          duration: const Duration(seconds: 32), curve: Curves.linear);
+      await scrollController.animateTo(
+        scrollController.position.maxScrollExtent,
+        duration: const Duration(seconds: 32),
+        curve: Curves.linear,
+      );
     }
   }
 
@@ -177,19 +193,23 @@ class _BattleRoomFindOpponentScreenState
     scrollController.dispose();
     setState(() {
       scrollController = ScrollController();
-      waitingTime = waitForOpponentDurationInSeconds;
+      waitingTime =
+          context.read<SystemConfigCubit>().randomBattleOpponentSearchDuration;
       waitForOpponent = true;
     });
-    letterAnimationController.repeat(reverse: false);
-    Future.delayed(const Duration(milliseconds: 100), () {
-      startScrollImageAnimation();
-    });
+    letterAnimationController.repeat();
+    Future.delayed(
+      const Duration(milliseconds: 100),
+      startScrollImageAnimation,
+    );
     setWaitForOpponentTimer();
     searchBattleRoom();
   }
 
   //
   Widget _buildUserDetails(String name, String profileUrl) {
+    final size = MediaQuery.of(context).size;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -199,14 +219,16 @@ class _BattleRoomFindOpponentScreenState
             //
             Container(
               decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Theme.of(context).primaryColor),
-              height: MediaQuery.of(context).size.height * (0.15),
+                shape: BoxShape.circle,
+                color: Theme.of(context).primaryColor,
+              ),
+              height: size.height * (0.15),
             ),
-            CircularImageContainer(
-                height: MediaQuery.of(context).size.height * (0.14),
-                imagePath: profileUrl,
-                width: MediaQuery.of(context).size.width * (0.3)),
+            QImage.circular(
+              height: size.height * (0.14),
+              imageUrl: profileUrl,
+              width: size.width * (0.3),
+            ),
           ],
         ),
         const SizedBox(
@@ -214,15 +236,17 @@ class _BattleRoomFindOpponentScreenState
         ),
         Container(
           alignment: Alignment.center,
-          width: MediaQuery.of(context).size.width * (0.3),
+          width: size.width * (0.3),
           child: Text(
             name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-                color: Theme.of(context).primaryColor, fontSize: 18.0),
+              color: Theme.of(context).primaryColor,
+              fontSize: 18,
+            ),
           ),
-        )
+        ),
       ],
     );
   }
@@ -233,8 +257,9 @@ class _BattleRoomFindOpponentScreenState
         end: MediaQuery.of(context).size.width * (0.45),
       ),
       child: _buildUserDetails(
-          context.read<UserDetailsCubit>().getUserProfile().name!,
-          context.read<UserDetailsCubit>().getUserProfile().profileUrl!),
+        context.read<UserDetailsCubit>().getUserProfile().name!,
+        context.read<UserDetailsCubit>().getUserProfile().profileUrl!,
+      ),
     );
   }
 
@@ -253,8 +278,9 @@ class _BattleRoomFindOpponentScreenState
               children: [
                 Container(
                   decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Theme.of(context).primaryColor),
+                    shape: BoxShape.circle,
+                    color: Theme.of(context).primaryColor,
+                  ),
                   height: MediaQuery.of(context).size.height * (0.15),
                   child: Center(
                     child: Icon(
@@ -263,51 +289,54 @@ class _BattleRoomFindOpponentScreenState
                     ),
                   ),
                 ),
-                const SizedBox(
-                  height: 2.5,
-                ),
+                const SizedBox(height: 2.5),
                 Container(
                   alignment: Alignment.center,
                   width: MediaQuery.of(context).size.width * (0.3),
                   child: Text(
-                    "....",
+                    '....',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                        color: Theme.of(context).primaryColor, fontSize: 18.0),
+                      color: Theme.of(context).primaryColor,
+                      fontSize: 18,
+                    ),
                   ),
-                )
+                ),
               ],
             );
           }
           if (state is BattleRoomUserFound) {
-            UserBattleRoomDetails opponentUserDetails = context
-                .read<BattleRoomCubit>()
-                .getOpponentUserDetails(
-                    context.read<UserDetailsCubit>().getUserId());
+            final opponentUserDetails =
+                context.read<BattleRoomCubit>().getOpponentUserDetails(
+                      context.read<UserDetailsCubit>().userId(),
+                    );
             return _buildUserDetails(
-                opponentUserDetails.name, opponentUserDetails.profileUrl);
+              opponentUserDetails.name,
+              opponentUserDetails.profileUrl,
+            );
           }
 
           return Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              FindOpponentLetterAnimation(
-                  animationController: letterAnimationController),
-              const SizedBox(
-                height: 2.5,
+              FindingOpponentAnimation(
+                animationController: letterAnimationController,
               ),
+              const SizedBox(height: 2.5),
               Container(
                 alignment: Alignment.center,
                 width: MediaQuery.of(context).size.width * (0.3),
                 child: Text(
-                  "....",
+                  '....',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                      color: Theme.of(context).primaryColor, fontSize: 18.0),
+                    color: Theme.of(context).primaryColor,
+                    fontSize: 18,
+                  ),
                 ),
-              )
+              ),
             ],
           );
         },
@@ -321,8 +350,12 @@ class _BattleRoomFindOpponentScreenState
         ? FadeTransition(
             opacity: findingOpponentStatusAnimation,
             child: SlideTransition(
-              position: findingOpponentStatusAnimation.drive(Tween<Offset>(
-                  begin: const Offset(0.075, 0.0), end: Offset.zero)),
+              position: findingOpponentStatusAnimation.drive(
+                Tween<Offset>(
+                  begin: const Offset(0.075, 0),
+                  end: Offset.zero,
+                ),
+              ),
               child: Align(
                 alignment: Alignment.bottomCenter,
                 child: Container(
@@ -337,21 +370,19 @@ class _BattleRoomFindOpponentScreenState
                       }
                       if (state is! BattleRoomUserFound) {
                         return Text(
-                          AppLocalization.of(context)!
-                              .getTranslatedValues('findingOpponentLbl')!,
+                          context.tr('findingOpponentLbl')!,
                           style: TextStyle(
                             color: Theme.of(context).primaryColor,
-                            fontSize: 20.0,
+                            fontSize: 20,
                             fontWeight: FontWeight.bold,
                           ),
                         );
                       }
                       return Text(
-                        AppLocalization.of(context)!
-                            .getTranslatedValues('foundOpponentLbl')!,
+                        context.tr('foundOpponentLbl')!,
                         style: TextStyle(
                           color: Theme.of(context).primaryColor,
-                          fontSize: 20.0,
+                          fontSize: 20,
                           fontWeight: FontWeight.bold,
                         ),
                       );
@@ -367,25 +398,27 @@ class _BattleRoomFindOpponentScreenState
   //to display map animation
   Widget _buildFindingMap() {
     return Align(
-      key: const Key("userFinding"),
+      key: const Key('userFinding'),
       alignment: Alignment.topCenter,
       child: Padding(
-        padding: const EdgeInsets.only(top: 10.0),
+        padding: const EdgeInsets.only(top: 10),
         child: IgnorePointer(
-          ignoring: true,
           child: SingleChildScrollView(
             controller: scrollController,
             scrollDirection: Axis.horizontal,
             child: SizedBox(
-                height: MediaQuery.of(context).size.height * (0.6),
-                child: Row(
-                  children: images
-                      .map((e) => Image.asset(
-                            e,
-                            fit: BoxFit.cover,
-                          ))
-                      .toList(),
-                )),
+              height: MediaQuery.of(context).size.height * (0.6),
+              child: Row(
+                children: images
+                    .map(
+                      (e) => Image.asset(
+                        e,
+                        fit: BoxFit.cover,
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
           ),
         ),
       ),
@@ -395,50 +428,8 @@ class _BattleRoomFindOpponentScreenState
   //build details when opponent found
   Widget _buildUserFoundDetails() {
     return Align(
-        key: const Key("userFound"),
-        alignment: Alignment.topCenter,
-        child: SizedBox(
-          height: MediaQuery.of(context).size.height * (0.6),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SizedBox(height: MediaQuery.of(context).size.height * (0.05)),
-              Text(
-                AppLocalization.of(context)!
-                    .getTranslatedValues('getReadyLbl')!,
-                style: TextStyle(
-                  color: Theme.of(context).primaryColor,
-                  fontSize: 25,
-                ),
-              ),
-              SizedBox(height: MediaQuery.of(context).size.height * (0.025)),
-              AnimatedBuilder(
-                  animation: quizCountDownAnimationController,
-                  builder: (context, child) {
-                    return Text(
-                      quizCountDownAnimation.value == 0
-                          ? AppLocalization.of(context)!
-                              .getTranslatedValues('bestOfLuckLbl')!
-                          : "${quizCountDownAnimation.value}",
-                      style: TextStyle(
-                        color: Theme.of(context).primaryColor,
-                        fontSize: 40,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    );
-                  }),
-              SizedBox(height: MediaQuery.of(context).size.height * (0.0275)),
-              const UserFoundMapContainer(),
-            ],
-          ),
-        ));
-  }
-
-  //show details when opponent not found
-  Widget _buildOpponentNotFoundDetails() {
-    return Align(
+      key: const Key('userFound'),
       alignment: Alignment.topCenter,
-      key: const Key("userNotFound"),
       child: SizedBox(
         height: MediaQuery.of(context).size.height * (0.6),
         child: Column(
@@ -446,63 +437,117 @@ class _BattleRoomFindOpponentScreenState
           children: [
             SizedBox(height: MediaQuery.of(context).size.height * (0.05)),
             Text(
-              AppLocalization.of(context)!
-                  .getTranslatedValues('opponentNotFoundLbl')!,
-              textAlign: TextAlign.center,
+              context.tr('getReadyLbl')!,
               style: TextStyle(
                 color: Theme.of(context).primaryColor,
                 fontSize: 25,
               ),
             ),
             SizedBox(height: MediaQuery.of(context).size.height * (0.025)),
-            Platform.isIOS
-                ? Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      CustomRoundedButton(
-                        widthPercentage: 0.375,
-                        backgroundColor: Theme.of(context).primaryColor,
-                        buttonTitle: AppLocalization.of(context)!
-                            .getTranslatedValues('retryLbl')!,
-                        radius: 5,
-                        showBorder: false,
-                        height: 40,
-                        titleColor: Theme.of(context).colorScheme.background,
-                        elevation: 5.0,
-                        onTap: () {
-                          retryToSearchBattleRoom();
-                        },
-                      ),
-                      CustomRoundedButton(
-                        widthPercentage: 0.375,
-                        backgroundColor: Theme.of(context).primaryColor,
-                        buttonTitle: "Back",
-                        radius: 5,
-                        showBorder: false,
-                        height: 40,
-                        titleColor: Theme.of(context).colorScheme.background,
-                        elevation: 5.0,
-                        onTap: () {
-                          Navigator.pop(context);
-                        },
-                      ),
-                    ],
-                  )
-                : CustomRoundedButton(
+            AnimatedBuilder(
+              animation: quizCountDownAnimationController,
+              builder: (context, child) {
+                return Text(
+                  quizCountDownAnimation.value == 0
+                      ? context.tr('bestOfLuckLbl')!
+                      : '${quizCountDownAnimation.value}',
+                  style: TextStyle(
+                    color: Theme.of(context).primaryColor,
+                    fontSize: 40,
+                    fontWeight: FontWeight.bold,
+                  ),
+                );
+              },
+            ),
+            SizedBox(height: MediaQuery.of(context).size.height * (0.0275)),
+            const UserFoundMapContainer(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  //show details when opponent not found
+  Widget _buildOpponentNotFoundDetails() {
+    return Align(
+      alignment: Alignment.topCenter,
+      key: const Key('userNotFound'),
+      child: SizedBox(
+        height: MediaQuery.of(context).size.height * (0.6),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(height: MediaQuery.of(context).size.height * (0.05)),
+            if (playWithBot) ...[
+              Text(
+                context.tr('battlePreparingLbl')!,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Theme.of(context).primaryColor,
+                  fontSize: 25,
+                ),
+              ),
+              SizedBox(height: MediaQuery.of(context).size.height * (0.025)),
+            ] else ...[
+              Text(
+                context.tr('opponentNotFoundLbl')!,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Theme.of(context).primaryColor,
+                  fontSize: 25,
+                ),
+              ),
+              SizedBox(height: MediaQuery.of(context).size.height * (0.025)),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  CustomRoundedButton(
                     widthPercentage: 0.375,
                     backgroundColor: Theme.of(context).primaryColor,
-                    buttonTitle: AppLocalization.of(context)!
-                        .getTranslatedValues('retryLbl')!,
+                    buttonTitle: context.tr('playWithBotLbl'),
                     radius: 5,
                     showBorder: false,
                     height: 40,
                     titleColor: Theme.of(context).colorScheme.background,
-                    elevation: 5.0,
+                    elevation: 5,
                     onTap: () {
-                      retryToSearchBattleRoom();
+                      /// To avoid button Spamming
+                      if (playWithBot) return;
+
+                      setState(() => playWithBot = true);
+
+                      final userProfile =
+                          context.read<UserDetailsCubit>().getUserProfile();
+                      context.read<BattleRoomCubit>().createRoomWithBot(
+                            categoryId: widget.categoryId,
+                            charType: context
+                                .read<SystemConfigCubit>()
+                                .oneVsOneBattleRoomCodeCharType,
+                            name: userProfile.name,
+                            uid: userProfile.userId,
+                            profileUrl: userProfile.profileUrl,
+                            botName: context.tr('botNameLbl'),
+                            questionLanguageId:
+                                UiUtils.getCurrentQuestionLanguageId(context),
+                            context: context,
+                          );
                     },
                   ),
-            SizedBox(height: MediaQuery.of(context).size.height * (0.03)),
+                  CustomRoundedButton(
+                    widthPercentage: 0.375,
+                    backgroundColor: Theme.of(context).primaryColor,
+                    buttonTitle: context.tr('retryLbl'),
+                    radius: 5,
+                    showBorder: false,
+                    height: 40,
+                    titleColor: Theme.of(context).colorScheme.background,
+                    elevation: 5,
+                    onTap: retryToSearchBattleRoom,
+                  ),
+                ],
+              ),
+              SizedBox(height: MediaQuery.of(context).size.height * (0.03)),
+            ],
             const UserFoundMapContainer(),
           ],
         ),
@@ -517,24 +562,26 @@ class _BattleRoomFindOpponentScreenState
       child: BlocBuilder<BattleRoomCubit, BattleRoomState>(
         bloc: context.read<BattleRoomCubit>(),
         builder: (context, state) {
-          Widget child = _buildFindingMap();
+          var child = _buildFindingMap();
           if (state is BattleRoomFailure) {
             child = ErrorContainer(
-                showBackButton: true,
-                errorMessage: AppLocalization.of(context)!.getTranslatedValues(
-                    convertErrorCodeToLanguageKey(state.errorMessageCode))!,
-                errorMessageColor: Theme.of(context).primaryColor,
-                onTapRetry: () {
-                  retryToSearchBattleRoom();
-                },
-                showErrorImage: true);
+              showBackButton: true,
+              errorMessage:
+                  convertErrorCodeToLanguageKey(state.errorMessageCode),
+              errorMessageColor: Theme.of(context).primaryColor,
+              onTapRetry: () {
+                retryToSearchBattleRoom();
+              },
+              showErrorImage: true,
+            );
           }
           if (state is BattleRoomUserFound) {
             child = _buildUserFoundDetails();
           }
           return AnimatedSwitcher(
-              duration: const Duration(milliseconds: 500),
-              child: waitForOpponent ? child : _buildOpponentNotFoundDetails());
+            duration: const Duration(milliseconds: 500),
+            child: waitForOpponent ? child : _buildOpponentNotFoundDetails(),
+          );
         },
       ),
     );
@@ -542,7 +589,7 @@ class _BattleRoomFindOpponentScreenState
 
   Widget _buildVsImageContainer() {
     return Image.asset(
-      UiUtils.getImagePath("vs_icon.png"),
+      Assets.vsIcon,
       fit: BoxFit.cover,
     );
   }
@@ -552,7 +599,8 @@ class _BattleRoomFindOpponentScreenState
       opacity: playerDetailsAnimation,
       child: SlideTransition(
         position: playerDetailsAnimation.drive(
-            Tween<Offset>(begin: const Offset(0.075, 0.0), end: Offset.zero)),
+          Tween<Offset>(begin: const Offset(0.075, 0), end: Offset.zero),
+        ),
         child: Align(
           alignment: Alignment.bottomCenter,
           child: Container(
@@ -579,56 +627,58 @@ class _BattleRoomFindOpponentScreenState
       alignment: Alignment.topLeft,
       child: Padding(
         padding: EdgeInsets.only(
-            left: 20.0, top: MediaQuery.of(context).padding.top),
+          left: 20,
+          top: MediaQuery.of(context).padding.top,
+        ),
         child: CustomBackButton(
-            onTap: () {
-              //
-              final battleRoomCubit = context.read<BattleRoomCubit>();
-              //if user has found opponent then do not allow to go back
-              if (battleRoomCubit.state is BattleRoomUserFound) {
-                return;
-              }
+          onTap: () {
+            //
+            final battleRoomCubit = context.read<BattleRoomCubit>();
+            //if user has found opponent then do not allow to go back
+            if (battleRoomCubit.state is BattleRoomUserFound) {
+              return;
+            }
 
-              showDialog(
-                  context: context,
-                  builder: (_) => ExitGameDialog(
-                        onTapYes: () {
-                          battleRoomCubit.deleteBattleRoom(false);
-                          Navigator.of(context).pop();
-                          Navigator.of(context).pop();
-                        },
-                      ));
-            },
-            iconColor: Theme.of(context).colorScheme.secondary),
+            showDialog<void>(
+              context: context,
+              builder: (_) => ExitGameDialog(
+                onTapYes: () {
+                  battleRoomCubit.deleteBattleRoom(isGroupBattle: false);
+                  Navigator.of(context).pop();
+                  Navigator.of(context).pop();
+                },
+              ),
+            );
+          },
+          iconColor: Theme.of(context).primaryColor,
+        ),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () {
-        final battleRoomCubit = context.read<BattleRoomCubit>();
-        //if user has found opponent then do not allow to go back
-        if (battleRoomCubit.state is BattleRoomUserFound) {
-          return Future.value(false);
-        }
+    final battleRoomCubit = context.read<BattleRoomCubit>();
 
-        showDialog(
-            context: context,
-            builder: (context) => ExitGameDialog(
-                  onTapYes: () {
-                    battleRoomCubit.deleteBattleRoom(false);
-                    Navigator.of(context).pop();
-                    Navigator.of(context).pop();
-                  },
-                ));
+    return PopScope(
+      canPop: battleRoomCubit.state is! BattleRoomUserFound,
+      onPopInvoked: (didPop) {
+        if (didPop) return;
 
-        return Future.value(false);
+        showDialog<void>(
+          context: context,
+          builder: (_) => ExitGameDialog(
+            onTapYes: () {
+              battleRoomCubit.deleteBattleRoom(isGroupBattle: false);
+              Navigator.of(context).pop();
+              Navigator.of(context).pop();
+            },
+          ),
+        );
       },
       child: Scaffold(
         body: BlocListener<BattleRoomCubit, BattleRoomState>(
-          bloc: context.read<BattleRoomCubit>(),
+          bloc: battleRoomCubit,
           listener: (context, state) async {
             //start timer for waiting user only room created successfully
             if (state is BattleRoomCreated) {
@@ -638,13 +688,21 @@ class _BattleRoomFindOpponentScreenState
             } else if (state is BattleRoomUserFound) {
               //if opponent found
               waitForOpponentTimer?.cancel();
-              await Future.delayed(const Duration(milliseconds: 500));
+              await Future<void>.delayed(const Duration(milliseconds: 500));
               await quizCountDownAnimationController.forward();
-              Navigator.of(context).pushReplacementNamed(Routes.battleRoomQuiz,
-                  arguments: {"battleLbl": "", "isTournamentBattle": false});
+
+              ///
+              await WakelockPlus.disable();
+              await Navigator.of(context).pushReplacementNamed(
+                Routes.battleRoomQuiz,
+                arguments: {
+                  'quiz_type': QuizTypes.randomBattle,
+                  'play_with_bot': playWithBot,
+                },
+              );
             } else if (state is BattleRoomFailure) {
-              if (state.errorMessageCode == unauthorizedAccessCode) {
-                UiUtils.showAlreadyLoggedInDialog(context: context);
+              if (state.errorMessageCode == errorCodeUnauthorizedAccess) {
+                await showAlreadyLoggedInDialog(context);
               }
             }
           },

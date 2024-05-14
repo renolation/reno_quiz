@@ -1,27 +1,27 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:flutterquiz/app/app_localization.dart';
 import 'package:flutterquiz/features/profileManagement/cubits/userDetailsCubit.dart';
+import 'package:flutterquiz/features/systemConfig/cubits/systemConfigCubit.dart';
 import 'package:flutterquiz/features/wallet/cubits/paymentRequestCubit.dart';
+import 'package:flutterquiz/ui/widgets/alreadyLoggedInDialog.dart';
 import 'package:flutterquiz/ui/widgets/customRoundedButton.dart';
 import 'package:flutterquiz/utils/constants/constants.dart';
-import 'package:flutterquiz/utils/constants/error_message_keys.dart';
-import 'package:flutterquiz/utils/constants/fonts.dart';
-import 'package:flutterquiz/utils/constants/string_labels.dart';
+import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
-import 'package:hive/hive.dart';
 import 'package:lottie/lottie.dart';
 
 class RedeemAmountRequestBottomSheetContainer extends StatefulWidget {
   const RedeemAmountRequestBottomSheetContainer({
-    super.key,
     required this.deductedCoins,
     required this.redeemableAmount,
     required this.paymentRequestCubit,
+    super.key,
   });
+
   final double redeemableAmount;
   final int deductedCoins;
 
@@ -37,7 +37,7 @@ class _RedeemAmountRequestBottomSheetContainerState
     with TickerProviderStateMixin {
   late final List<TextEditingController> _inputDetailsControllers =
       payoutMethods[_selectedPaymentMethodIndex]
-          .inputDetailsFromUser
+          .inputs
           .map((e) => TextEditingController())
           .toList();
 
@@ -45,11 +45,11 @@ class _RedeemAmountRequestBottomSheetContainerState
 
   late int _selectedPaymentMethodIndex = 0;
   late int _enterPayoutMethodDx = 1;
-  late String _errorMessage = "";
+  late String _errorMessage = '';
 
   @override
   void dispose() {
-    for (var element in _inputDetailsControllers) {
+    for (final element in _inputDetailsControllers) {
       element.dispose();
     }
     super.dispose();
@@ -61,15 +61,14 @@ class _RedeemAmountRequestBottomSheetContainerState
         setState(() {
           _selectedPaymentMethodIndex = paymentMethodIndex;
           _inputDetailsControllers.clear();
-          for (var element in payoutMethods[_selectedPaymentMethodIndex]
-              .inputDetailsFromUser) {
+          for (final _ in payoutMethods[_selectedPaymentMethodIndex].inputs) {
             _inputDetailsControllers.add(TextEditingController());
           }
         });
       },
       child: Container(
-        padding: const EdgeInsets.all(10.0),
-        margin: const EdgeInsets.symmetric(horizontal: 5.0),
+        padding: const EdgeInsets.all(10),
+        margin: const EdgeInsets.symmetric(horizontal: 5),
         width: MediaQuery.of(context).size.width * .175,
         height: MediaQuery.of(context).size.width * .175,
         decoration: BoxDecoration(
@@ -83,42 +82,49 @@ class _RedeemAmountRequestBottomSheetContainerState
               ? Theme.of(context).primaryColor
               : Theme.of(context).scaffoldBackgroundColor,
         ),
-        child: SvgPicture.asset(
-          payoutMethods[paymentMethodIndex].image,
-          color: _selectedPaymentMethodIndex == paymentMethodIndex
-              ? Theme.of(context).colorScheme.background
-              : Theme.of(context).colorScheme.onTertiary,
-          // color: Theme.of(context).primaryColor,
-        ),
+        child: SvgPicture.asset(payoutMethods[paymentMethodIndex].image),
       ),
     );
   }
 
   Widget _buildInputDetailsContainer(int inputDetailsIndex) {
+    final input =
+        payoutMethods[_selectedPaymentMethodIndex].inputs[inputDetailsIndex];
+
+    final inputFormatters = input.isNumber
+        ? [FilteringTextInputFormatter.digitsOnly]
+        : <TextInputFormatter>[];
+    if (input.maxLength > 0) {
+      inputFormatters.add(
+        LengthLimitingTextInputFormatter(input.maxLength),
+      );
+    }
+
     return Container(
-      padding: const EdgeInsets.only(left: 20.0, right: 20.0),
+      padding: const EdgeInsets.only(left: 20, right: 20),
       margin: EdgeInsets.symmetric(
-        vertical: 5.0,
+        vertical: 5,
         horizontal: MediaQuery.of(context).size.width * .1,
       ),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.background,
-        borderRadius: BorderRadius.circular(10.0),
+        borderRadius: BorderRadius.circular(10),
       ),
       height: MediaQuery.of(context).size.height * (0.05),
       child: TextField(
         controller: _inputDetailsControllers[inputDetailsIndex],
         textAlign: TextAlign.center,
+        keyboardType: input.isNumber ? TextInputType.phone : TextInputType.text,
+        inputFormatters: inputFormatters,
         style: TextStyle(color: Theme.of(context).colorScheme.onTertiary),
         cursorColor: Theme.of(context).colorScheme.onTertiary,
         decoration: InputDecoration(
           isDense: true,
           border: InputBorder.none,
-          hintText: payoutMethods[_selectedPaymentMethodIndex]
-              .inputDetailsFromUser[inputDetailsIndex],
+          hintText: input.name,
           hintStyle: TextStyle(
-            fontSize: 16.0,
-            color: Theme.of(context).colorScheme.onTertiary,
+            fontSize: 16,
+            color: Theme.of(context).colorScheme.onTertiary.withOpacity(.6),
           ),
         ),
       ),
@@ -126,23 +132,23 @@ class _RedeemAmountRequestBottomSheetContainerState
   }
 
   Widget _buildEnterPayoutMethodDetailsContainer() {
+    final mqSize = MediaQuery.of(context).size;
     return AnimatedContainer(
       curve: Curves.easeInOut,
       transform: Matrix4.identity()
-        ..setEntry(
-            0, 3, MediaQuery.of(context).size.width * _enterPayoutMethodDx),
+        ..setEntry(0, 3, mqSize.width * _enterPayoutMethodDx),
       duration: const Duration(milliseconds: 500),
       child: BlocConsumer<PaymentRequestCubit, PaymentRequestState>(
         listener: (context, state) {
           if (state is PaymentRequestFailure) {
-            if (state.errorMessage == unauthorizedAccessCode) {
-              UiUtils.showAlreadyLoggedInDialog(context: context);
+            if (state.errorMessage == errorCodeUnauthorizedAccess) {
+              showAlreadyLoggedInDialog(context);
               return;
             }
-            //todo:error
             setState(() {
-              _errorMessage = AppLocalization.of(context)!.getTranslatedValues(
-                  convertErrorCodeToLanguageKey(state.errorMessage))!;
+              _errorMessage = context.tr(
+                convertErrorCodeToLanguageKey(state.errorMessage),
+              )!;
             });
           } else if (state is PaymentRequestSuccess) {
             context.read<UserDetailsCubit>().updateCoins(
@@ -157,81 +163,69 @@ class _RedeemAmountRequestBottomSheetContainerState
             return Column(
               children: [
                 //
-                SizedBox(
-                  height: MediaQuery.of(context).size.height * (0.025),
-                ),
+                SizedBox(height: mqSize.height * (0.025)),
                 Container(
-                    alignment: Alignment.center,
-                    child: Text(
-                      AppLocalization.of(context)!
-                          .getTranslatedValues(successfullyRequestedKey)!,
-                      style: TextStyle(
-                          color: Theme.of(context).primaryColor,
-                          fontSize: 20.0),
-                    )),
-                SizedBox(
-                  height: MediaQuery.of(context).size.height * (0.025),
+                  alignment: Alignment.center,
+                  child: Text(
+                    context.tr(successfullyRequestedKey)!,
+                    style: TextStyle(
+                      color: Theme.of(context).primaryColor,
+                      fontSize: 20,
+                    ),
+                  ),
                 ),
+                SizedBox(height: mqSize.height * (0.025)),
                 LottieBuilder.asset(
-                  "assets/animations/success.json",
+                  'assets/animations/success.json',
                   fit: BoxFit.cover,
                   animate: true,
-                  height: MediaQuery.of(context).size.height * (0.2),
+                  height: mqSize.height * (0.2),
                 ),
 
-                SizedBox(
-                  height: MediaQuery.of(context).size.height * (0.025),
-                ),
+                SizedBox(height: mqSize.height * (0.025)),
                 CustomRoundedButton(
                   widthPercentage: 0.525,
                   backgroundColor: Theme.of(context).primaryColor,
-                  buttonTitle: AppLocalization.of(context)!
-                      .getTranslatedValues(trackRequestKey),
-                  radius: 15.0,
+                  buttonTitle: context.tr(trackRequestKey),
+                  radius: 15,
                   showBorder: false,
                   titleColor: Theme.of(context).colorScheme.background,
                   fontWeight: FontWeight.bold,
-                  textSize: 17.0,
+                  textSize: 17,
                   onTap: () {
-              
-
                     Navigator.of(context).pop(true);
                   },
-                  height: 40.0,
+                  height: 40,
                 ),
               ],
             );
           }
+
+          final payoutMethod = payoutMethods[_selectedPaymentMethodIndex];
+
           return Column(
             children: [
-              SizedBox(height: MediaQuery.of(context).size.height * .015),
+              SizedBox(height: mqSize.height * .015),
               //
               Container(
                 alignment: Alignment.center,
                 child: Text(
-                  "${AppLocalization.of(context)!.getTranslatedValues(payoutMethodKey)!} - ${payoutMethods[_selectedPaymentMethodIndex].type}",
+                  '${context.tr(payoutMethodKey)!} - ${payoutMethod.type}',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.onTertiary,
                     fontWeight: FontWeights.bold,
-                    fontSize: 22.0,
+                    fontSize: 22,
                   ),
                 ),
               ),
 
-              SizedBox(height: MediaQuery.of(context).size.height * .025),
+              SizedBox(height: mqSize.height * .025),
 
-              for (var i = 0;
-                  i <
-                      payoutMethods[_selectedPaymentMethodIndex]
-                          .inputDetailsFromUser
-                          .length;
-                  i++)
+              for (var i = 0; i < payoutMethod.inputs.length; i++)
                 _buildInputDetailsContainer(i),
 
-              SizedBox(
-                height: MediaQuery.of(context).size.height * (0.01),
-              ),
+              SizedBox(height: mqSize.height * (0.01)),
 
               AnimatedOpacity(
                 opacity: _errorMessage.isEmpty ? 0 : 1.0,
@@ -249,29 +243,26 @@ class _RedeemAmountRequestBottomSheetContainerState
                 ),
               ),
 
-              SizedBox(height: MediaQuery.of(context).size.height * .0125),
+              SizedBox(height: mqSize.height * .0125),
 
               Padding(
                 padding: EdgeInsets.symmetric(
-                  horizontal:
-                      MediaQuery.of(context).size.width * UiUtils.hzMarginPct,
+                  horizontal: mqSize.width * UiUtils.hzMarginPct,
                 ),
                 child: CustomRoundedButton(
                   widthPercentage: 1,
                   backgroundColor: Theme.of(context).primaryColor,
                   buttonTitle: state is PaymentRequestInProgress
-                      ? AppLocalization.of(context)!
-                          .getTranslatedValues(requestingKey)
-                      : AppLocalization.of(context)!
-                          .getTranslatedValues(makeRequestKey),
-                  radius: 10.0,
+                      ? context.tr(requestingKey)
+                      : context.tr(makeRequestKey),
+                  radius: 10,
                   showBorder: false,
                   titleColor: Theme.of(context).colorScheme.background,
                   fontWeight: FontWeight.bold,
-                  textSize: 18.0,
+                  textSize: 18,
                   onTap: () {
-                    bool isAnyInputFieldEmpty = false;
-                    for (var textEditingController
+                    var isAnyInputFieldEmpty = false;
+                    for (final textEditingController
                         in _inputDetailsControllers) {
                       if (textEditingController.text.trim().isEmpty) {
                         isAnyInputFieldEmpty = true;
@@ -282,24 +273,24 @@ class _RedeemAmountRequestBottomSheetContainerState
 
                     if (isAnyInputFieldEmpty) {
                       setState(() {
-                        _errorMessage = AppLocalization.of(context)!
-                            .getTranslatedValues(pleaseFillAllDataKey)!;
+                        _errorMessage = context.tr(pleaseFillAllDataKey)!;
                       });
                       return;
                     }
 
                     widget.paymentRequestCubit.makePaymentRequest(
-                        userId: context.read<UserDetailsCubit>().getUserId(),
-                        paymentType:
-                            payoutMethods[_selectedPaymentMethodIndex].type,
-                        paymentAddress: jsonEncode(_inputDetailsControllers
+                      paymentType: payoutMethod.type,
+                      paymentAddress: jsonEncode(
+                        _inputDetailsControllers
                             .map((e) => e.text.trim())
-                            .toList()),
-                        paymentAmount: widget.redeemableAmount.toString(),
-                        coinUsed: widget.deductedCoins.toString(),
-                        details: "Redeem Request");
+                            .toList(),
+                      ),
+                      paymentAmount: widget.redeemableAmount.toString(),
+                      coinUsed: widget.deductedCoins.toString(),
+                      details: context.tr('redeemRequest')!,
+                    );
                   },
-                  height: 50.0,
+                  height: 50,
                 ),
               ),
 
@@ -308,19 +299,18 @@ class _RedeemAmountRequestBottomSheetContainerState
                   setState(() {
                     _selectPaymentMethodDx = 0;
                     _enterPayoutMethodDx = 1;
-                    _errorMessage = "";
+                    _errorMessage = '';
                   });
                 },
                 child: Text(
-                  AppLocalization.of(context)!
-                      .getTranslatedValues(changePayoutMethodKey)!,
+                  context.tr(changePayoutMethodKey)!,
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.onTertiary,
                     fontWeight: FontWeights.semiBold,
                     fontSize: 14,
                   ),
                 ),
-              )
+              ),
             ],
           );
         },
@@ -329,7 +319,7 @@ class _RedeemAmountRequestBottomSheetContainerState
   }
 
   List<Widget> _buildPayoutSelectMethodContainer() {
-    List<Widget> children = [];
+    final children = <Widget>[];
     for (var i = 0; i < payoutMethods.length; i++) {
       children.add(_buildPaymentSelectMethodContainer(paymentMethodIndex: i));
     }
@@ -337,20 +327,19 @@ class _RedeemAmountRequestBottomSheetContainerState
   }
 
   Widget _buildSelectPayoutOption() {
+    final mqSize = MediaQuery.of(context).size;
     return AnimatedContainer(
       curve: Curves.easeInOut,
       transform: Matrix4.identity()
-        ..setEntry(
-            0, 3, MediaQuery.of(context).size.width * _selectPaymentMethodDx),
+        ..setEntry(0, 3, mqSize.width * _selectPaymentMethodDx),
       duration: const Duration(milliseconds: 500),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Column(
             children: [
               const SizedBox(height: 10),
               Text(
-                "Payout",
+                context.tr('payoutMethod')!,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
@@ -359,32 +348,31 @@ class _RedeemAmountRequestBottomSheetContainerState
               ),
               const Divider(),
               Text(
-                AppLocalization.of(context)!
-                    .getTranslatedValues(redeemableAmountKey)!,
+                context.tr(redeemableAmountKey)!,
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.onTertiary,
-                  fontSize: 18.0,
+                  fontSize: 18,
                 ),
               ),
               Container(
                 alignment: Alignment.center,
                 child: Text(
-                  "\$${widget.redeemableAmount}",
+                  '${context.read<SystemConfigCubit>().payoutRequestCurrency} ${widget.redeemableAmount}',
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.onTertiary,
                     fontWeight: FontWeights.bold,
-                    fontSize: 22.0,
+                    fontSize: 22,
                   ),
                 ),
               ),
               Container(
                 alignment: Alignment.center,
                 child: Text(
-                  "${widget.deductedCoins} ${AppLocalization.of(context)!.getTranslatedValues(coinsWillBeDeductedKey)}",
+                  '${widget.deductedCoins} ${context.tr(coinsWillBeDeductedKey)}',
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.onTertiary,
                     fontWeight: FontWeights.medium,
-                    fontSize: 18.0,
+                    fontSize: 18,
                   ),
                 ),
               ),
@@ -392,29 +380,27 @@ class _RedeemAmountRequestBottomSheetContainerState
           ),
           Padding(
             padding: EdgeInsets.symmetric(
-                horizontal:
-                    MediaQuery.of(context).size.width * UiUtils.hzMarginPct),
+              horizontal: mqSize.width * UiUtils.hzMarginPct,
+            ),
             child: const Divider(),
           ),
           Container(
             alignment: Alignment.center,
             child: Text(
-              AppLocalization.of(context)!
-                  .getTranslatedValues(selectPayoutOptionKey)!,
+              context.tr(selectPayoutOptionKey)!,
               style: TextStyle(
                 color: Theme.of(context).colorScheme.onTertiary,
                 fontWeight: FontWeights.medium,
-                fontSize: 16.0,
+                fontSize: 16,
               ),
             ),
           ),
           SizedBox(
-            height: MediaQuery.of(context).size.height * (0.55) * (0.05),
+            height: mqSize.height * (0.55) * (0.05),
           ),
           Padding(
             padding: EdgeInsets.symmetric(
-              horizontal:
-                  MediaQuery.of(context).size.width * UiUtils.hzMarginPct,
+              horizontal: mqSize.width * UiUtils.hzMarginPct,
             ),
             child: Wrap(
               //alignment: WrapAlignment.center,
@@ -422,30 +408,28 @@ class _RedeemAmountRequestBottomSheetContainerState
             ),
           ),
           SizedBox(
-            height: MediaQuery.of(context).size.height * (0.55) * (0.075),
+            height: mqSize.height * (0.55) * (0.075),
           ),
           Padding(
             padding: EdgeInsets.symmetric(
-              horizontal:
-                  MediaQuery.of(context).size.width * UiUtils.hzMarginPct,
+              horizontal: mqSize.width * UiUtils.hzMarginPct,
             ),
             child: CustomRoundedButton(
               widthPercentage: 1,
               backgroundColor: Theme.of(context).primaryColor,
-              buttonTitle:
-                  AppLocalization.of(context)!.getTranslatedValues(continueLbl),
-              radius: 10.0,
+              buttonTitle: context.tr(continueLbl),
+              radius: 10,
               showBorder: false,
               titleColor: Theme.of(context).colorScheme.background,
               fontWeight: FontWeight.bold,
-              textSize: 18.0,
+              textSize: 18,
               onTap: () {
                 setState(() {
                   _selectPaymentMethodDx = -1;
                   _enterPayoutMethodDx = 0;
                 });
               },
-              height: 50.0,
+              height: 50,
             ),
           ),
         ],
@@ -455,53 +439,25 @@ class _RedeemAmountRequestBottomSheetContainerState
 
   @override
   Widget build(BuildContext context) {
+    final mqHeight = MediaQuery.of(context).size.height;
     return Container(
-      constraints:
-          BoxConstraints(maxHeight: MediaQuery.of(context).size.height * (0.8)),
+      constraints: BoxConstraints(maxHeight: mqHeight * .8),
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(20.0),
-          topRight: Radius.circular(20.0),
-        ),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Padding(
         padding: MediaQuery.of(context).viewInsets,
         child: SingleChildScrollView(
           child: Column(
-            // mainAxisSize: MainAxisSize.min,
             children: [
-              // Row(
-              //   mainAxisAlignment: MainAxisAlignment.end,
-              //   children: [
-              //     Container(
-              //       margin: EdgeInsets.all(10.0),
-              //       alignment: Alignment.centerRight,
-              //       child: IconButton(
-              //           onPressed: () {
-              //             if (widget.paymentRequestCubit.state
-              //                 is PaymentRequestInProgress) {
-              //               return;
-              //             }
-              //             //if state is PaymentRequestSuccess then update coins and transaction
-              //             Navigator.of(context).pop(widget.paymentRequestCubit
-              //                 .state is PaymentRequestSuccess);
-              //           },
-              //           icon: Icon(
-              //             Icons.close,
-              //             size: 28.0,
-              //             color: Theme.of(context).primaryColor,
-              //           )),
-              //     ),
-              //   ],
-              // ),
               Stack(
                 children: [
                   _buildSelectPayoutOption(),
                   _buildEnterPayoutMethodDetailsContainer(),
                 ],
               ),
-              SizedBox(height: MediaQuery.of(context).size.height * .05),
+              SizedBox(height: mqHeight * .05),
             ],
           ),
         ),

@@ -10,22 +10,23 @@ class DeleteAccountInProgress extends DeleteAccountState {}
 class DeleteAccountSuccess extends DeleteAccountState {}
 
 class DeleteAccountFailure extends DeleteAccountState {
-  final String errorMessage;
   DeleteAccountFailure(this.errorMessage);
+
+  final String errorMessage;
 }
 
 class DeleteAccountCubit extends Cubit<DeleteAccountState> {
-  final ProfileManagementRepository _profileManagementRepository;
   DeleteAccountCubit(this._profileManagementRepository)
       : super(DeleteAccountInitial());
+  final ProfileManagementRepository _profileManagementRepository;
 
-  void deleteUserAccount({required String userId}) {
+  void deleteUserAccount() {
     //
     emit(DeleteAccountInProgress());
-    _profileManagementRepository.deleteAccount(userId: userId).then((value) {
+    _profileManagementRepository.deleteAccount().then((value) {
       //
       emit(DeleteAccountSuccess());
-    }).catchError((e) {
+    }).catchError((Object e) {
       //
       emit(DeleteAccountFailure(e.toString()));
     });

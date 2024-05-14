@@ -1,32 +1,21 @@
-import 'package:assets_audio_player/assets_audio_player.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_tex/flutter_tex.dart';
 import 'package:flutterquiz/features/quiz/models/answerOption.dart';
 import 'package:flutterquiz/features/quiz/models/quizType.dart';
 import 'package:flutterquiz/features/settings/settingsCubit.dart';
-import 'package:flutterquiz/utils/constants/constants.dart';
+import 'package:flutterquiz/features/systemConfig/model/answer_mode.dart';
+import 'package:flutterquiz/ui/styles/colors.dart';
 import 'package:flutterquiz/utils/constants/fonts.dart';
+import 'package:flutterquiz/utils/constants/sound_constants.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:just_audio/just_audio.dart';
 
 class OptionContainer extends StatefulWidget {
-  final Function hasSubmittedAnswerForCurrentQuestion;
-  final Function submitAnswer;
-  final AnswerOption answerOption;
-  final BoxConstraints constraints;
-  final String correctOptionId;
-  final String submittedAnswerId;
-  final bool showAudiencePoll;
-  final int? audiencePollPercentage;
-  final bool showAnswerCorrectness;
-  final QuizTypes quizType;
-  final bool trueFalseOption;
-
   const OptionContainer({
-    super.key,
     required this.quizType,
-    required this.showAnswerCorrectness,
+    required this.answerMode,
     required this.showAudiencePoll,
     required this.hasSubmittedAnswerForCurrentQuestion,
     required this.constraints,
@@ -34,9 +23,24 @@ class OptionContainer extends StatefulWidget {
     required this.correctOptionId,
     required this.submitAnswer,
     required this.submittedAnswerId,
+    this.canResubmitAnswer = false,
     this.audiencePollPercentage,
     this.trueFalseOption = false,
+    super.key,
   });
+
+  final bool Function() hasSubmittedAnswerForCurrentQuestion;
+  final void Function(String) submitAnswer;
+  final AnswerOption answerOption;
+  final BoxConstraints constraints;
+  final String correctOptionId;
+  final String submittedAnswerId;
+  final bool showAudiencePoll;
+  final int? audiencePollPercentage;
+  final AnswerMode answerMode;
+  final bool canResubmitAnswer;
+  final QuizTypes quizType;
+  final bool trueFalseOption;
 
   @override
   State<OptionContainer> createState() => _OptionContainerState();
@@ -48,39 +52,49 @@ class _OptionContainerState extends State<OptionContainer>
     vsync: this,
     duration: const Duration(milliseconds: 90),
   );
-  late Animation<double> animation = Tween<double>(begin: 0.0, end: 1.0)
-      .animate(CurvedAnimation(
-          parent: animationController, curve: Curves.easeInQuad));
+  late Animation<double> animation = Tween<double>(begin: 0, end: 1).animate(
+    CurvedAnimation(parent: animationController, curve: Curves.easeInQuad),
+  );
 
   late AnimationController topContainerAnimationController =
       AnimationController(
-          vsync: this, duration: const Duration(milliseconds: 180));
+    vsync: this,
+    duration: const Duration(milliseconds: 180),
+  );
   late Animation<double> topContainerOpacityAnimation =
-      Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(
-    parent: topContainerAnimationController,
-    curve: const Interval(0.0, 0.25, curve: Curves.easeInQuad),
-  ));
+      Tween<double>(begin: 0, end: 1).animate(
+    CurvedAnimation(
+      parent: topContainerAnimationController,
+      curve: const Interval(0, 0.25, curve: Curves.easeInQuad),
+    ),
+  );
 
   late Animation<double> topContainerAnimation =
-      Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(
-          parent: topContainerAnimationController,
-          curve: const Interval(0.0, 0.5, curve: Curves.easeInQuad)));
+      Tween<double>(begin: 0, end: 1).animate(
+    CurvedAnimation(
+      parent: topContainerAnimationController,
+      curve: const Interval(0, 0.5, curve: Curves.easeInQuad),
+    ),
+  );
 
   late Animation<double> answerCorrectnessAnimation =
-      Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(
-          parent: topContainerAnimationController,
-          curve: const Interval(0.5, 1.0, curve: Curves.easeInQuad)));
+      Tween<double>(begin: 0, end: 1).animate(
+    CurvedAnimation(
+      parent: topContainerAnimationController,
+      curve: const Interval(0.5, 1, curve: Curves.easeInQuad),
+    ),
+  );
 
   late double heightPercentage = 0.105;
-  late AssetsAudioPlayer assetsAudioPlayer = AssetsAudioPlayer();
+  late final _audioPlayer = AudioPlayer();
 
   late TextSpan textSpan = TextSpan(
     text: widget.answerOption.title,
     style: GoogleFonts.nunito(
       textStyle: TextStyle(
-        color: Theme.of(context).colorScheme.background,
-        height: 1.0,
-        fontSize: 16.0,
+        color: optionTextColor,
+        height: 1,
+        fontSize: 16,
       ),
     ),
   );
@@ -89,55 +103,100 @@ class _OptionContainerState extends State<OptionContainer>
   void dispose() {
     animationController.dispose();
     topContainerAnimationController.dispose();
-    assetsAudioPlayer.dispose();
+    _audioPlayer.dispose();
     super.dispose();
   }
 
-  void playSound(String trackName) async {
+  Future<void> playSound(String trackName) async {
     if (context.read<SettingsCubit>().getSettings().sound) {
-      if (assetsAudioPlayer.isPlaying.value) {
-        await assetsAudioPlayer.stop();
+      if (_audioPlayer.playing) {
+        await _audioPlayer.stop();
       }
-      await assetsAudioPlayer.open(Audio(trackName));
-      await assetsAudioPlayer.play();
+      await _audioPlayer.setAsset(trackName);
+      await _audioPlayer.play();
     }
   }
 
-  void playVibrate() async {
+  Future<void> playVibrate() async {
     if (context.read<SettingsCubit>().getSettings().vibration) {
       UiUtils.vibrate();
     }
   }
 
   int calculateMaxLines() {
-    TextPainter textPainter =
-        TextPainter(text: textSpan, textDirection: Directionality.of(context));
-
-    textPainter.layout(maxWidth: widget.constraints.maxWidth * 0.85);
+    final textPainter = TextPainter(
+      text: textSpan,
+      textDirection: Directionality.of(context),
+    )..layout(maxWidth: widget.constraints.maxWidth * 0.85);
 
     return textPainter.computeLineMetrics().length;
   }
 
-  Color _buildOptionBackgroundColor() {
-    if (widget.showAnswerCorrectness) {
-      return Theme.of(context).colorScheme.background;
-    }
-    if (widget.hasSubmittedAnswerForCurrentQuestion() &&
-        widget.submittedAnswerId == widget.answerOption.id) {
-      print("Submitted answer id is : ${widget.submittedAnswerId}");
-      print("Stop here");
+  bool get isCorrectAnswer => widget.answerOption.id == widget.correctOptionId;
 
-      return Theme.of(context).primaryColor;
+  bool get isSubmittedAnswer =>
+      widget.answerOption.id == widget.submittedAnswerId;
+
+  Color get optionTextColor {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    if (widget.answerMode == AnswerMode.noAnswerCorrectness) {
+      return isSubmittedAnswer
+          ? colorScheme.background
+          : colorScheme.onTertiary;
+    }
+
+    if (widget.hasSubmittedAnswerForCurrentQuestion()) {
+      if (widget.answerMode ==
+              AnswerMode.showAnswerCorrectnessAndCorrectAnswer &&
+          (isCorrectAnswer || isSubmittedAnswer)) {
+        return colorScheme.background;
+
+        /// for showAnswerCorrectness
+      } else if (isSubmittedAnswer) {
+        return colorScheme.background;
+      }
+    }
+
+    return colorScheme.onTertiary;
+  }
+
+  Color _buildOptionBackgroundColor() {
+    if (widget.answerMode == AnswerMode.noAnswerCorrectness) {
+      return isSubmittedAnswer
+          ? Theme.of(context).primaryColor
+          : Theme.of(context).colorScheme.background;
+    }
+
+    if (widget.hasSubmittedAnswerForCurrentQuestion()) {
+      if (widget.answerMode ==
+          AnswerMode.showAnswerCorrectnessAndCorrectAnswer) {
+        return isCorrectAnswer
+            ? kCorrectAnswerColor
+            : isSubmittedAnswer
+                ? kWrongAnswerColor
+                : Theme.of(context).colorScheme.background;
+      } else {
+        return isSubmittedAnswer
+            ? isCorrectAnswer
+                ? kCorrectAnswerColor
+                : kWrongAnswerColor
+            : Theme.of(context).colorScheme.background;
+      }
     }
 
     return Theme.of(context).colorScheme.background;
   }
 
   void _onTapOptionContainer() {
-    if (widget.showAnswerCorrectness) {
-      //if user has submitted the answer then do not show correctness of the answer
+    if (widget.answerMode == AnswerMode.noAnswerCorrectness) {
+      widget.submitAnswer(widget.answerOption.id!);
+
+      playSound(clickEventSoundTrack);
+      playVibrate();
+    } else {
       if (!widget.hasSubmittedAnswerForCurrentQuestion()) {
-        widget.submitAnswer(widget.answerOption.id);
+        widget.submitAnswer(widget.answerOption.id!);
 
         topContainerAnimationController.forward();
 
@@ -148,16 +207,11 @@ class _OptionContainerState extends State<OptionContainer>
         }
         playVibrate();
       }
-    } else {
-      widget.submitAnswer(widget.answerOption.id);
-
-      playSound(clickEventSoundTrack);
-      playVibrate();
     }
   }
 
   Widget _buildOptionDetails(double optionWidth) {
-    int maxLines = calculateMaxLines();
+    final maxLines = calculateMaxLines();
     if (!widget.hasSubmittedAnswerForCurrentQuestion()) {
       heightPercentage = maxLines > 2
           ? (heightPercentage + (0.03 * (maxLines - 2)))
@@ -168,7 +222,7 @@ class _OptionContainerState extends State<OptionContainer>
       animation: animationController,
       builder: (_, child) {
         return Transform.scale(
-          scale: animation.drive(Tween<double>(begin: 1.0, end: 0.9)).value,
+          scale: animation.drive(Tween<double>(begin: 1, end: 0.9)).value,
           child: child,
         );
       },
@@ -176,24 +230,31 @@ class _OptionContainerState extends State<OptionContainer>
         margin: EdgeInsets.only(top: widget.constraints.maxHeight * (0.015)),
         height: widget.quizType == QuizTypes.groupPlay
             ? widget.constraints.maxHeight * (heightPercentage * 0.75)
-            : widget.constraints.maxHeight * (heightPercentage),
+            : widget.constraints.maxHeight * heightPercentage,
         width: optionWidth,
         alignment: Alignment.center,
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(10.0),
+          borderRadius: BorderRadius.circular(10),
           child: Stack(
             alignment: Alignment.center,
             children: [
               Container(
                 padding: EdgeInsets.symmetric(
-                  horizontal: 15.0,
+                  horizontal: 15,
                   vertical: maxLines > 2 ? 7.50 : 0,
                 ),
                 color: _buildOptionBackgroundColor(),
                 alignment: AlignmentDirectional.centerStart,
                 child:
                     //if question type is 1 means render latex question
-                    widget.quizType == QuizTypes.mathMania
+                    widget.quizType == QuizTypes.mathMania ||
+                            widget.quizType == QuizTypes.quizZone ||
+                            widget.quizType == QuizTypes.exam ||
+                            widget.quizType == QuizTypes.oneVsOneBattle ||
+                            widget.quizType == QuizTypes.groupPlay ||
+                            widget.quizType == QuizTypes.dailyQuiz ||
+                            widget.quizType == QuizTypes.trueAndFalse ||
+                            widget.quizType == QuizTypes.selfChallenge
                         ? TeXView(
                             child: TeXViewInkWell(
                               rippleEffect: false,
@@ -203,8 +264,7 @@ class _OptionContainerState extends State<OptionContainer>
                               id: widget.answerOption.id!,
                             ),
                             style: TeXViewStyle(
-                              contentColor:
-                                  Theme.of(context).colorScheme.onTertiary,
+                              contentColor: optionTextColor,
                               backgroundColor: Colors.transparent,
                               sizeUnit: TeXViewSizeUnit.pixels,
                               textAlign: TeXViewTextAlign.center,
@@ -213,56 +273,11 @@ class _OptionContainerState extends State<OptionContainer>
                           )
                         : Center(
                             child: RichText(
-                            text: textSpan,
-                            textAlign: TextAlign.center,
-                          )),
-              ),
-              if (widget.showAnswerCorrectness) ...[
-                IgnorePointer(
-                  ignoring: true,
-                  child: AnimatedBuilder(
-                    builder: (context, child) {
-                      final height = topContainerAnimation
-                          .drive(Tween<double>(
-                              begin: 0.085, end: heightPercentage))
-                          .value;
-                      final width = topContainerAnimation
-                          .drive(Tween<double>(begin: 0.2, end: 1.0))
-                          .value;
-
-                      final borderRadius = topContainerAnimation
-                          .drive(Tween<double>(begin: 40.0, end: 10))
-                          .value;
-
-                      return Opacity(
-                        opacity: topContainerOpacityAnimation.value,
-                        child: Container(
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).primaryColor,
-                            borderRadius: BorderRadius.circular(borderRadius),
-                          ),
-                          width: optionWidth * width,
-                          height: widget.constraints.maxHeight * height,
-                          child: Transform.scale(
-                            scale: answerCorrectnessAnimation.value,
-                            child: Opacity(
-                              opacity: answerCorrectnessAnimation.value,
-                              child: Icon(
-                                widget.answerOption.id == widget.correctOptionId
-                                    ? Icons.check
-                                    : Icons.close,
-                                color: Theme.of(context).colorScheme.background,
-                              ),
+                              text: textSpan,
+                              textAlign: TextAlign.center,
                             ),
                           ),
-                        ),
-                      );
-                    },
-                    animation: topContainerAnimationController,
-                  ),
-                ),
-              ],
+              ),
             ],
           ),
         ),
@@ -276,16 +291,16 @@ class _OptionContainerState extends State<OptionContainer>
       text: widget.answerOption.title,
       style: GoogleFonts.nunito(
         textStyle: TextStyle(
-          color: Theme.of(context).colorScheme.onTertiary,
-          height: 1.0,
-          fontSize: 16.0,
+          color: optionTextColor,
+          height: 1,
+          fontSize: 16,
         ),
       ),
     );
     return GestureDetector(
       onTapCancel: animationController.reverse,
       onTap: () async {
-        animationController.reverse();
+        await animationController.reverse();
         _onTapOptionContainer();
       },
       onTapDown: (_) => animationController.forward(),
@@ -295,11 +310,11 @@ class _OptionContainerState extends State<OptionContainer>
                 _buildOptionDetails(widget.constraints.maxWidth * .8),
                 const SizedBox(width: 10),
                 Text(
-                  "${widget.audiencePollPercentage}%",
+                  '${widget.audiencePollPercentage}%',
                   style: GoogleFonts.nunito(
                     textStyle: TextStyle(
                       color: Theme.of(context).colorScheme.onTertiary,
-                      fontSize: 16.0,
+                      fontSize: 16,
                       fontWeight: FontWeights.bold,
                     ),
                   ),

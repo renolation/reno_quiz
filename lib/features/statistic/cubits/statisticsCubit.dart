@@ -11,25 +11,26 @@ class StatisticInitial extends StatisticState {}
 class StatisticFetchInProgress extends StatisticState {}
 
 class StatisticFetchSuccess extends StatisticState {
-  final StatisticModel statisticModel;
-
   StatisticFetchSuccess(this.statisticModel);
+
+  final StatisticModel statisticModel;
 }
 
 class StatisticFetchFailure extends StatisticState {
-  final String errorMessageCode;
   StatisticFetchFailure(this.errorMessageCode);
+
+  final String errorMessageCode;
 }
 
 class StatisticCubit extends Cubit<StatisticState> {
-  final StatisticRepository _statisticRepository;
   StatisticCubit(this._statisticRepository) : super(StatisticInitial());
+  final StatisticRepository _statisticRepository;
 
-  void getStatistic(String userId) async {
+  Future<void> getStatistic() async {
     emit(StatisticFetchInProgress());
     try {
-      final result = await _statisticRepository.getStatistic(
-          userId: userId, getBattleStatistics: false);
+      final result =
+          await _statisticRepository.getStatistic(getBattleStatistics: false);
 
       emit(StatisticFetchSuccess(result));
     } catch (e) {
@@ -37,11 +38,12 @@ class StatisticCubit extends Cubit<StatisticState> {
     }
   }
 
-  void getStatisticWithBattle(String userId) async {
+  Future<void> getStatisticWithBattle() async {
     emit(StatisticFetchInProgress());
     try {
       final result = await _statisticRepository.getStatistic(
-          userId: userId, getBattleStatistics: true);
+        getBattleStatistics: true,
+      );
       emit(StatisticFetchSuccess(result));
     } catch (e) {
       emit(StatisticFetchFailure(e.toString()));

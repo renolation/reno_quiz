@@ -1,10 +1,8 @@
 import 'dart:async';
 
-import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutterquiz/app/app_localization.dart';
 import 'package:flutterquiz/app/routes.dart';
 import 'package:flutterquiz/features/bookmark/bookmarkRepository.dart';
 import 'package:flutterquiz/features/bookmark/cubits/updateBookmarkCubit.dart';
@@ -14,6 +12,7 @@ import 'package:flutterquiz/features/quiz/models/question.dart';
 import 'package:flutterquiz/features/quiz/models/quizType.dart';
 import 'package:flutterquiz/features/quiz/quizRepository.dart';
 import 'package:flutterquiz/features/systemConfig/cubits/systemConfigCubit.dart';
+import 'package:flutterquiz/features/systemConfig/model/answer_mode.dart';
 import 'package:flutterquiz/ui/widgets/circularProgressContainer.dart';
 import 'package:flutterquiz/ui/widgets/customAppbar.dart';
 import 'package:flutterquiz/ui/widgets/customRoundedButton.dart';
@@ -21,29 +20,30 @@ import 'package:flutterquiz/ui/widgets/errorContainer.dart';
 import 'package:flutterquiz/ui/widgets/exitGameDialog.dart';
 import 'package:flutterquiz/ui/widgets/questionsContainer.dart';
 import 'package:flutterquiz/utils/constants/error_message_keys.dart';
+import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class SelfChallengeQuestionsScreen extends StatefulWidget {
-  final String? categoryId;
-  final String? subcategoryId;
-  final int? minutes;
-  final String? numberOfQuestions;
-
   const SelfChallengeQuestionsScreen({
-    super.key,
     required this.categoryId,
     required this.minutes,
     required this.numberOfQuestions,
     required this.subcategoryId,
+    super.key,
   });
+
+  final String? categoryId;
+  final String? subcategoryId;
+  final int? minutes;
+  final String? numberOfQuestions;
 
   @override
   State<SelfChallengeQuestionsScreen> createState() =>
       _SelfChallengeQuestionsScreenState();
 
   static Route<dynamic> route(RouteSettings routeSettings) {
-    Map? arguments = routeSettings.arguments as Map<dynamic, dynamic>?;
+    final arguments = routeSettings.arguments as Map<dynamic, dynamic>?;
 
     //keys of map are categoryId,subcategoryId,minutes,numberOfQuestions
     return CupertinoPageRoute(
@@ -57,10 +57,10 @@ class SelfChallengeQuestionsScreen extends StatefulWidget {
           ),
         ],
         child: SelfChallengeQuestionsScreen(
-          categoryId: arguments!['categoryId'],
-          minutes: arguments['minutes'],
-          numberOfQuestions: arguments['numberOfQuestions'],
-          subcategoryId: arguments['subcategoryId'],
+          categoryId: arguments!['categoryId'] as String,
+          minutes: arguments['minutes'] as int,
+          numberOfQuestions: arguments['numberOfQuestions'] as String,
+          subcategoryId: arguments['subcategoryId'] as String,
         ),
       ),
     );
@@ -104,13 +104,18 @@ class _SelfChallengeQuestionsScreenState
   void initState() {
     initializeAnimation();
     timerAnimationController = AnimationController(
-        vsync: this, duration: Duration(minutes: widget.minutes!))
-      ..addStatusListener(currentUserTimerAnimationStatusListener);
+      vsync: this,
+      duration: Duration(minutes: widget.minutes!),
+    )..addStatusListener(currentUserTimerAnimationStatusListener);
 
     animationController = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 100));
+      vsync: this,
+      duration: const Duration(milliseconds: 100),
+    );
     topContainerAnimationController = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 100));
+      vsync: this,
+      duration: const Duration(milliseconds: 100),
+    );
     _getQuestions();
     super.initState();
   }
@@ -124,28 +129,28 @@ class _SelfChallengeQuestionsScreenState
       vsync: this,
       duration: const Duration(milliseconds: 525),
     );
-    questionSlideAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+    questionSlideAnimation = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
         parent: questionAnimationController,
         curve: Curves.easeInOut,
       ),
     );
-    questionScaleUpAnimation = Tween<double>(begin: 0.0, end: 0.1).animate(
+    questionScaleUpAnimation = Tween<double>(begin: 0, end: 0.1).animate(
       CurvedAnimation(
         parent: questionAnimationController,
-        curve: const Interval(0.0, 0.5, curve: Curves.easeInQuad),
+        curve: const Interval(0, 0.5, curve: Curves.easeInQuad),
       ),
     );
-    questionContentAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+    questionContentAnimation = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
         parent: questionContentAnimationController,
         curve: Curves.easeInQuad,
       ),
     );
-    questionScaleDownAnimation = Tween<double>(begin: 0.0, end: 0.05).animate(
+    questionScaleDownAnimation = Tween<double>(begin: 0, end: 0.05).animate(
       CurvedAnimation(
         parent: questionAnimationController,
-        curve: const Interval(0.5, 1.0, curve: Curves.easeOutQuad),
+        curve: const Interval(0.5, 1, curve: Curves.easeOutQuad),
       ),
     );
   }
@@ -153,8 +158,8 @@ class _SelfChallengeQuestionsScreenState
   @override
   void dispose() {
     timerAnimationController
-        .removeStatusListener(currentUserTimerAnimationStatusListener);
-    timerAnimationController.dispose();
+      ..removeStatusListener(currentUserTimerAnimationStatusListener)
+      ..dispose();
     questionAnimationController.dispose();
     questionContentAnimationController.dispose();
     super.dispose();
@@ -166,7 +171,7 @@ class _SelfChallengeQuestionsScreenState
     required bool increaseIndex,
     required int newQuestionIndex,
   }) {
-    questionAnimationController.forward(from: 0.0).then((_) {
+    questionAnimationController.forward(from: 0).then((_) {
       // reset animations
       questionAnimationController.reset();
       questionContentAnimationController.reset();
@@ -195,14 +200,19 @@ class _SelfChallengeQuestionsScreenState
   }
 
   //update answer locally and on cloud
-  void submitAnswer(String submittedAnswer) async {
+  Future<void> submitAnswer(String submittedAnswer) async {
     context.read<QuestionsCubit>().updateQuestionWithAnswerAndLifeline(
           context.read<QuestionsCubit>().questions()[currentQuestionIndex].id,
           submittedAnswer,
           context.read<UserDetailsCubit>().getUserFirebaseId(),
-          context.read<SystemConfigCubit>().getPlayScore(),
+          context
+              .read<SystemConfigCubit>()
+              .quizCorrectAnswerCreditScore(QuizTypes.selfChallenge),
+          context
+              .read<SystemConfigCubit>()
+              .quizWrongAnswerDeductScore(QuizTypes.selfChallenge),
         ); //change question
-    await Future.delayed(const Duration(milliseconds: 500));
+    await Future<void>.delayed(const Duration(milliseconds: 500));
   }
 
   //listener for current user timer
@@ -212,7 +222,7 @@ class _SelfChallengeQuestionsScreenState
     }
   }
 
-  void navigateToResult() async {
+  void navigateToResult() {
     if (isBottomSheetOpen) {
       Navigator.of(context).pop();
     }
@@ -223,31 +233,27 @@ class _SelfChallengeQuestionsScreenState
       Navigator.of(context).pop();
     }
 
-    var totalSecondsToCompleteQuiz =
+    final totalSecondsToCompleteQuiz =
         Duration(minutes: widget.minutes!).inSeconds *
             timerAnimationController.value;
 
-    Navigator.of(context).pushReplacementNamed(Routes.result, arguments: {
-      "numberOfPlayer": 1,
-      "myPoints": context.read<QuestionsCubit>().currentPoints(),
-      "quizType": QuizTypes.selfChallenge,
-      "questions": context.read<QuestionsCubit>().questions(),
-      "entryFee": 0,
-      "timeTakenToCompleteQuiz": totalSecondsToCompleteQuiz,
-    });
-
-    await FirebaseAnalytics.instance.logEvent(
-      name: "Quiz_type_selfChallenge",
-      parameters: {
-        "categoryId": widget.categoryId,
-        "subcategoryId": widget.subcategoryId,
-        "minutes": widget.minutes,
-        "questions": context.read<QuestionsCubit>().questions().length,
+    Navigator.of(context).pushReplacementNamed(
+      Routes.result,
+      arguments: {
+        'numberOfPlayer': 1,
+        'myPoints': context.read<QuestionsCubit>().currentPoints(),
+        'quizType': QuizTypes.selfChallenge,
+        'questions': context.read<QuestionsCubit>().questions(),
+        'entryFee': 0,
+        'timeTakenToCompleteQuiz': totalSecondsToCompleteQuiz,
       },
     );
   }
 
-  Widget hasQuestionAttemptedContainer(int questionIndex, bool attempted) {
+  Widget hasQuestionAttemptedContainer(
+    int questionIndex, {
+    required bool attempted,
+  }) {
     return GestureDetector(
       onTap: () {
         if (questionIndex != currentQuestionIndex) {
@@ -266,11 +272,11 @@ class _SelfChallengeQuestionsScreenState
               ? Theme.of(context).primaryColor
               : Theme.of(context).colorScheme.background,
         ),
-        margin: const EdgeInsets.all(5.0),
-        height: 40.0,
-        width: 40.0,
+        margin: const EdgeInsets.all(5),
+        height: 40,
+        width: 40,
         child: Text(
-          "${questionIndex + 1}",
+          '${questionIndex + 1}',
           style: TextStyle(
             color: attempted
                 ? Theme.of(context).colorScheme.background
@@ -285,21 +291,21 @@ class _SelfChallengeQuestionsScreenState
 
   void onTapBackButton() {
     isExitDialogOpen = true;
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (_) => const ExitGameDialog(),
     ).then((_) => isExitDialogOpen = false);
   }
 
   void openBottomSheet(List<Question> questions) {
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       shape: const RoundedRectangleBorder(
         borderRadius: UiUtils.bottomSheetTopRadius,
       ),
       isScrollControlled: true,
       context: context,
       builder: (context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 5.0),
+        padding: const EdgeInsets.symmetric(horizontal: 5),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.background,
           borderRadius: UiUtils.bottomSheetTopRadius,
@@ -310,9 +316,9 @@ class _SelfChallengeQuestionsScreenState
         child: SingleChildScrollView(
           child: Column(
             children: [
-              const SizedBox(height: 15.0),
+              const SizedBox(height: 15),
               Text(
-                "Questions Attempted",
+                context.tr('questionsAttemptedLbl')!,
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -320,18 +326,20 @@ class _SelfChallengeQuestionsScreenState
                 ),
               ),
               const Divider(),
-              const SizedBox(height: 15.0),
+              const SizedBox(height: 15),
               Wrap(
                 children: List.generate(questions.length, (i) => i)
-                    .map((index) => hasQuestionAttemptedContainer(
-                          index,
-                          questions[index].attempted,
-                        ))
+                    .map(
+                      (i) => hasQuestionAttemptedContainer(
+                        i,
+                        attempted: questions[i].attempted,
+                      ),
+                    )
                     .toList(),
               ),
-              const SizedBox(height: 20.0),
+              const SizedBox(height: 20),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 15.0),
+                padding: const EdgeInsets.symmetric(horizontal: 15),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -340,10 +348,9 @@ class _SelfChallengeQuestionsScreenState
                       color: Theme.of(context).primaryColor,
                       size: 22,
                     ),
-                    const SizedBox(width: 10.0),
+                    const SizedBox(width: 10),
                     Text(
-                      AppLocalization.of(context)!
-                          .getTranslatedValues("attemptedLbl")!,
+                      context.tr('attemptedLbl')!,
                       style: TextStyle(
                         fontSize: 14,
                         color: Theme.of(context).colorScheme.onTertiary,
@@ -355,10 +362,9 @@ class _SelfChallengeQuestionsScreenState
                       color: Theme.of(context).colorScheme.onTertiary,
                       size: 22,
                     ),
-                    const SizedBox(width: 10.0),
+                    const SizedBox(width: 10),
                     Text(
-                      AppLocalization.of(context)!
-                          .getTranslatedValues("unAttemptedLbl")!,
+                      context.tr('unAttemptedLbl')!,
                       style: TextStyle(
                         fontSize: 14,
                         color: Theme.of(context).colorScheme.onTertiary,
@@ -367,7 +373,7 @@ class _SelfChallengeQuestionsScreenState
                   ],
                 ),
               ),
-              const SizedBox(height: 20.0),
+              const SizedBox(height: 20),
               CustomRoundedButton(
                 onTap: () {
                   timerAnimationController.stop();
@@ -376,55 +382,21 @@ class _SelfChallengeQuestionsScreenState
                 },
                 widthPercentage: MediaQuery.of(context).size.width,
                 backgroundColor: Theme.of(context).primaryColor,
-                buttonTitle: AppLocalization.of(context)!
-                    .getTranslatedValues("submitBtn")!,
+                buttonTitle: context.tr('submitBtn'),
                 radius: 8,
                 showBorder: false,
                 titleColor: Theme.of(context).colorScheme.background,
                 fontWeight: FontWeight.w600,
-                height: 50.0,
+                height: 50,
                 textSize: 18,
               ),
-              const SizedBox(height: 15.0),
+              const SizedBox(height: 15),
             ],
           ),
         ),
       ),
     ).then((_) => isBottomSheetOpen = false);
   }
-
-  // Widget _buildTopMenu() {
-  //   return Align(
-  //     alignment: Alignment.topCenter,
-  //     child: Container(
-  //       margin: EdgeInsets.only(
-  //           right: MediaQuery.of(context).size.width *
-  //               ((1.0 - UiUtils.questionContainerWidthPercentage) * 0.5),
-  //           left: MediaQuery.of(context).size.width *
-  //               ((1.0 - UiUtils.questionContainerWidthPercentage) * 0.5),
-  //           top: MediaQuery.of(context).padding.top),
-  //       child: Row(
-  //         children: [
-  //           CustomBackButton(
-  //             onTap: () {
-  //               onTapBackButton();
-  //             },
-  //             iconColor: Theme.of(context).colorScheme.background,
-  //           ),
-  //           const Spacer(),
-  //           SettingButton(onPressed: () {
-  //             toggleSettingDialog();
-  //             showDialog(
-  //                 context: context,
-  //                 builder: (_) => SettingsDialogContainer()).then((value) {
-  //               toggleSettingDialog();
-  //             });
-  //           }),
-  //         ],
-  //       ),
-  //     ),
-  //   );
-  // }
 
   Widget _buildBottomMenu(BuildContext context) {
     return BlocBuilder<QuestionsCubit, QuestionsState>(
@@ -517,7 +489,9 @@ class _SelfChallengeQuestionsScreenState
                           if (currentQuestionIndex !=
                               (state.questions.length - 1)) {
                             changeQuestion(
-                                increaseIndex: true, newQuestionIndex: -1);
+                              increaseIndex: true,
+                              newQuestionIndex: -1,
+                            );
                           }
                         }
                       },
@@ -537,21 +511,24 @@ class _SelfChallengeQuestionsScreenState
     );
   }
 
-  Duration get timer => (timerAnimationController.duration! -
-      timerAnimationController.lastElapsedDuration!);
+  Duration get timer =>
+      timerAnimationController.duration! -
+      timerAnimationController.lastElapsedDuration!;
 
   String get remaining => (timerAnimationController.isAnimating)
       ? "${timer.inMinutes.remainder(60).toString().padLeft(2, '0')}:${timer.inSeconds.remainder(60).toString().padLeft(2, '0')}"
-      : "";
+      : '';
 
   @override
   Widget build(BuildContext context) {
     final quesCubit = context.read<QuestionsCubit>();
 
-    return WillPopScope(
-      onWillPop: () {
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (didPop) return;
+
         onTapBackButton();
-        return Future.value(false);
       },
       child: Scaffold(
         appBar: QAppBar(
@@ -585,62 +562,63 @@ class _SelfChallengeQuestionsScreenState
         body: Stack(
           children: [
             BlocConsumer<QuestionsCubit, QuestionsState>(
-                bloc: quesCubit,
-                listener: (context, state) {
-                  if (state is QuestionsFetchSuccess) {
-                    if (!timerAnimationController.isAnimating) {
-                      timerAnimationController.forward();
-                    }
+              bloc: quesCubit,
+              listener: (context, state) {
+                if (state is QuestionsFetchSuccess) {
+                  if (!timerAnimationController.isAnimating) {
+                    timerAnimationController.forward();
                   }
-                },
-                builder: (context, state) {
-                  if (state is QuestionsFetchInProgress ||
-                      state is QuestionsIntial) {
-                    return const Center(child: CircularProgressContainer());
-                  }
-                  if (state is QuestionsFetchFailure) {
-                    return Center(
-                      child: ErrorContainer(
-                        showBackButton: true,
-                        errorMessageColor:
-                            Theme.of(context).scaffoldBackgroundColor,
-                        errorMessage: AppLocalization.of(context)!
-                            .getTranslatedValues(convertErrorCodeToLanguageKey(
-                                state.errorMessage)),
-                        onTapRetry: _getQuestions,
-                        showErrorImage: true,
-                      ),
-                    );
-                  }
-                  final questions = (state as QuestionsFetchSuccess).questions;
-                  ques = questions;
-                  return Align(
-                    alignment: Alignment.topCenter,
-                    child: QuestionsContainer(
-                      timerAnimationController: timerAnimationController,
-                      quizType: QuizTypes.selfChallenge,
-                      showAnswerCorrectness: false,
-                      lifeLines: const {},
-                      topPadding: MediaQuery.of(context).size.height *
-                          UiUtils.getQuestionContainerTopPaddingPercentage(
-                              MediaQuery.of(context).size.height),
-                      hasSubmittedAnswerForCurrentQuestion:
-                          hasSubmittedAnswerForCurrentQuestion,
-                      questions: questions,
-                      submitAnswer: submitAnswer,
-                      questionContentAnimation: questionContentAnimation,
-                      questionScaleDownAnimation: questionScaleDownAnimation,
-                      questionScaleUpAnimation: questionScaleUpAnimation,
-                      questionSlideAnimation: questionSlideAnimation,
-                      currentQuestionIndex: currentQuestionIndex,
-                      questionAnimationController: questionAnimationController,
-                      questionContentAnimationController:
-                          questionContentAnimationController,
-                      guessTheWordQuestions: const [],
-                      guessTheWordQuestionContainerKeys: const [],
+                }
+              },
+              builder: (context, state) {
+                if (state is QuestionsFetchInProgress ||
+                    state is QuestionsIntial) {
+                  return const Center(child: CircularProgressContainer());
+                }
+                if (state is QuestionsFetchFailure) {
+                  return Center(
+                    child: ErrorContainer(
+                      showBackButton: true,
+                      errorMessageColor:
+                          Theme.of(context).scaffoldBackgroundColor,
+                      errorMessage:
+                          convertErrorCodeToLanguageKey(state.errorMessage),
+                      onTapRetry: _getQuestions,
+                      showErrorImage: true,
                     ),
                   );
-                }),
+                }
+                final questions = (state as QuestionsFetchSuccess).questions;
+                ques = questions;
+                return Align(
+                  alignment: Alignment.topCenter,
+                  child: QuestionsContainer(
+                    timerAnimationController: timerAnimationController,
+                    quizType: QuizTypes.selfChallenge,
+                    answerMode: AnswerMode.noAnswerCorrectness,
+                    lifeLines: const {},
+                    topPadding: MediaQuery.of(context).size.height *
+                        UiUtils.getQuestionContainerTopPaddingPercentage(
+                          MediaQuery.of(context).size.height,
+                        ),
+                    hasSubmittedAnswerForCurrentQuestion:
+                        hasSubmittedAnswerForCurrentQuestion,
+                    questions: questions,
+                    submitAnswer: submitAnswer,
+                    questionContentAnimation: questionContentAnimation,
+                    questionScaleDownAnimation: questionScaleDownAnimation,
+                    questionScaleUpAnimation: questionScaleUpAnimation,
+                    questionSlideAnimation: questionSlideAnimation,
+                    currentQuestionIndex: currentQuestionIndex,
+                    questionAnimationController: questionAnimationController,
+                    questionContentAnimationController:
+                        questionContentAnimationController,
+                    guessTheWordQuestions: const [],
+                    guessTheWordQuestionContainerKeys: const [],
+                  ),
+                );
+              },
+            ),
             BlocBuilder<QuestionsCubit, QuestionsState>(
               bloc: quesCubit,
               builder: (context, state) {

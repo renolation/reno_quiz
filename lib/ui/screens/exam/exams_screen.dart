@@ -1,24 +1,17 @@
-import 'dart:convert';
 import 'dart:developer';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutterquiz/app/app_localization.dart';
 import 'package:flutterquiz/app/routes.dart';
 import 'package:flutterquiz/features/exam/cubits/completedExamsCubit.dart';
 import 'package:flutterquiz/features/exam/cubits/examsCubit.dart';
 import 'package:flutterquiz/features/exam/examRepository.dart';
-
 import 'package:flutterquiz/features/exam/models/exam.dart';
 import 'package:flutterquiz/features/exam/models/examResult.dart';
-import 'package:flutterquiz/features/profileManagement/cubits/userDetailsCubit.dart';
 import 'package:flutterquiz/ui/screens/exam/exam_result_screen.dart';
-
 import 'package:flutterquiz/ui/screens/exam/widgets/examKeyBottomSheetContainer.dart';
-import 'package:flutterquiz/ui/screens/exam/widgets/examResultBottomSheetContainer.dart';
-
+import 'package:flutterquiz/ui/widgets/alreadyLoggedInDialog.dart';
 import 'package:flutterquiz/ui/widgets/bannerAdContainer.dart';
 import 'package:flutterquiz/ui/widgets/circularProgressContainer.dart';
 import 'package:flutterquiz/ui/widgets/customAppbar.dart';
@@ -26,8 +19,8 @@ import 'package:flutterquiz/ui/widgets/errorContainer.dart';
 import 'package:flutterquiz/utils/constants/error_message_keys.dart';
 import 'package:flutterquiz/utils/constants/string_labels.dart';
 import 'package:flutterquiz/utils/datetime_utils.dart';
+import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
-import 'package:intl/intl.dart';
 
 class ExamsScreen extends StatefulWidget {
   const ExamsScreen({super.key});
@@ -35,7 +28,7 @@ class ExamsScreen extends StatefulWidget {
   @override
   State<ExamsScreen> createState() => _ExamsScreenState();
 
-  static Route<dynamic> route(RouteSettings routeSettings) {
+  static Route<dynamic> route() {
     return CupertinoPageRoute(
       builder: (_) => MultiBlocProvider(
         providers: [
@@ -57,48 +50,44 @@ class _ExamsScreenState extends State<ExamsScreen> {
     ..addListener(hasMoreResultScrollListener);
 
   ///
-  late final String userId;
   late final String languageId;
 
   void hasMoreResultScrollListener() {
     if (_completedExamScrollController.position.maxScrollExtent ==
         _completedExamScrollController.offset) {
-      log("At the end of the list");
+      log('At the end of the list');
 
       ///
       if (context.read<CompletedExamsCubit>().hasMoreResult()) {
-        context.read<CompletedExamsCubit>().getMoreResult(
-              userId: userId,
-              languageId: languageId,
-            );
+        context
+            .read<CompletedExamsCubit>()
+            .getMoreResult(languageId: languageId);
       } else {
-        log("No more result");
+        log('No more result');
       }
     }
   }
 
   @override
   void initState() {
-    userId = context.read<UserDetailsCubit>().getUserId();
+    super.initState();
     languageId = UiUtils.getCurrentQuestionLanguageId(context);
 
-    super.initState();
     getExams();
     getCompletedExams();
   }
 
   @override
   void dispose() {
-    _completedExamScrollController.removeListener(hasMoreResultScrollListener);
-    _completedExamScrollController.dispose();
+    _completedExamScrollController
+      ..removeListener(hasMoreResultScrollListener)
+      ..dispose();
     super.dispose();
   }
 
   void getExams() {
     Future.delayed(Duration.zero, () {
-      context
-          .read<ExamsCubit>()
-          .getExams(userId: userId, languageId: languageId);
+      context.read<ExamsCubit>().getExams(languageId: languageId);
     });
   }
 
@@ -106,16 +95,15 @@ class _ExamsScreenState extends State<ExamsScreen> {
     Future.delayed(Duration.zero, () {
       context
           .read<CompletedExamsCubit>()
-          .getCompletedExams(userId: userId, languageId: languageId);
+          .getCompletedExams(languageId: languageId);
     });
   }
 
   void showExamKeyBottomSheet(BuildContext context, Exam exam) {
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       isDismissible: false,
-      enableDrag: true,
       isScrollControlled: true,
-      elevation: 5.0,
+      elevation: 5,
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: UiUtils.bottomSheetTopRadius,
@@ -127,35 +115,18 @@ class _ExamsScreenState extends State<ExamsScreen> {
     );
   }
 
-  // void showExamResultBottomSheet(BuildContext context, ExamResult examResult) {
-  //   showModalBottomSheet(
-  //     isScrollControlled: true,
-  //     elevation: 5.0,
-  //     context: context,
-  //     enableDrag: true,
-  //     isDismissible: true,
-  //     shape: const RoundedRectangleBorder(
-  //       borderRadius: UiUtils.bottomSheetTopRadius,
-  //     ),
-  //     builder: (_) => ExamResultBottomSheetContainer(examResult: examResult),
-  //   );
-  // }
-
-  void navigateToExamScreen() async {
+  Future<void> navigateToExamScreen() async {
     Navigator.of(context).pop();
 
-    Navigator.of(context).pushNamed(Routes.exam).then((value) {
+    await Navigator.of(context).pushNamed(Routes.exam).then((value) {
       Future.delayed(const Duration(milliseconds: 100), () {
         if (mounted) {
-          print("Fetch exam details again");
           //fetch exams again with fresh status
-          context
-              .read<ExamsCubit>()
-              .getExams(userId: userId, languageId: languageId);
+          context.read<ExamsCubit>().getExams(languageId: languageId);
           //fetch completed exam again with fresh status
           context
               .read<CompletedExamsCubit>()
-              .getCompletedExams(userId: userId, languageId: languageId);
+              .getCompletedExams(languageId: languageId);
         }
       });
     });
@@ -165,8 +136,8 @@ class _ExamsScreenState extends State<ExamsScreen> {
     return BlocConsumer<CompletedExamsCubit, CompletedExamsState>(
       listener: (context, state) {
         if (state is CompletedExamsFetchFailure) {
-          if (state.errorMessage == unauthorizedAccessCode) {
-            UiUtils.showAlreadyLoggedInDialog(context: context);
+          if (state.errorMessage == errorCodeUnauthorizedAccess) {
+            showAlreadyLoggedInDialog(context);
           }
         }
       },
@@ -179,11 +150,13 @@ class _ExamsScreenState extends State<ExamsScreen> {
         if (state is CompletedExamsFetchFailure) {
           return Center(
             child: ErrorContainer(
-                errorMessageColor: Theme.of(context).primaryColor,
-                errorMessage: AppLocalization.of(context)!.getTranslatedValues(
-                    convertErrorCodeToLanguageKey(state.errorMessage)),
-                onTapRetry: getCompletedExams,
-                showErrorImage: true),
+              errorMessageColor: Theme.of(context).primaryColor,
+              errorMessage: convertErrorCodeToLanguageKey(state.errorMessage),
+              onTapRetry: getCompletedExams,
+              showErrorImage: true,
+              showRTryButton:
+                  state.errorMessage != errorCodeHaveNotCompletedExam,
+            ),
           );
         }
         return ListView.builder(
@@ -212,8 +185,8 @@ class _ExamsScreenState extends State<ExamsScreen> {
     return BlocConsumer<ExamsCubit, ExamsState>(
       listener: (_, state) {
         if (state is ExamsFetchFailure) {
-          if (state.errorMessage == unauthorizedAccessCode) {
-            UiUtils.showAlreadyLoggedInDialog(context: context);
+          if (state.errorMessage == errorCodeUnauthorizedAccess) {
+            showAlreadyLoggedInDialog(context);
           }
         }
       },
@@ -226,15 +199,27 @@ class _ExamsScreenState extends State<ExamsScreen> {
           return Center(
             child: ErrorContainer(
               errorMessageColor: Theme.of(context).primaryColor,
-              errorMessage: AppLocalization.of(context)!.getTranslatedValues(
-                  convertErrorCodeToLanguageKey(state.errorMessage)),
+              errorMessage: convertErrorCodeToLanguageKey(state.errorMessage),
               onTapRetry: getExams,
               showErrorImage: true,
+              showRTryButton: state.errorMessage != errorCodeNoExamForToday,
             ),
           );
         }
 
         final exams = (state as ExamsFetchSuccess).exams;
+
+        if (exams.isEmpty) {
+          return Center(
+            child: Text(
+              context.tr('allExamsCompleteLbl')!,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onTertiary,
+                fontSize: 20,
+              ),
+            ),
+          );
+        }
 
         return ListView.separated(
           padding: EdgeInsets.symmetric(
@@ -253,13 +238,12 @@ class _ExamsScreenState extends State<ExamsScreen> {
     final formattedDate = DateTimeUtils.dateFormat.format(
       DateTime.parse(exam.date),
     );
-    print("Exam Duration: ${exam.duration}");
     return GestureDetector(
       onTap: () => showExamKeyBottomSheet(context, exam),
       child: Container(
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.background,
-          borderRadius: BorderRadius.circular(8.0),
+          borderRadius: BorderRadius.circular(8),
         ),
         height: MediaQuery.of(context).size.height * 0.1,
         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -284,7 +268,7 @@ class _ExamsScreenState extends State<ExamsScreen> {
 
                   /// Date & Duration
                   Text(
-                    "$formattedDate  |  ${exam.duration} min",
+                    "$formattedDate  |  ${exam.duration} ${context.tr("minLbl")!}",
                     style: TextStyle(
                       fontSize: 14,
                       color: Theme.of(context)
@@ -309,7 +293,7 @@ class _ExamsScreenState extends State<ExamsScreen> {
               ),
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
               child: Text(
-                "${exam.totalMarks} ${AppLocalization.of(context)!.getTranslatedValues(markKey)!}",
+                '${exam.totalMarks} ${context.tr(markKey)!}',
                 style: TextStyle(
                   color:
                       Theme.of(context).colorScheme.onTertiary.withOpacity(0.6),
@@ -337,12 +321,10 @@ class _ExamsScreenState extends State<ExamsScreen> {
         if (hasMoreResultFetchError) {
           return Center(
             child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 15.0, vertical: 8.0),
+              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
               child: IconButton(
                 onPressed: () {
                   context.read<CompletedExamsCubit>().getMoreResult(
-                        userId: userId,
                         languageId: languageId,
                       );
                 },
@@ -356,7 +338,7 @@ class _ExamsScreenState extends State<ExamsScreen> {
         } else {
           return const Center(
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 15.0, vertical: 8.0),
+              padding: EdgeInsets.symmetric(horizontal: 15, vertical: 8),
               child: CircularProgressContainer(),
             ),
           );
@@ -367,21 +349,25 @@ class _ExamsScreenState extends State<ExamsScreen> {
     final formattedDate = DateTimeUtils.dateFormat.format(
       DateTime.parse(examResult.date),
     );
+    final colorScheme = Theme.of(context).colorScheme;
+    final size = MediaQuery.of(context).size;
+
     return GestureDetector(
       onTap: () {
-        Navigator.of(context).push(CupertinoPageRoute(
-          builder: (_) => ExamResultScreen(examResult: examResult),
-        ));
-        // showExamResultBottomSheet(context, examResult);
+        Navigator.of(context).push(
+          CupertinoPageRoute<ExamResultScreen>(
+            builder: (_) => ExamResultScreen(examResult: examResult),
+          ),
+        );
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 15.0, vertical: 8.0),
+        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.background,
-          borderRadius: BorderRadius.circular(8.0),
+          color: colorScheme.background,
+          borderRadius: BorderRadius.circular(8),
         ),
-        height: MediaQuery.of(context).size.height * .1,
-        margin: const EdgeInsets.symmetric(vertical: 10.0),
+        height: size.height * .1,
+        margin: const EdgeInsets.symmetric(vertical: 10),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -390,13 +376,13 @@ class _ExamsScreenState extends State<ExamsScreen> {
               children: [
                 Container(
                   alignment: Alignment.centerLeft,
-                  width: MediaQuery.of(context).size.width * (0.5),
+                  width: size.width * (0.5),
                   child: Text(
                     examResult.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: Theme.of(context).colorScheme.onTertiary,
+                      color: colorScheme.onTertiary,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
@@ -404,16 +390,13 @@ class _ExamsScreenState extends State<ExamsScreen> {
                 ),
                 Container(
                   alignment: Alignment.centerLeft,
-                  width: MediaQuery.of(context).size.width * (0.5),
+                  width: size.width * (0.5),
                   child: Text(
                     formattedDate,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onTertiary
-                          .withOpacity(0.3),
+                      color: colorScheme.onTertiary.withOpacity(0.3),
                       fontSize: 14,
                     ),
                   ),
@@ -432,15 +415,15 @@ class _ExamsScreenState extends State<ExamsScreen> {
                 ),
                 padding: const EdgeInsets.all(8),
                 child: Text(
-                  "${examResult.obtainedMarks()}/${examResult.totalMarks} ${AppLocalization.of(context)!.getTranslatedValues(markKey)!} ",
+                  '${examResult.obtainedMarks()}/${examResult.totalMarks} ${context.tr(markKey)!} ',
                   style: TextStyle(
-                    color: Theme.of(context).colorScheme.onTertiary,
+                    color: colorScheme.onTertiary,
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
-            )
+            ),
           ],
         ),
       ),
@@ -453,18 +436,12 @@ class _ExamsScreenState extends State<ExamsScreen> {
       length: 2,
       child: Scaffold(
         appBar: QAppBar(
-          title:
-              Text(AppLocalization.of(context)!.getTranslatedValues("exam")!),
+          title: Text(context.tr('exam')!),
           bottom: TabBar(
+            tabAlignment: TabAlignment.fill,
             tabs: [
-              Tab(
-                text:
-                    AppLocalization.of(context)!.getTranslatedValues(dailyLbl)!,
-              ),
-              Tab(
-                text: AppLocalization.of(context)!
-                    .getTranslatedValues(completedLbl)!,
-              ),
+              Tab(text: context.tr(dailyLbl)),
+              Tab(text: context.tr(completedLbl)),
             ],
           ),
         ),

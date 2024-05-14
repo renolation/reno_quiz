@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:flutterquiz/app/app_localization.dart';
 import 'package:flutterquiz/features/exam/models/examResult.dart';
+import 'package:flutterquiz/ui/styles/colors.dart';
 import 'package:flutterquiz/ui/widgets/customAppbar.dart';
-import 'package:flutterquiz/ui/widgets/customBackButton.dart';
 import 'package:flutterquiz/utils/constants/fonts.dart';
 import 'package:flutterquiz/utils/constants/string_labels.dart';
 import 'package:flutterquiz/utils/datetime_utils.dart';
+import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
 
 class ExamResultScreen extends StatelessWidget {
-  const ExamResultScreen({super.key, required this.examResult});
+  const ExamResultScreen({required this.examResult, super.key});
 
   final ExamResult examResult;
 
@@ -19,173 +19,168 @@ class ExamResultScreen extends StatelessWidget {
       DateTime.parse(examResult.date),
     );
     final colorScheme = Theme.of(context).colorScheme;
-
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
       appBar: QAppBar(
         elevation: 0,
         title: Text(
-          AppLocalization.of(context)!.getTranslatedValues(examResultKey)!,
+          context.tr(examResultKey)!,
         ),
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            Container(
-              height: size.height * .315,
-              width: size.width,
-              decoration: BoxDecoration(
-                color: colorScheme.background,
-                borderRadius: const BorderRadius.vertical(
-                  bottom: Radius.circular(10),
+      body: ListView(
+        children: [
+          Container(
+            height: size.height * .315,
+            width: size.width,
+            decoration: BoxDecoration(
+              color: colorScheme.background,
+              borderRadius: const BorderRadius.vertical(
+                bottom: Radius.circular(10),
+              ),
+            ),
+            padding: EdgeInsets.symmetric(
+              horizontal: size.width * UiUtils.hzMarginPct,
+            ),
+            child: Column(
+              children: [
+                Text(
+                  formattedDate,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeights.regular,
+                    height: 1.2,
+                    color: colorScheme.onTertiary.withOpacity(0.3),
+                  ),
                 ),
-              ),
-              padding: EdgeInsets.symmetric(
-                horizontal: size.width * UiUtils.hzMarginPct,
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    formattedDate,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeights.regular,
-                      height: 1.2,
-                      color: colorScheme.onTertiary.withOpacity(0.3),
+                const SizedBox(height: 6),
+                Text(
+                  examResult.title,
+                  style: TextStyle(
+                    fontSize: 18,
+                    height: 1.2,
+                    fontWeight: FontWeights.medium,
+                    color: colorScheme.onTertiary,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: colorScheme.onTertiary.withOpacity(0.4),
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    examResult.title,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 50,
+                    vertical: 10,
+                  ),
+                  child: Text(
+                    '${context.tr(obtainedMarksLblKey)!} : ${examResult.obtainedMarks()}/${examResult.totalMarks}',
                     style: TextStyle(
-                      fontSize: 18,
-                      height: 1.2,
-                      fontWeight: FontWeights.medium,
+                      fontSize: 16,
+                      fontWeight: FontWeights.semiBold,
                       color: colorScheme.onTertiary,
                     ),
                   ),
-                  const SizedBox(height: 10),
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(
-                        color: colorScheme.onTertiary.withOpacity(0.4),
-                      ),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 50,
-                      vertical: 10,
-                    ),
-                    child: Text(
-                      "Obtained Marks : ${examResult.obtainedMarks()}/${examResult.totalMarks}",
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      context.tr('totalQuestions')!,
                       style: TextStyle(
                         fontSize: 16,
-                        fontWeight: FontWeights.semiBold,
+                        fontWeight: FontWeights.medium,
                         color: colorScheme.onTertiary,
                       ),
                     ),
+                    Text(
+                      "[ ${examResult.totalQuestions()} ${context.tr("quesLbl")!}]",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeights.medium,
+                        color: colorScheme.onTertiary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(18),
+                    color: Theme.of(context).primaryColor,
                   ),
-                  const SizedBox(height: 20),
-                  Row(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 15,
+                    vertical: 10,
+                  ),
+                  height: 75,
+                  child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        "Total Questions",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeights.medium,
-                          color: colorScheme.onTertiary,
+                      Text.rich(
+                        TextSpan(
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeights.semiBold,
+                            color: colorScheme.background,
+                          ),
+                          children: [
+                            TextSpan(
+                              text: '${examResult.totalCorrectAnswers()}\n',
+                            ),
+                            TextSpan(
+                              text: context.tr('correctAnswersLbl'),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeights.regular,
+                              ),
+                            ),
+                          ],
                         ),
+                        textAlign: TextAlign.center,
                       ),
-                      Text(
-                        "[ ${examResult.totalQuestions()} Ques ]",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeights.medium,
-                          color: colorScheme.onTertiary,
+                      Text.rich(
+                        TextSpan(
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeights.semiBold,
+                            color: colorScheme.background,
+                          ),
+                          children: [
+                            TextSpan(
+                              text: '${examResult.totalInCorrectAnswers()}\n',
+                            ),
+                            TextSpan(
+                              text: context.tr('incorrectAnswersLbl'),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeights.regular,
+                              ),
+                            ),
+                          ],
                         ),
+                        textAlign: TextAlign.center,
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(18),
-                      color: Theme.of(context).primaryColor,
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 15,
-                      vertical: 10,
-                    ),
-                    height: 75,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text.rich(
-                          TextSpan(
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeights.semiBold,
-                              color: colorScheme.background,
-                            ),
-                            children: [
-                              TextSpan(
-                                text: "${examResult.totalCorrectAnswers()}\n",
-                              ),
-                              const TextSpan(
-                                text: "Correct Answers",
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeights.regular,
-                                ),
-                              ),
-                            ],
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        Text.rich(
-                          TextSpan(
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeights.semiBold,
-                              color: colorScheme.background,
-                            ),
-                            children: [
-                              TextSpan(
-                                text: "${examResult.totalInCorrectAnswers()}\n",
-                              ),
-                              const TextSpan(
-                                text: "Incorrect Answers",
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeights.regular,
-                                ),
-                              ),
-                            ],
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            ...examResult.getUniqueMarksOfQuestion().map(
-                  (marks) => _StatCard(
-                    marks: marks,
-                    totalQues:
-                        examResult.totalQuestionsByMark(marks).toString(),
-                    correctAns:
-                        examResult.totalCorrectAnswersByMark(marks).toString(),
-                    incorrectAns: examResult
-                        .totalInCorrectAnswersByMark(marks)
-                        .toString(),
-                  ),
                 ),
-          ],
-        ),
+              ],
+            ),
+          ),
+          ...examResult.getUniqueMarksOfQuestion().map(
+                (marks) => _StatCard(
+                  marks: marks,
+                  totalQues: examResult.totalQuestionsByMark(marks).toString(),
+                  correctAns:
+                      examResult.totalCorrectAnswersByMark(marks).toString(),
+                  incorrectAns:
+                      examResult.totalInCorrectAnswersByMark(marks).toString(),
+                ),
+              ),
+        ],
       ),
     );
   }
@@ -220,7 +215,7 @@ class _StatCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                "$marks Marks Questions",
+                "$marks ${context.tr("markQuestionsLbl")!}",
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeights.medium,
@@ -228,7 +223,7 @@ class _StatCard extends StatelessWidget {
                 ),
               ),
               Text(
-                "[ $totalQues Ques ]",
+                "[ $totalQues ${context.tr("quesLbl")!} ]",
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeights.medium,
@@ -245,7 +240,6 @@ class _StatCard extends StatelessWidget {
             ),
             padding: const EdgeInsets.symmetric(
               horizontal: 20,
-              // vertical: 10,
             ),
             height: 80,
             child: Row(
@@ -264,7 +258,7 @@ class _StatCard extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      'Correct Answers',
+                      context.tr('correctAnswersLbl')!,
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeights.regular,
@@ -280,7 +274,7 @@ class _StatCard extends StatelessWidget {
                           borderRadius: BorderRadius.vertical(
                             top: Radius.circular(19),
                           ),
-                          color: Colors.green,
+                          color: kCorrectAnswerColor,
                         ),
                       ),
                     ),
@@ -304,7 +298,7 @@ class _StatCard extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      'Incorrect Answers',
+                      context.tr('incorrectAnswersLbl')!,
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeights.regular,

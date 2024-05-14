@@ -30,6 +30,7 @@ import CallKit
         self.window.isHidden = false
     }
     override func applicationWillResignActive(_ application: UIApplication) {
+        self.window.rootViewController?.view.endEditing(true)
         self.window.isHidden = true
     }
     

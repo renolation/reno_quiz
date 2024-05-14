@@ -2,12 +2,11 @@ import 'dart:ui';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutterquiz/app/app_localization.dart';
-import 'package:flutterquiz/features/systemConfig/cubits/systemConfigCubit.dart';
-
-import 'package:flutterquiz/utils/constants/string_labels.dart';
-import 'package:flutterquiz/utils/ui_utils.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutterquiz/features/systemConfig/cubits/systemConfigCubit.dart';
+import 'package:flutterquiz/utils/constants/string_labels.dart';
+import 'package:flutterquiz/utils/extensions.dart';
+import 'package:flutterquiz/utils/ui_utils.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class UpdateAppContainer extends StatelessWidget {
@@ -27,14 +26,13 @@ class UpdateAppContainer extends StatelessWidget {
         alignment: Alignment.center,
         child: CupertinoAlertDialog(
           title: Text(
-            AppLocalization.of(context)!.getTranslatedValues(warningKey)!,
+            context.tr(warningKey)!,
             style: const TextStyle(fontSize: 18),
           ),
           content: Padding(
-            padding: const EdgeInsets.only(top: 5.0),
+            padding: const EdgeInsets.only(top: 5),
             child: Text(
-              AppLocalization.of(context)!
-                  .getTranslatedValues(updateApplicationKey)!,
+              context.tr(updateApplicationKey)!,
               style: const TextStyle(fontSize: 14.5),
             ),
           ),
@@ -43,36 +41,31 @@ class UpdateAppContainer extends StatelessWidget {
             CupertinoButton(
               onPressed: () async {
                 try {
-                  String url = context.read<SystemConfigCubit>().getAppUrl();
+                  final url = context.read<SystemConfigCubit>().appUrl;
                   if (url.isEmpty) {
-                    UiUtils.setSnackbar(
-                      AppLocalization.of(context)!
-                          .getTranslatedValues(failedToGetAppUrlKey)!,
+                    UiUtils.showSnackBar(
+                      context.tr(failedToGetAppUrlKey)!,
                       context,
-                      false,
                     );
 
                     return;
                   }
-                  bool canLaunch = await canLaunchUrl(Uri.parse(url));
+                  final canLaunch = await canLaunchUrl(Uri.parse(url));
                   if (canLaunch) {
-                    launchUrl(Uri.parse(url));
+                    await launchUrl(Uri.parse(url));
                   }
                 } catch (e) {
-                  UiUtils.setSnackbar(
-                    AppLocalization.of(context)!
-                        .getTranslatedValues(failedToGetAppUrlKey)!,
+                  UiUtils.showSnackBar(
+                    context.tr(failedToGetAppUrlKey)!,
                     context,
-                    false,
                   );
                 }
               },
               child: Text(
-                AppLocalization.of(context)!.getTranslatedValues(updateKey)!,
-                style:
-                    TextStyle(color: Theme.of(context).colorScheme.secondary),
+                context.tr(updateKey)!,
+                style: TextStyle(color: Theme.of(context).primaryColor),
               ),
-            )
+            ),
           ],
         ),
       ),

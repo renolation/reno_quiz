@@ -2,7 +2,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_tex/flutter_tex.dart';
-import 'package:flutterquiz/app/app_localization.dart';
 import 'package:flutterquiz/features/bookmark/bookmarkRepository.dart';
 import 'package:flutterquiz/features/bookmark/cubits/updateBookmarkCubit.dart';
 import 'package:flutterquiz/features/musicPlayer/musicPlayerCubit.dart';
@@ -15,26 +14,25 @@ import 'package:flutterquiz/features/reportQuestion/reportQuestionCubit.dart';
 import 'package:flutterquiz/features/reportQuestion/reportQuestionRepository.dart';
 import 'package:flutterquiz/ui/screens/quiz/widgets/music_player_container.dart';
 import 'package:flutterquiz/ui/screens/quiz/widgets/questionContainer.dart';
+import 'package:flutterquiz/ui/screens/quiz/widgets/report_question_bottom_sheet.dart';
+import 'package:flutterquiz/ui/styles/colors.dart';
 import 'package:flutterquiz/ui/widgets/customAppbar.dart';
-
-import 'package:flutterquiz/ui/widgets/customRoundedButton.dart';
 import 'package:flutterquiz/utils/answer_encryption.dart';
-import 'package:flutterquiz/utils/constants/error_message_keys.dart';
 import 'package:flutterquiz/utils/constants/string_labels.dart';
-import 'package:flutterquiz/utils/quiz_types.dart';
+import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
 
 class ReviewAnswersScreen extends StatefulWidget {
-  final List<Question> questions;
-  final QuizTypes quizType;
-  final List<GuessTheWordQuestion> guessTheWordQuestions;
-
   const ReviewAnswersScreen({
-    super.key,
     required this.questions,
     required this.guessTheWordQuestions,
     required this.quizType,
+    super.key,
   });
+
+  final List<Question> questions;
+  final QuizTypes quizType;
+  final List<GuessTheWordQuestion> guessTheWordQuestions;
 
   static Route<dynamic> route(RouteSettings routeSettings) {
     final arguments = routeSettings.arguments as Map?;
@@ -51,10 +49,11 @@ class ReviewAnswersScreen extends StatefulWidget {
           ),
         ],
         child: ReviewAnswersScreen(
-          quizType: arguments!['quizType'],
-          guessTheWordQuestions: arguments['guessTheWordQuestions'] ??
-              List<GuessTheWordQuestion>.from([]),
-          questions: arguments['questions'] ?? List<Question>.from([]),
+          quizType: arguments!['quizType'] as QuizTypes,
+          guessTheWordQuestions: arguments['guessTheWordQuestions']
+                  as List<GuessTheWordQuestion>? ??
+              <GuessTheWordQuestion>[],
+          questions: arguments['questions'] as List<Question>? ?? <Question>[],
         ),
       ),
     );
@@ -65,172 +64,90 @@ class ReviewAnswersScreen extends StatefulWidget {
 }
 
 class _ReviewAnswersScreenState extends State<ReviewAnswersScreen> {
-  PageController? _pageController;
-  int _currentIndex = 0;
-  List<GlobalKey<MusicPlayerContainerState>> musicPlayerContainerKeys = [];
+  late final _pageController = PageController();
+  int _currQueIdx = 0;
 
-  @override
-  void initState() {
-    _pageController = PageController();
-    if (_hasAudioQuestion()) {
-      for (var e in widget.questions) {
-        musicPlayerContainerKeys.add(GlobalKey<MusicPlayerContainerState>());
-      }
-    }
+  late final _firebaseId = context.read<UserDetailsCubit>().getUserFirebaseId();
 
-    super.initState();
-  }
+  late final _isGuessTheWord = widget.quizType == QuizTypes.guessTheWord;
+  late final _isAudioQuestions = widget.quizType == QuizTypes.audioQuestions;
 
-  bool _hasAudioQuestion() {
-    if (widget.questions.isNotEmpty) {
-      return widget.questions.first.audio!.isNotEmpty;
-    }
-    return false;
-  }
+  late final questionsLength = _isGuessTheWord
+      ? widget.guessTheWordQuestions.length
+      : widget.questions.length;
 
-  void showNotes() {
-    if (widget.questions[_currentIndex].note!.isEmpty) {
-      UiUtils.setSnackbar(
-          AppLocalization.of(context)!.getTranslatedValues(
-              convertErrorCodeToLanguageKey(notesNotAvailableCode))!,
-          context,
-          false);
-      return;
-    }
-    showModalBottomSheet(
-      isScrollControlled: true,
+  late final _musicPlayerKeys = List.generate(
+    widget.questions.length,
+    (_) => GlobalKey<MusicPlayerContainerState>(),
+    growable: false,
+  );
+  late final _correctAnswerIds = List.generate(
+    widget.questions.length,
+    (i) => AnswerEncryption.decryptCorrectAnswer(
+      rawKey: _firebaseId,
+      correctAnswer: widget.questions[i].correctAnswer!,
+    ),
+    growable: false,
+  );
+
+  bool get isLatex => switch (widget.quizType) {
+        QuizTypes.quizZone || QuizTypes.mathMania || QuizTypes.exam => true,
+        _ => false,
+      };
+
+  void _onTapReportQuestion() {
+    showReportQuestionBottomSheet(
       context: context,
-      builder: (context) => Container(
-        constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * (0.6)),
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              const SizedBox(height: 10.0),
-              Text(
-                AppLocalization.of(context)!.getTranslatedValues("notesLbl")!,
-                style: TextStyle(
-                    fontSize: 18.0,
-                    fontWeight: FontWeight.w500,
-                    color: Theme.of(context).primaryColor),
-              ),
-              const SizedBox(height: 10.0),
-              Container(
-                alignment: Alignment.center,
-                padding: EdgeInsets.symmetric(
-                    horizontal: MediaQuery.of(context).size.width * (0.1)),
-                child: Text(
-                  "${widget.questions[_currentIndex].question}",
-                  style: TextStyle(
-                      fontSize: 18.0,
-                      fontWeight: FontWeight.w400,
-                      color: Theme.of(context).primaryColor),
-                ),
-              ),
-              const SizedBox(height: 5.0),
-              const Divider(),
-              Container(
-                alignment: Alignment.center,
-                padding: EdgeInsets.symmetric(
-                    horizontal: MediaQuery.of(context).size.width * (0.1)),
-                child: Text(
-                  "${widget.questions[_currentIndex].note}",
-                  style: TextStyle(
-                      fontSize: 17.0, color: Theme.of(context).primaryColor),
-                ),
-              ),
-              SizedBox(
-                height: MediaQuery.of(context).size.height * (0.1),
-              ),
-            ],
-          ),
-        ),
-      ),
+      questionId: _isGuessTheWord
+          ? widget.guessTheWordQuestions[_currQueIdx].id
+          : widget.questions[_currQueIdx].id!,
+      reportQuestionCubit: context.read<ReportQuestionCubit>(),
     );
   }
 
-  int getQuestionsLength() {
-    if (widget.questions.isEmpty) {
-      return widget.guessTheWordQuestions.length;
+  void _onPageChanged(int idx) {
+    if (_isAudioQuestions) {
+      _musicPlayerKeys[_currQueIdx].currentState?.stopAudio();
+      _musicPlayerKeys[idx].currentState?.playAudio();
     }
-    return widget.questions.length;
+    setState(() => _currQueIdx = idx);
   }
 
-  bool isGuessTheWordQuizModule() {
-    return widget.guessTheWordQuestions.isNotEmpty;
-  }
-
-  Color getOptionColor(Question question, String? optionId) {
-    String correctAnswerId = AnswerEncryption.decryptCorrectAnswer(
-      rawKey: context.read<UserDetailsCubit>().getUserFirebaseId(),
-      correctAnswer: question.correctAnswer!,
-    );
-
-    if (question.attempted) {
-      // if given answer is correct
-      if (question.submittedAnswerId == correctAnswerId) {
-        //if given option is same as answer
-        if (question.submittedAnswerId == optionId) {
-          return Colors.green;
-        }
-        //color will not change for other options
-        return Theme.of(context).colorScheme.background;
-      } else {
-        //option id is same as given answer then change color to red
-        if (question.submittedAnswerId == optionId) {
-          return Colors.red;
-        }
-        //if given option id is correct as same answer then change color to green
-        else if (correctAnswerId == optionId) {
-          return Colors.green;
-        }
-        //do not change color
-        return Theme.of(context).colorScheme.background;
-      }
-    } else {
-      // if answer not given then only show correct answer
-      if (correctAnswerId == optionId) {
-        return Colors.green;
-      }
-      return Theme.of(context).colorScheme.background;
+  Color _optionBackgroundColor(String? optionId) {
+    if (optionId == _correctAnswerIds[_currQueIdx]) {
+      return kCorrectAnswerColor;
     }
-  }
 
-  Color getOptionTextColor(Question question, String? optionId) {
-    String correctAnswerId = AnswerEncryption.decryptCorrectAnswer(
-        rawKey: context.read<UserDetailsCubit>().getUserFirebaseId(),
-        correctAnswer: question.correctAnswer!);
-    if (question.attempted) {
-      // if given answer is correct
-      if (question.submittedAnswerId == correctAnswerId) {
-        //if given option is same as answer
-        if (question.submittedAnswerId == optionId) {
-          return Theme.of(context).colorScheme.background;
-        }
-        //color will not change for other options
-        return Theme.of(context).colorScheme.onTertiary;
-      } else {
-        //option id is same as given answer then change color to red
-        if (question.submittedAnswerId == optionId) {
-          return Theme.of(context).colorScheme.background;
-        }
-        //if given option id is correct as same answer then change color to green
-        else if (correctAnswerId == optionId) {
-          return Theme.of(context).colorScheme.background;
-        }
-        //do not change color
-        return Theme.of(context).colorScheme.onTertiary;
-      }
-    } else {
-      // if answer not given then only show correct answer
-      if (correctAnswerId == optionId) {
-        return Theme.of(context).colorScheme.background;
-      }
-      return Theme.of(context).colorScheme.onTertiary;
+    if (optionId == widget.questions[_currQueIdx].submittedAnswerId) {
+      return kWrongAnswerColor;
     }
+
+    return Theme.of(context).colorScheme.background;
   }
 
-  Widget _buildBottomMenu(BuildContext context) {
+  Color _optionTextColor(String? optionId) {
+    final correctAnswerId = _correctAnswerIds[_currQueIdx];
+    final submittedAnswerId = widget.questions[_currQueIdx].submittedAnswerId;
+
+    return optionId == correctAnswerId || optionId == submittedAnswerId
+        ? Theme.of(context).colorScheme.background
+        : Theme.of(context).colorScheme.onTertiary;
+  }
+
+  Widget _buildBottomMenu() {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    void onTapPageChange({required bool flipLeft}) {
+      if (_currQueIdx != (flipLeft ? 0 : questionsLength - 1)) {
+        final idx = _currQueIdx + (flipLeft ? -1 : 1);
+        _pageController.animateToPage(
+          idx,
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+        );
+      }
+    }
+
     return Container(
       alignment: Alignment.center,
       padding: EdgeInsets.symmetric(
@@ -244,23 +161,16 @@ class _ReviewAnswersScreenState extends State<ReviewAnswersScreen> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
-                color:
-                    Theme.of(context).colorScheme.onTertiary.withOpacity(0.2),
+                color: colorScheme.onTertiary.withOpacity(0.2),
               ),
             ),
             padding:
                 const EdgeInsets.only(top: 5, left: 8, right: 2, bottom: 5),
             child: GestureDetector(
-              onTap: () {
-                if (_currentIndex != 0) {
-                  _pageController!.animateToPage(_currentIndex - 1,
-                      duration: const Duration(milliseconds: 500),
-                      curve: Curves.easeInOut);
-                }
-              },
+              onTap: () => onTapPageChange(flipLeft: true),
               child: Icon(
                 Icons.arrow_back_ios,
-                color: Theme.of(context).colorScheme.onTertiary,
+                color: colorScheme.onTertiary,
               ),
             ),
           ),
@@ -269,16 +179,15 @@ class _ReviewAnswersScreenState extends State<ReviewAnswersScreen> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
-                color:
-                    Theme.of(context).colorScheme.onTertiary.withOpacity(0.2),
+                color: colorScheme.onTertiary.withOpacity(0.2),
               ),
             ),
             padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
             child: Text(
-              "${_currentIndex + 1} / ${getQuestionsLength()}",
+              '${_currQueIdx + 1} / $questionsLength',
               style: TextStyle(
-                color: Theme.of(context).colorScheme.onTertiary,
-                fontSize: 18.0,
+                color: colorScheme.onTertiary,
+                fontSize: 18,
               ),
             ),
           ),
@@ -286,22 +195,15 @@ class _ReviewAnswersScreenState extends State<ReviewAnswersScreen> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
-                color:
-                    Theme.of(context).colorScheme.onTertiary.withOpacity(0.2),
+                color: colorScheme.onTertiary.withOpacity(0.2),
               ),
             ),
             padding: const EdgeInsets.all(5),
             child: GestureDetector(
-              onTap: () {
-                if (_currentIndex != (getQuestionsLength() - 1)) {
-                  _pageController!.animateToPage(_currentIndex + 1,
-                      duration: const Duration(milliseconds: 500),
-                      curve: Curves.easeInOut);
-                }
-              },
+              onTap: () => onTapPageChange(flipLeft: false),
               child: Icon(
                 Icons.arrow_forward_ios,
-                color: Theme.of(context).colorScheme.onTertiary,
+                color: colorScheme.onTertiary,
               ),
             ),
           ),
@@ -311,170 +213,155 @@ class _ReviewAnswersScreenState extends State<ReviewAnswersScreen> {
   }
 
   //to build option of given question
-  Widget _buildOption(AnswerOption option, Question question) {
+  Widget _buildOption(AnswerOption option) {
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10.0),
-        color: getOptionColor(question, option.id),
+        borderRadius: BorderRadius.circular(10),
+        color: _optionBackgroundColor(option.id),
       ),
       width: MediaQuery.of(context).size.width,
-      margin: const EdgeInsets.only(top: 15.0),
-      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 15.0),
-      child: widget.quizType == QuizTypes.mathMania
-          ? Center(
-              child: TeXView(
+      margin: const EdgeInsets.only(top: 15),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+      child: Center(
+        child: isLatex
+            ? TeXView(
                 child: TeXViewDocument(option.title!),
                 style: TeXViewStyle(
-                  contentColor: Theme.of(context).colorScheme.onTertiary,
+                  contentColor: _optionTextColor(option.id),
                   backgroundColor: Colors.transparent,
                   sizeUnit: TeXViewSizeUnit.pixels,
                   textAlign: TeXViewTextAlign.center,
                   fontStyle: TeXViewFontStyle(fontSize: 19),
                 ),
-              ),
-            )
-          : Center(
-              child: Text(
+              )
+            : Text(
                 option.title!,
                 style: TextStyle(
-                  color: getOptionTextColor(question, option.id),
+                  color: _optionTextColor(option.id),
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
                 ),
               ),
-            ),
+      ),
     );
   }
 
-  Widget _buildOptions(Question question) {
-    return Column(
-      children: question.answerOptions!.map((option) {
-        return _buildOption(option, question);
-      }).toList(),
-    );
-  }
+  // TODO(J): Latex Options List
+  // Sizing issues with Latex Options Lists.
+  Widget _buildOptions() => Column(
+        children: widget.questions[_currQueIdx].answerOptions!
+            .map(_buildOption)
+            .toList(),
+      );
 
   Widget _buildGuessTheWordOptionAndAnswer(
-      GuessTheWordQuestion guessTheWordQuestion) {
-    return Container(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 25.0),
+    GuessTheWordQuestion guessTheWordQuestion,
+  ) {
+    final isCorrect = UiUtils.buildGuessTheWordQuestionAnswer(
+          guessTheWordQuestion.submittedAnswer,
+        ) ==
+        guessTheWordQuestion.answer;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 25),
+        Padding(
+          padding: EdgeInsets.zero,
+          child: Text(
+            "${context.tr("yourAnsLbl")!} : ${UiUtils.buildGuessTheWordQuestionAnswer(guessTheWordQuestion.submittedAnswer)}",
+            style: TextStyle(
+              fontSize: 18,
+              color: isCorrect
+                  ? kCorrectAnswerColor
+                  : Theme.of(context).colorScheme.onTertiary,
+            ),
+          ),
+        ),
+        if (!isCorrect) ...[
           Padding(
-            padding: EdgeInsets.zero,
+            padding: EdgeInsetsDirectional.zero,
             child: Text(
-              "${AppLocalization.of(context)!.getTranslatedValues("yourAnsLbl")!} : ${UiUtils.buildGuessTheWordQuestionAnswer(guessTheWordQuestion.submittedAnswer)}",
+              "${context.tr("correctAndLbl")!}: ${guessTheWordQuestion.answer}",
               style: TextStyle(
-                fontSize: 18.0,
-                color: UiUtils.buildGuessTheWordQuestionAnswer(
-                            guessTheWordQuestion.submittedAnswer) ==
-                        guessTheWordQuestion.answer
-                    ? Colors.green
-                    : Theme.of(context).colorScheme.onTertiary,
+                fontSize: 18,
+                color: Theme.of(context).colorScheme.onTertiary,
               ),
             ),
           ),
-          UiUtils.buildGuessTheWordQuestionAnswer(
-                      guessTheWordQuestion.submittedAnswer) ==
-                  guessTheWordQuestion.answer
-              ? const SizedBox()
-              : Padding(
-                  padding: const EdgeInsetsDirectional.only(start: 0.0),
-                  child: Text(
-                    "${AppLocalization.of(context)!.getTranslatedValues("correctAndLbl")!}: ${guessTheWordQuestion.answer}",
-                    style: TextStyle(
-                      fontSize: 18.0,
-                      color: Theme.of(context).colorScheme.onTertiary,
-                    ),
-                  ),
-                )
+        ],
+      ],
+    );
+  }
+
+  Widget _buildNotes(String notes) {
+    if (notes.isEmpty) return const SizedBox.shrink();
+
+    final primaryColor = Theme.of(context).primaryColor;
+
+    return Container(
+      width: MediaQuery.of(context).size.width * (0.8),
+      margin: const EdgeInsets.only(top: 25),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            context.tr(notesKey)!,
+            style: TextStyle(
+              color: primaryColor,
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          ///
+          if (isLatex)
+            TeXView(
+              child: TeXViewDocument(notes),
+              style: TeXViewStyle(
+                contentColor: primaryColor,
+                sizeUnit: TeXViewSizeUnit.pixels,
+                textAlign: TeXViewTextAlign.center,
+              ),
+            )
+          else
+            Text(
+              notes,
+              style: TextStyle(color: primaryColor),
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildNotes(String notes) {
-    return notes.isEmpty
-        ? Container()
-        : widget.quizType == QuizTypes.mathMania
-            ? Container(
-                width: MediaQuery.of(context).size.width * (0.8),
-                margin: const EdgeInsets.only(top: 25.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                        AppLocalization.of(context)!
-                            .getTranslatedValues(notesKey)!,
-                        style: TextStyle(
-                            color: Theme.of(context).primaryColor,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18.0)),
-                    const SizedBox(height: 10.0),
-                    TeXView(
-                      child: TeXViewDocument(notes),
-                      style: TeXViewStyle(
-                        contentColor: Theme.of(context).primaryColor,
-                        //backgroundColor: Theme.of(context).backgroundColor,
-                        sizeUnit: TeXViewSizeUnit.pixels,
-                        textAlign: TeXViewTextAlign.center,
-                      ),
-                    )
-                  ],
-                ),
-              )
-            : Container(
-                width: MediaQuery.of(context).size.width * (0.8),
-                margin: const EdgeInsets.only(top: 25.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      AppLocalization.of(context)!
-                          .getTranslatedValues(notesKey)!,
-                      style: TextStyle(
-                        color: Theme.of(context).primaryColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18.0,
-                      ),
-                    ),
-                    const SizedBox(height: 10.0),
-                    Text(
-                      notes,
-                      style: TextStyle(color: Theme.of(context).primaryColor),
-                    ),
-                  ],
-                ),
-              );
-  }
-
   Widget _buildQuestionAndOptions(Question question, int index) {
     return SingleChildScrollView(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: [
           QuestionContainer(
-            isMathQuestion: widget.quizType == QuizTypes.mathMania,
+            isMathQuestion: isLatex,
             question: question,
             questionColor: Theme.of(context).colorScheme.onTertiary,
           ),
-          _hasAudioQuestion()
-              ? BlocProvider<MusicPlayerCubit>(
-                  create: (_) => MusicPlayerCubit(),
-                  child: MusicPlayerContainer(
-                    currentIndex: _currentIndex,
-                    index: index,
-                    url: question.audio!,
-                    key: musicPlayerContainerKeys[index],
-                  ),
-                )
-              : const SizedBox(),
+          if (_isAudioQuestions)
+            BlocProvider<MusicPlayerCubit>(
+              create: (_) => MusicPlayerCubit(),
+              child: MusicPlayerContainer(
+                currentIndex: _currQueIdx,
+                index: index,
+                url: question.audio!,
+                key: _musicPlayerKeys[index],
+              ),
+            )
+          else
+            const SizedBox(),
 
           //build options
-          _buildOptions(question),
+          _buildOptions(),
           _buildNotes(question.note!),
+          const SizedBox(height: 50),
         ],
       ),
     );
@@ -490,7 +377,7 @@ class _ReviewAnswersScreenState extends State<ReviewAnswersScreen> {
             isMathQuestion: false,
             questionColor: Theme.of(context).colorScheme.onTertiary,
             question: Question(
-              marks: "",
+              marks: '',
               id: question.id,
               question: question.question,
               imageUrl: question.image,
@@ -507,343 +394,67 @@ class _ReviewAnswersScreenState extends State<ReviewAnswersScreen> {
     return SizedBox(
       height: MediaQuery.of(context).size.height * (0.85),
       child: PageView.builder(
-          onPageChanged: (index) {
-            if (_hasAudioQuestion()) {
-              musicPlayerContainerKeys[_currentIndex].currentState?.stopAudio();
-            }
-            setState(() {
-              _currentIndex = index;
-            });
-            if (_hasAudioQuestion()) {
-              musicPlayerContainerKeys[_currentIndex].currentState?.playAudio();
-            }
-          },
-          controller: _pageController,
-          itemCount: getQuestionsLength(),
-          itemBuilder: (context, index) {
-            if (widget.questions.isEmpty) {
-              return _buildGuessTheWordQuestionAndOptions(
-                  widget.guessTheWordQuestions[index]);
-            }
-            return _buildQuestionAndOptions(widget.questions[index], index);
-          }),
-    );
-  }
-
-  Widget _buildReportButton(ReportQuestionCubit reportQuestionCubit) {
-    return IconButton(
-      onPressed: () {
-        showModalBottomSheet(
-          shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(20.0),
-            topRight: Radius.circular(20.0),
-          )),
-          isDismissible: false,
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          enableDrag: false,
-          isScrollControlled: true,
-          context: context,
-          builder: (_) => ReportQuestionBottomSheetContainer(
-              questionId: isGuessTheWordQuizModule()
-                  ? widget.guessTheWordQuestions[_currentIndex].id
-                  : widget.questions[_currentIndex].id!,
-              reportQuestionCubit: reportQuestionCubit),
-        );
-      },
-      icon: Icon(
-        Icons.info_outline,
-        color: Theme.of(context).colorScheme.onTertiary,
+        onPageChanged: _onPageChanged,
+        controller: _pageController,
+        itemCount: questionsLength,
+        itemBuilder: (_, idx) => _isGuessTheWord
+            ? _buildGuessTheWordQuestionAndOptions(
+                widget.guessTheWordQuestions[idx],
+              )
+            : _buildQuestionAndOptions(widget.questions[idx], idx),
       ),
     );
   }
 
-  // Widget _buildAppbar() {
-  //   return Align(
-  //     alignment: Alignment.topCenter,
-  //     child: RoundedAppbar(
-  //       title: AppLocalization.of(context)!
-  //           .getTranslatedValues("reviewAnswerLbl")!,
-  //       trailingWidget: widget.questions.isEmpty
-  //           ? _buildReportButton(context.read<ReportQuestionCubit>())
-  //           : widget.questions.first.audio!.isNotEmpty
-  //               ? _buildReportButton(context.read<ReportQuestionCubit>())
-  //               : Row(
-  //                   crossAxisAlignment: CrossAxisAlignment.center,
-  //                   mainAxisSize: MainAxisSize.min,
-  //                   children: [
-  //                     // Transform.translate(
-  //                     //   offset: Offset(5.0, 10.0),
-  //                     //   child: BookmarkButton(
-  //                     //     bookmarkButtonColor: Theme.of(context).primaryColor,
-  //                     //     bookmarkFillColor: Theme.of(context).primaryColor,
-  //                     //     question: widget.questions[_currentIndex],
-  //                     //   ),
-  //                     // ),
-  //                     _buildReportButton(context.read<ReportQuestionCubit>()),
-  //                   ],
-  //                 ),
-  //     ),
-  //   );
-  // }
+  Widget _buildReportButton() {
+    return IconButton(
+      onPressed: _onTapReportQuestion,
+      icon: Icon(
+        Icons.info_outline,
+        color: Theme.of(context).primaryColor,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+
     return Scaffold(
       appBar: QAppBar(
-        title: Text(AppLocalization.of(context)!
-            .getTranslatedValues("reviewAnswerLbl")!),
+        title: Text(
+          context.tr('reviewAnswerLbl')!,
+        ),
         actions: [
-          (widget.questions.isNotEmpty &&
-                  (widget.quizType == QuizTypes.quizZone ||
-                      widget.quizType == QuizTypes.selfChallenge ||
-                      widget.quizType == QuizTypes.battle ||
-                      widget.quizType == QuizTypes.groupPlay))
-              ?
-              // (context.read<ReportQuestionCubit>())
-              // : widget.questions.first.audio!.isNotEmpty
-              //     ? _buildReportButton(context.read<ReportQuestionCubit>())
-              //     :
-              Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Transform.translate(
-                    //   offset: Offset(5.0, 10.0),
-                    //   child: BookmarkButton(
-                    //     bookmarkButtonColor: Theme.of(context).primaryColor,
-                    //     bookmarkFillColor: Theme.of(context).primaryColor,
-                    //     question: widget.questions[_currentIndex],
-                    //   ),
-                    // ),
-                    _buildReportButton(context.read<ReportQuestionCubit>()),
-                  ],
-                )
-              : Container()
+          if (widget.questions.isNotEmpty &&
+              (widget.quizType == QuizTypes.quizZone ||
+                  widget.quizType == QuizTypes.selfChallenge ||
+                  widget.quizType == QuizTypes.oneVsOneBattle ||
+                  widget.quizType == QuizTypes.groupPlay)) ...[
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [_buildReportButton()],
+            ),
+          ],
         ],
       ),
       body: Stack(
         children: [
-          //_buildAppbar(),
           Align(
             alignment: Alignment.topCenter,
             child: Padding(
               padding: EdgeInsets.symmetric(
-                vertical:
-                    MediaQuery.of(context).size.height * UiUtils.vtMarginPct,
-                horizontal:
-                    MediaQuery.of(context).size.width * UiUtils.hzMarginPct,
+                vertical: size.height * UiUtils.vtMarginPct,
+                horizontal: size.width * UiUtils.hzMarginPct,
               ),
               child: _buildQuestions(),
             ),
           ),
           Align(
             alignment: Alignment.bottomCenter,
-            child: _buildBottomMenu(context),
+            child: _buildBottomMenu(),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class ReportQuestionBottomSheetContainer extends StatefulWidget {
-  final ReportQuestionCubit reportQuestionCubit;
-  final String questionId;
-
-  const ReportQuestionBottomSheetContainer({
-    super.key,
-    required this.reportQuestionCubit,
-    required this.questionId,
-  });
-
-  @override
-  _ReportQuestionBottomSheetContainerState createState() =>
-      _ReportQuestionBottomSheetContainerState();
-}
-
-class _ReportQuestionBottomSheetContainerState
-    extends State<ReportQuestionBottomSheetContainer> {
-  final textEditingController = TextEditingController();
-  late String errorMessage = "";
-
-  String _buildButtonTitle(ReportQuestionState state) {
-    if (state is ReportQuestionInProgress) {
-      return AppLocalization.of(context)!
-          .getTranslatedValues(submittingButton)!;
-    }
-    if (state is ReportQuestionFailure) {
-      return AppLocalization.of(context)!.getTranslatedValues(retryLbl)!;
-    }
-    return AppLocalization.of(context)!.getTranslatedValues(submitBtn)!;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocListener<ReportQuestionCubit, ReportQuestionState>(
-      bloc: widget.reportQuestionCubit,
-      listener: (context, state) {
-        if (state is ReportQuestionSuccess) {
-          Navigator.of(context).pop();
-        }
-        if (state is ReportQuestionFailure) {
-          if (state.errorMessageCode == unauthorizedAccessCode) {
-            UiUtils.showAlreadyLoggedInDialog(context: context);
-            return;
-          }
-          //
-          setState(() {
-            errorMessage = AppLocalization.of(context)!.getTranslatedValues(
-                convertErrorCodeToLanguageKey(state.errorMessageCode))!;
-          });
-        }
-      },
-      child: WillPopScope(
-        onWillPop: () {
-          if (widget.reportQuestionCubit.state is ReportQuestionInProgress) {
-            return Future.value(false);
-          }
-          return Future.value(true);
-        },
-        child: Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(20.0),
-              topRight: Radius.circular(20.0),
-            ),
-          ),
-          child: Padding(
-            padding: MediaQuery.of(context).viewInsets,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Container(
-                      margin: const EdgeInsets.all(10.0),
-                      child: IconButton(
-                        onPressed: () {
-                          if (widget.reportQuestionCubit.state
-                              is! ReportQuestionInProgress) {
-                            Navigator.of(context).pop();
-                          }
-                        },
-                        icon: Icon(
-                          Icons.close,
-                          size: 28.0,
-                          color: Theme.of(context).primaryColor,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 5.0),
-                  alignment: Alignment.center,
-                  child: Text(
-                    AppLocalization.of(context)!
-                        .getTranslatedValues(reportQuestionKey)!,
-                    style: TextStyle(
-                        fontSize: 20.0,
-                        color: Theme.of(context).primaryColor,
-                        fontWeight: FontWeight.bold),
-                  ),
-                ),
-                const SizedBox(height: 15.0),
-                //
-                Container(
-                  alignment: Alignment.center,
-                  margin: EdgeInsets.symmetric(
-                    horizontal: MediaQuery.of(context).size.width * (0.125),
-                  ),
-                  padding: const EdgeInsets.only(left: 20.0),
-                  height: 60.0,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(10.0),
-                    color: Theme.of(context).colorScheme.background,
-                  ),
-                  child: TextField(
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.secondary,
-                    ),
-                    controller: textEditingController,
-                    decoration: InputDecoration(
-                      hintText: AppLocalization.of(context)!
-                          .getTranslatedValues(enterReasonKey)!,
-                      hintStyle: TextStyle(
-                        color: Theme.of(context).colorScheme.secondary,
-                      ),
-                      border: InputBorder.none,
-                    ),
-                  ),
-                ),
-                SizedBox(
-                  height: MediaQuery.of(context).size.height * (0.02),
-                ),
-
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 250),
-                  child: errorMessage.isEmpty
-                      ? const SizedBox(height: 20.0)
-                      : SizedBox(
-                          height: 20.0,
-                          child: Text(
-                            errorMessage,
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.secondary,
-                            ),
-                          ),
-                        ),
-                ),
-
-                SizedBox(
-                  height: MediaQuery.of(context).size.height * (0.02),
-                ),
-                //
-
-                BlocBuilder<ReportQuestionCubit, ReportQuestionState>(
-                  bloc: widget.reportQuestionCubit,
-                  builder: (context, state) {
-                    return Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: MediaQuery.of(context).size.width * (0.3),
-                      ),
-                      child: CustomRoundedButton(
-                        widthPercentage: MediaQuery.of(context).size.width,
-                        backgroundColor: Theme.of(context).primaryColor,
-                        buttonTitle: _buildButtonTitle(state),
-                        radius: 10.0,
-                        showBorder: false,
-                        onTap: () {
-                          if (state is! ReportQuestionInProgress) {
-                            widget.reportQuestionCubit.reportQuestion(
-                                message: textEditingController.text.trim(),
-                                questionId: widget.questionId,
-                                userId: context
-                                    .read<UserDetailsCubit>()
-                                    .getUserId());
-                          }
-                        },
-                        fontWeight: FontWeight.bold,
-                        titleColor: Theme.of(context).colorScheme.background,
-                        height: 40.0,
-                      ),
-                    );
-                  },
-                ),
-
-                //
-                SizedBox(
-                  height: MediaQuery.of(context).size.height * (0.05),
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }

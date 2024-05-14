@@ -1,12 +1,12 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutterquiz/app/app_localization.dart';
+import 'package:flutterquiz/utils/extensions.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class ExitGameDialog extends StatelessWidget {
-  final Function()? onTapYes;
-
   const ExitGameDialog({super.key, this.onTapYes});
+
+  final VoidCallback? onTapYes;
 
   @override
   Widget build(BuildContext context) {
@@ -20,27 +20,28 @@ class ExitGameDialog extends StatelessWidget {
       backgroundColor: Theme.of(context).colorScheme.background,
       shadowColor: Colors.transparent,
       content: Text(
-        AppLocalization.of(context)!.getTranslatedValues("quizExitLbl")!,
+        context.tr('quizExitLbl')!,
         style: textStyle,
       ),
       actions: [
         CupertinoButton(
-            child: Text(
-              AppLocalization.of(context)!.getTranslatedValues("yesBtn")!,
-              style: textStyle,
-            ),
-            onPressed: () {
-              if (onTapYes != null) {
-                onTapYes!();
-              } else {
-                Navigator.of(context).pop();
-                Navigator.of(context).pop();
-              }
-            }),
+          child: Text(
+            context.tr('yesBtn')!,
+            style: textStyle,
+          ),
+          onPressed: () {
+            if (onTapYes != null) {
+              onTapYes!();
+            } else {
+              Navigator.of(context).pop();
+              Navigator.of(context).pop();
+            }
+          },
+        ),
         CupertinoButton(
           onPressed: Navigator.of(context).pop,
           child: Text(
-            AppLocalization.of(context)!.getTranslatedValues("noBtn")!,
+            context.tr('noBtn')!,
             style: textStyle,
           ),
         ),

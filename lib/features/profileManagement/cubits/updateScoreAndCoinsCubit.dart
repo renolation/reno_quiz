@@ -10,79 +10,95 @@ class UpdateScoreAndCoinsInitial extends UpdateScoreAndCoinsState {}
 class UpdateScoreAndCoinsInProgress extends UpdateScoreAndCoinsState {}
 
 class UpdateScoreAndCoinsSuccess extends UpdateScoreAndCoinsState {
+  UpdateScoreAndCoinsSuccess({this.coins, this.score});
+
   final String? score;
   final String? coins;
-
-  UpdateScoreAndCoinsSuccess({this.coins, this.score});
 }
 
 class UpdateScoreAndCoinsFailure extends UpdateScoreAndCoinsState {
-  final String errorMessage;
-
   UpdateScoreAndCoinsFailure(this.errorMessage);
+
+  final String errorMessage;
 }
 
 class UpdateScoreAndCoinsCubit extends Cubit<UpdateScoreAndCoinsState> {
-  final ProfileManagementRepository _profileManagementRepository;
-
   UpdateScoreAndCoinsCubit(this._profileManagementRepository)
       : super(UpdateScoreAndCoinsInitial());
+  final ProfileManagementRepository _profileManagementRepository;
 
-  void updateCoins(String? userId, int? coins, bool addCoin, String title,
-      {String? type}) async {
+  Future<void> updateCoins({
+    required String title,
+    required bool addCoin,
+    int? coins,
+    String? type,
+  }) async {
     emit(UpdateScoreAndCoinsInProgress());
 
-    _profileManagementRepository
-        .updateConins(
-            userId: userId!,
-            coins: coins,
-            addCoin: addCoin,
-            type: type,
-            title: title)
+    await _profileManagementRepository
+        .updateCoins(
+      coins: coins,
+      addCoin: addCoin,
+      type: type,
+      title: title,
+    )
         .then((result) {
       if (!isClosed) {
-        emit(UpdateScoreAndCoinsSuccess(
-            coins: result['coins'], score: result['score']));
+        emit(
+          UpdateScoreAndCoinsSuccess(
+            coins: result.coins,
+            score: result.score,
+          ),
+        );
       }
-    }).catchError((e) {
+    }).catchError((Object e) {
       if (!isClosed) {
         emit(UpdateScoreAndCoinsFailure(e.toString()));
       }
     });
   }
 
-  void updateScore(String? userId, int? score, {String? type}) async {
+  Future<void> updateScore(int? score, {String? type}) async {
     emit(UpdateScoreAndCoinsInProgress());
-    _profileManagementRepository
-        .updateScore(userId: userId!, score: score, type: type)
+    await _profileManagementRepository
+        .updateScore(score: score, type: type)
         .then(
-          (result) => UpdateScoreAndCoinsSuccess(
-              coins: result['coins'], score: result['score']),
+          (result) => emit(
+            UpdateScoreAndCoinsSuccess(
+              coins: result['coins'] as String,
+              score: result['score'] as String,
+            ),
+          ),
         )
-        .catchError((e) {
+        .catchError((Object e) {
       emit(UpdateScoreAndCoinsFailure(e.toString()));
     });
   }
 
-  void updateCoinsAndScore(
-      String? userId, int? score, bool addCoin, int coins, String title,
-      {String? type}) async {
+  Future<void> updateCoinsAndScore(
+    int? score,
+    int coins,
+    String title, {
+    bool addCoin = true,
+    String? type,
+  }) async {
     emit(UpdateScoreAndCoinsInProgress());
 
-    _profileManagementRepository
+    await _profileManagementRepository
         .updateCoinsAndScore(
-            title: title,
-            userId: userId!,
-            coins: coins,
-            addCoin: addCoin,
-            score: score,
-            type: type)
-        .then(
-          (result) => emit(UpdateScoreAndCoinsSuccess(
-              coins: result['coins'], score: result['score'])),
+          title: title,
+          coins: coins,
+          addCoin: addCoin,
+          score: score,
+          type: type,
         )
-        .catchError((e) {
-      emit(UpdateScoreAndCoinsFailure(e.toString()));
-    });
+        .then(
+          (v) => emit(
+            UpdateScoreAndCoinsSuccess(coins: v.coins, score: v.score),
+          ),
+        )
+        .catchError(
+          (dynamic e) => emit(UpdateScoreAndCoinsFailure(e.toString())),
+        );
   }
 }

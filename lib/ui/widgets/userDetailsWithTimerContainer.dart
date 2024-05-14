@@ -1,25 +1,27 @@
 import 'package:flutter/material.dart';
-import 'package:flutterquiz/ui/widgets/circularImageContainer.dart';
 import 'package:flutterquiz/ui/widgets/circularTimerContainer.dart';
+import 'package:flutterquiz/ui/widgets/custom_image.dart';
 import 'package:flutterquiz/utils/constants/fonts.dart';
 
 const timerHeightAndWidthPercentage = 0.14;
 
 class UserDetailsWithTimerContainer extends StatelessWidget {
-  final String profileUrl;
-  final String correctAnswers;
-  final String name;
-  final AnimationController timerAnimationController;
-  final bool isCurrentUser;
-
   const UserDetailsWithTimerContainer({
-    super.key,
     required this.name,
     required this.timerAnimationController,
     required this.profileUrl,
     required this.correctAnswers,
     required this.isCurrentUser,
+    required this.totalQues,
+    super.key,
   });
+
+  final String profileUrl;
+  final String correctAnswers;
+  final String name;
+  final AnimationController timerAnimationController;
+  final bool isCurrentUser;
+  final String totalQues;
 
   Widget _buildTimer(BuildContext context) {
     return SizedBox(
@@ -36,10 +38,10 @@ class UserDetailsWithTimerContainer extends StatelessWidget {
                   timerAnimationController: timerAnimationController,
                   heightAndWidth: 50,
                 ),
-                CircularImageContainer(
-                  height: 47,
-                  imagePath: profileUrl,
+                QImage.circular(
+                  imageUrl: profileUrl,
                   width: 47,
+                  height: 47,
                 ),
               ],
             ),
@@ -55,7 +57,7 @@ class UserDetailsWithTimerContainer extends StatelessWidget {
               ),
               alignment: Alignment.center,
               child: Text(
-                '$correctAnswers/10',
+                '$correctAnswers/$totalQues',
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.background,
                   fontSize: 10,
@@ -63,7 +65,7 @@ class UserDetailsWithTimerContainer extends StatelessWidget {
                 ),
               ),
             ),
-          )
+          ),
         ],
       ),
     );
@@ -85,7 +87,6 @@ class UserDetailsWithTimerContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    print("$name: $correctAnswers");
     return SizedBox(
       width: 75,
       height: 75,

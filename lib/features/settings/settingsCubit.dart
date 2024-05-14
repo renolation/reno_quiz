@@ -4,20 +4,25 @@ import 'package:flutterquiz/features/settings/settingsModel.dart';
 import 'package:flutterquiz/features/settings/settingsRepository.dart';
 
 class SettingsState {
-  final SettingsModel? settingsModel;
   SettingsState({this.settingsModel});
+
+  final SettingsModel? settingsModel;
 }
 
 class SettingsCubit extends Cubit<SettingsState> {
-  final SettingsRepository _settingsRepository;
   SettingsCubit(this._settingsRepository) : super(SettingsState()) {
     _getCurrentSettings();
   }
 
+  final SettingsRepository _settingsRepository;
+
   void _getCurrentSettings() {
-    emit(SettingsState(
+    emit(
+      SettingsState(
         settingsModel:
-            SettingsModel.fromJson(_settingsRepository.getCurrentSettings())));
+            SettingsModel.fromJson(_settingsRepository.getCurrentSettings()),
+      ),
+    );
   }
 
   SettingsModel getSettings() {
@@ -25,33 +30,54 @@ class SettingsCubit extends Cubit<SettingsState> {
   }
 
   void changeShowIntroSlider() {
-    _settingsRepository.changeIntroSlider(false);
-    emit(SettingsState(
-        settingsModel: state.settingsModel!.copyWith(showIntroSlider: false)));
+    _settingsRepository.showIntroSlider = false;
+    emit(
+      SettingsState(
+        settingsModel: state.settingsModel!.copyWith(showIntroSlider: false),
+      ),
+    );
   }
 
-  void changeSound(bool value) {
-    _settingsRepository.changeSound(value);
-    emit(SettingsState(
-        settingsModel: state.settingsModel!.copyWith(sound: value)));
+  bool get sound => _settingsRepository.sound;
+
+  set sound(bool value) {
+    _settingsRepository.sound = value;
+    emit(
+      SettingsState(
+        settingsModel: state.settingsModel!.copyWith(sound: value),
+      ),
+    );
   }
 
-  void changeBackgroundMusic(bool value) {
-    _settingsRepository.changeBackgroundMusic(value);
-    emit(SettingsState(
-        settingsModel: state.settingsModel!.copyWith(backgroundMusic: value)));
+  bool get backgroundMusic => _settingsRepository.backgroundMusic;
+
+  set backgroundMusic(bool value) {
+    _settingsRepository.backgroundMusic = value;
+    emit(
+      SettingsState(
+        settingsModel: state.settingsModel!.copyWith(backgroundMusic: value),
+      ),
+    );
   }
 
-  void changeVibration(bool value) {
-    _settingsRepository.changeVibration(value);
-    emit(SettingsState(
-        settingsModel: state.settingsModel!.copyWith(vibration: value)));
+  bool get vibration => _settingsRepository.vibration;
+
+  set vibration(bool value) {
+    _settingsRepository.vibration = value;
+    emit(
+      SettingsState(
+        settingsModel: state.settingsModel!.copyWith(vibration: value),
+      ),
+    );
   }
 
   void changeFontSize(double value) {
-    _settingsRepository.changePlayAreaFontSize(value);
-    emit(SettingsState(
-        settingsModel: state.settingsModel!.copyWith(playAreaFontSize: value)));
+    _settingsRepository.playAreaFontSize = value;
+    emit(
+      SettingsState(
+        settingsModel: state.settingsModel!.copyWith(playAreaFontSize: value),
+      ),
+    );
   }
 
   String? getLanguageCode() {

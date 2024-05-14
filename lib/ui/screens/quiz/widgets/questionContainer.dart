@@ -6,22 +6,20 @@ import 'package:flutterquiz/ui/widgets/circularProgressContainer.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
 
 class QuestionContainer extends StatelessWidget {
+  const QuestionContainer({
+    required this.isMathQuestion,
+    super.key,
+    this.question,
+    this.questionColor,
+    this.questionNumber,
+  });
   final Question? question;
   final Color? questionColor;
   final int? questionNumber;
   final bool isMathQuestion;
 
-  const QuestionContainer({
-    super.key,
-    this.question,
-    required this.isMathQuestion,
-    this.questionColor,
-    this.questionNumber,
-  });
-
   @override
   Widget build(BuildContext context) {
-    print("isMathQuestion: $isMathQuestion");
     return Column(
       children: [
         Row(
@@ -47,13 +45,14 @@ class QuestionContainer extends StatelessWidget {
                           textAlign: TeXViewTextAlign.center,
                           fontStyle: TeXViewFontStyle(fontSize: 23),
                         ),
+                        renderingEngine: const TeXViewRenderingEngine.katex(),
                       )
                     : Text(
                         questionNumber == null
-                            ? "${question!.question}"
-                            : "$questionNumber. ${question!.question}",
+                            ? '${question!.question}'
+                            : '$questionNumber. ${question!.question}',
                         style: TextStyle(
-                          fontSize: 20.0,
+                          fontSize: 20,
                           color:
                               questionColor ?? Theme.of(context).primaryColor,
                         ),
@@ -64,47 +63,53 @@ class QuestionContainer extends StatelessWidget {
             /// Show Marks if given
             if (question!.marks!.isNotEmpty) ...[
               Padding(
-                padding: const EdgeInsets.only(right: 20.0),
+                padding: const EdgeInsets.only(right: 20),
                 child: Text(
-                  "[${question!.marks}]",
+                  '[${question!.marks}]',
                   style: TextStyle(
-                      fontSize: 18.0,
-                      fontWeight: FontWeight.w400,
-                      color: questionColor ?? Theme.of(context).primaryColor),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w400,
+                    color: questionColor ?? Theme.of(context).primaryColor,
+                  ),
                 ),
               ),
             ],
           ],
         ),
-        const SizedBox(height: 15.0),
+        const SizedBox(height: 15),
         if (question!.imageUrl != null && question!.imageUrl!.isNotEmpty) ...[
           Container(
             width: MediaQuery.of(context).size.width,
-            decoration:
-                BoxDecoration(borderRadius: BorderRadius.circular(10.0)),
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(10)),
             height: MediaQuery.of(context).size.height * (0.225),
-            child: CachedNetworkImage(
-              errorWidget: (context, image, _) => Center(
-                child: Icon(
-                  Icons.error,
-                  color: Theme.of(context).primaryColor,
+            child: InteractiveViewer(
+              boundaryMargin: const EdgeInsets.all(20),
+              child: CachedNetworkImage(
+                errorWidget: (context, image, _) => Center(
+                  child: Icon(
+                    Icons.error,
+                    color: Theme.of(context).primaryColor,
+                  ),
+                ),
+                imageBuilder: (context, imageProvider) {
+                  return Container(
+                    decoration: BoxDecoration(
+                      image: DecorationImage(
+                        image: imageProvider,
+                        fit: BoxFit.cover,
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  );
+                },
+                imageUrl: question!.imageUrl!,
+                placeholder: (context, url) => const Center(
+                  child: CircularProgressContainer(),
                 ),
               ),
-              imageBuilder: (context, imageProvider) {
-                return Container(
-                  decoration: BoxDecoration(
-                    image: DecorationImage(
-                        image: imageProvider, fit: BoxFit.cover),
-                    borderRadius: BorderRadius.circular(10.0),
-                  ),
-                );
-              },
-              imageUrl: question!.imageUrl!,
-              placeholder: (context, url) => const Center(
-                  child: CircularProgressContainer(whiteLoader: false)),
             ),
           ),
-          const SizedBox(height: 5.0),
+          const SizedBox(height: 5),
         ],
       ],
     );

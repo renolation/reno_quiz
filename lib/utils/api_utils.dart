@@ -5,7 +5,7 @@ import 'package:flutterquiz/features/auth/authRemoteDataSource.dart';
 
 class ApiUtils {
   static Future<Map<String, String>> getHeaders() async {
-    String jwtToken = AuthLocalDataSource.getJwtToken();
+    var jwtToken = AuthLocalDataSource.getJwtToken();
 
     if (jwtToken.isEmpty) {
       try {
@@ -21,6 +21,6 @@ class ApiUtils {
 
     log(name: 'API: JWT Token', jwtToken);
 
-    return {"Authorization": 'Bearer $jwtToken'};
+    return {'Authorization': 'Bearer $jwtToken'};
   }
 }

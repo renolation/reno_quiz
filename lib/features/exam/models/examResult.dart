@@ -11,6 +11,22 @@ class ExamResult {
     required this.statistics,
   });
 
+  ExamResult.fromJson(Map<String, dynamic> json) {
+    id = json['id'] as String;
+    languageId = json['language_id'] as String;
+    title = json['title'] as String;
+    date = json['date'] as String;
+    examKey = json['exam_key'] as String;
+    duration = json['duration'] as String;
+    status = json['status'] as String;
+    totalDuration = json['total_duration'] as String? ?? '0';
+    totalMarks = json['total_marks'] as String? ?? '0';
+    statistics = (json['statistics'] as List)
+        .cast<Map<String, dynamic>>()
+        .map(Statistics.fromJson)
+        .toList();
+  }
+
   late final String id;
   late final String languageId;
   late final String title;
@@ -22,22 +38,6 @@ class ExamResult {
   late final List<Statistics> statistics;
 
   late final String totalMarks;
-
-  ExamResult.fromJson(Map<String, dynamic> json) {
-    id = json['id'];
-    languageId = json['language_id'];
-    title = json['title'];
-    date = json['date'];
-    examKey = json['exam_key'];
-    duration = json['duration'];
-    status = json['status'];
-    totalDuration = json['total_duration'] ?? "0";
-
-    totalMarks = json['total_marks'] ?? "0";
-    statistics = List.from(json['statistics'] ?? [])
-        .map((e) => Statistics.fromJson(e))
-        .toList();
-  }
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
@@ -56,8 +56,8 @@ class ExamResult {
   }
 
   int obtainedMarks() {
-    int totalObtainedMarks = 0;
-    for (var markStatistics in statistics) {
+    var totalObtainedMarks = 0;
+    for (final markStatistics in statistics) {
       totalObtainedMarks = totalObtainedMarks +
           int.parse(markStatistics.mark) *
               int.parse(markStatistics.correctAnswer);
@@ -67,8 +67,8 @@ class ExamResult {
   }
 
   int totalQuestions() {
-    int totalQuestion = 0;
-    for (var markStatistics in statistics) {
+    var totalQuestion = 0;
+    for (final markStatistics in statistics) {
       totalQuestion = totalQuestion +
           int.parse(markStatistics.correctAnswer) +
           int.parse(markStatistics.incorrect);
@@ -77,34 +77,34 @@ class ExamResult {
   }
 
   int totalCorrectAnswers() {
-    int correctAnswers = 0;
-    for (var markStatistics in statistics) {
+    var correctAnswers = 0;
+    for (final markStatistics in statistics) {
       correctAnswers = correctAnswers + int.parse(markStatistics.correctAnswer);
     }
     return correctAnswers;
   }
 
   int totalInCorrectAnswers() {
-    int inCorrectAnswers = 0;
-    for (var markStatistics in statistics) {
+    var inCorrectAnswers = 0;
+    for (final markStatistics in statistics) {
       inCorrectAnswers = inCorrectAnswers + int.parse(markStatistics.incorrect);
     }
     return inCorrectAnswers;
   }
 
   int totalQuestionsByMark(String questionMark) {
-    Statistics statistics = _getStatisticsByMark(questionMark);
-    return (int.parse(statistics.correctAnswer) +
-        int.parse(statistics.incorrect));
+    final statistics = _getStatisticsByMark(questionMark);
+    return int.parse(statistics.correctAnswer) +
+        int.parse(statistics.incorrect);
   }
 
   int totalInCorrectAnswersByMark(String questionMark) {
-    Statistics statistics = _getStatisticsByMark(questionMark);
+    final statistics = _getStatisticsByMark(questionMark);
     return int.parse(statistics.incorrect);
   }
 
   int totalCorrectAnswersByMark(String questionMark) {
-    Statistics statistics = _getStatisticsByMark(questionMark);
+    final statistics = _getStatisticsByMark(questionMark);
     return int.parse(statistics.correctAnswer);
   }
 
@@ -121,21 +121,20 @@ class ExamResult {
 }
 
 class Statistics {
-  Statistics({
+  const Statistics({
     required this.mark,
     required this.correctAnswer,
     required this.incorrect,
   });
 
-  late final String mark;
-  late final String correctAnswer;
-  late final String incorrect;
+  Statistics.fromJson(Map<String, dynamic> json)
+      : mark = json['mark'] as String,
+        correctAnswer = json['correct_answer'] as String,
+        incorrect = json['incorrect'] as String;
 
-  Statistics.fromJson(Map<String, dynamic> json) {
-    mark = json['mark'];
-    correctAnswer = json['correct_answer'];
-    incorrect = json['incorrect'];
-  }
+  final String mark;
+  final String correctAnswer;
+  final String incorrect;
 
   Map<String, dynamic> toJson() => {
         'mark': mark,

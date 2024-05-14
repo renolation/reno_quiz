@@ -2,11 +2,6 @@ import 'package:flutterquiz/features/coinHistory/coinHistoryRemoteDataSource.dar
 import 'package:flutterquiz/features/coinHistory/models/coinHistory.dart';
 
 class CoinHistoryRepository {
-  static final CoinHistoryRepository _coinHistoryRepository =
-      CoinHistoryRepository._internal();
-
-  late CoinHistoryRemoteDataSource _coinHistoryRemoteDataSource;
-
   factory CoinHistoryRepository() {
     _coinHistoryRepository._coinHistoryRemoteDataSource =
         CoinHistoryRemoteDataSource();
@@ -15,17 +10,24 @@ class CoinHistoryRepository {
 
   CoinHistoryRepository._internal();
 
-  Future<Map<String, dynamic>> getCoinHistory(
-      {required String userId,
-      required String offset,
-      required String limit}) async {
-    final result = await _coinHistoryRemoteDataSource.getCoinHistory(
-        userId: userId, limit: limit, offset: offset);
+  static final CoinHistoryRepository _coinHistoryRepository =
+      CoinHistoryRepository._internal();
 
-    return {
-      "total": result['total'],
-      "coinHistory":
-          (result['data'] as List).map((e) => CoinHistory.fromJson(e)).toList(),
-    };
+  late CoinHistoryRemoteDataSource _coinHistoryRemoteDataSource;
+
+  // then sending again to Map.
+  Future<({int total, List<CoinHistory> data})> getCoinHistory({
+    required String offset,
+    required String limit,
+  }) async {
+    final (:total, :data) = await _coinHistoryRemoteDataSource.getCoinHistory(
+      limit: limit,
+      offset: offset,
+    );
+
+    return (
+      total: total,
+      data: data.map(CoinHistory.fromJson).toList(),
+    );
   }
 }

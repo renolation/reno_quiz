@@ -1,13 +1,17 @@
 import 'dart:developer';
-
-import 'package:facebook_audience_network/ad/ad_rewarded.dart';
-import 'package:flutter/widgets.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutterquiz/features/systemConfig/cubits/systemConfigCubit.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
-import 'package:unity_ads_plugin/unity_ads_plugin.dart';
 import 'dart:io';
 
+import 'package:flutter/widgets.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutterquiz/features/profileManagement/cubits/userDetailsCubit.dart';
+import 'package:flutterquiz/features/systemConfig/cubits/systemConfigCubit.dart';
+import 'package:flutterquiz/utils/constants/error_message_keys.dart';
+import 'package:flutterquiz/utils/extensions.dart';
+import 'package:flutterquiz/utils/ui_utils.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:unity_ads_plugin/unity_ads_plugin.dart';
+
+// TODO(J): watching Unity Video Ad crashes the app. check after updating unity dependency to latest.
 abstract class RewardedAdState {}
 
 class RewardedAdInitial extends RewardedAdState {}
@@ -29,51 +33,19 @@ class RewardedAdCubit extends Cubit<RewardedAdState> {
     //dispose ad and then load
     _rewardedAd?.dispose();
     RewardedAd.load(
-      adUnitId: context.read<SystemConfigCubit>().googleRewardedAdId(),
+      adUnitId: context.read<SystemConfigCubit>().googleRewardedAdId,
       request: const AdRequest(),
-      rewardedAdLoadCallback: RewardedAdLoadCallback(onAdFailedToLoad: (error) {
-        print("Rewarded ad failed to load");
-        emit(RewardedAdFailure());
-      }, onAdLoaded: (ad) {
-        _rewardedAd = ad;
-        print("Rewarded ad loaded successfully");
-        emit(RewardedAdLoaded());
-      }),
-    );
-  }
-
-  Future<void> _createFacebookRewardedAd(
-    BuildContext context, {
-    required Function onFbRewardAdCompleted,
-  }) async {
-    await FacebookRewardedVideoAd.destroyRewardedVideoAd();
-    FacebookRewardedVideoAd.loadRewardedVideoAd(
-      placementId: context.read<SystemConfigCubit>().faceBookRewardedAdId(),
-      listener: (result, value) {
-        log("Rewarded Ad: $result --> $value");
-        if (result == RewardedVideoAdResult.LOADED) {
-          emit(RewardedAdLoaded());
-        }
-
-        if (result == RewardedVideoAdResult.ERROR) {
-          print(value);
+      rewardedAdLoadCallback: RewardedAdLoadCallback(
+        onAdFailedToLoad: (error) {
+          log(error.message, name: 'Create Google Ads');
           emit(RewardedAdFailure());
-        }
-        //if (result == RewardedVideoAdResult.VIDEO_COMPLETE)
+        },
+        onAdLoaded: (ad) {
+          _rewardedAd = ad;
 
-        /// Once a Rewarded Ad has been closed and becomes invalidated,
-        /// load a fresh Ad by calling this function.
-        if (result == RewardedVideoAdResult.VIDEO_CLOSED &&
-            (value == true || value["invalidated"] == true)) {
-          //ad callback here to
-          print("Add coins here");
-          onFbRewardAdCompleted();
-          createRewardedAd(
-            context,
-            onFbRewardAdCompleted: onFbRewardAdCompleted,
-          );
-        }
-      },
+          emit(RewardedAdLoaded());
+        },
+      ),
     );
   }
 
@@ -85,91 +57,169 @@ class RewardedAdCubit extends Cubit<RewardedAdState> {
     );
   }
 
-  void createRewardedAd(
-    BuildContext context, {
-    required Function onFbRewardAdCompleted,
-  }) {
+  void createRewardedAd(BuildContext context) {
     emit(RewardedAdLoadInProgress());
 
-    var sysConfigCubit = context.read<SystemConfigCubit>();
-    if (sysConfigCubit.isAdsEnable()) {
-      var adsType = sysConfigCubit.adsType();
-      if (adsType == 1) {
+    final sysConfigCubit = context.read<SystemConfigCubit>();
+    if (sysConfigCubit.isAdsEnable &&
+        !context.read<UserDetailsCubit>().removeAds()) {
+      if (sysConfigCubit.adsType == 1) {
         _createGoogleRewardedAd(context);
-      } else if (adsType == 2) {
-        _createFacebookRewardedAd(
-          context,
-          onFbRewardAdCompleted: onFbRewardAdCompleted,
-        );
       } else {
         createUnityRewardsAd();
       }
     }
   }
 
+  Future<void> createDailyRewardAd(BuildContext context) async {
+    emit(RewardedAdLoadInProgress());
+
+    final sysConfig = context.read<SystemConfigCubit>();
+    if (sysConfig.isAdsEnable &&
+        !context.read<UserDetailsCubit>().removeAds()) {
+      if (sysConfig.adsType == 1) {
+        _createGoogleRewardedAd(context);
+      } else {
+        createUnityRewardsAd();
+      }
+    }
+  }
+
+  Future<void> showDailyAd({required BuildContext context}) async {
+    final sysConfigCubit = context.read<SystemConfigCubit>();
+    final userDetails = context.read<UserDetailsCubit>();
+
+    if (sysConfigCubit.isAdsEnable && state is RewardedAdLoaded) {
+      ///
+      if (sysConfigCubit.adsType == 1) {
+        _rewardedAd?.fullScreenContentCallback = FullScreenContentCallback(
+          onAdDismissedFullScreenContent: (ad) async {
+            // await ad.dispose();
+            await createDailyRewardAd(context);
+          },
+          onAdFailedToShowFullScreenContent: (ad, error) async {
+            await ad.dispose();
+            emit(RewardedAdFailure());
+          },
+        );
+        await rewardedAd?.show(
+          onUserEarnedReward: (_, __) {
+            userDetails.watchedDailyAd().then((_) async {
+              await context.read<UserDetailsCubit>().fetchUserDetails();
+
+              if (!context.mounted) return;
+
+              UiUtils.showSnackBar(
+                "${context.tr("earnedLbl")!} "
+                '${sysConfigCubit.coinsPerDailyAdView} '
+                "${context.tr("coinsLbl")!}",
+                context,
+                duration: const Duration(seconds: 2),
+              );
+            }).catchError((dynamic e) {
+              if (e.toString() == errorCodeDailyAdsLimitSucceeded) {
+                UiUtils.showSnackBar(
+                  context.tr('dailyAdsLimitExceeded')!,
+                  context,
+                );
+              }
+            });
+          },
+        );
+      } else {
+        await UnityAds.showVideoAd(
+          placementId: unityRewardsPlacement(),
+          onComplete: (_) async {
+            await userDetails.watchedDailyAd().then((_) async {
+              await context.read<UserDetailsCubit>().fetchUserDetails();
+
+              if (!context.mounted) return;
+
+              UiUtils.showSnackBar(
+                "${context.tr("earnedLbl")!} "
+                '${sysConfigCubit.coinsPerDailyAdView} '
+                "${context.tr("coinsLbl")!}",
+                context,
+                duration: const Duration(seconds: 2),
+              );
+            }).catchError((dynamic e) {
+              if (e.toString() == errorCodeDailyAdsLimitSucceeded) {
+                UiUtils.showSnackBar(
+                  context.tr('dailyAdsLimitExceeded')!,
+                  context,
+                );
+              }
+            });
+            log('Watched Daily Ad', name: 'Admob Ads');
+
+            return createDailyRewardAd(context);
+          },
+        );
+      }
+    } else if (state is RewardedAdFailure) {
+      await createDailyRewardAd(context);
+    }
+  }
+
   void showAd({
-    required Function onAdDismissedCallback,
+    required VoidCallback onAdDismissedCallback,
     required BuildContext context,
   }) {
     //if ads is enable
-    var sysConfigCubit = context.read<SystemConfigCubit>();
-    if (sysConfigCubit.isAdsEnable()) {
+    final sysConfigCubit = context.read<SystemConfigCubit>();
+    if (sysConfigCubit.isAdsEnable &&
+        !context.read<UserDetailsCubit>().removeAds()) {
       if (state is RewardedAdLoaded) {
         //if google ad is enable
-        var adsType = sysConfigCubit.adsType();
-        if (adsType == 1) {
+        if (sysConfigCubit.adsType == 1) {
           _rewardedAd?.fullScreenContentCallback = FullScreenContentCallback(
             onAdDismissedFullScreenContent: (ad) {
               ad.dispose();
               onAdDismissedCallback();
-              createRewardedAd(context, onFbRewardAdCompleted: () {});
+              createRewardedAd(context);
             },
             onAdFailedToShowFullScreenContent: (ad, error) {
-              print('$ad onAdFailedToShowFullScreenContent: $error');
               ad.dispose();
               //need to show this reason to user
               emit(RewardedAdFailure());
-              createRewardedAd(context, onFbRewardAdCompleted: () {});
+              createRewardedAd(context);
             },
           );
           rewardedAd?.show(onUserEarnedReward: (_, __) => {});
-        } else if (adsType == 2) {
-          //show facebook ad
-          FacebookRewardedVideoAd.showRewardedVideoAd();
         } else {
           UnityAds.showVideoAd(
             placementId: unityRewardsPlacement(),
             onComplete: (placementId) {
               onAdDismissedCallback();
-              createRewardedAd(context, onFbRewardAdCompleted: () {});
+              createRewardedAd(context);
             },
             onFailed: (placementId, error, message) =>
-                print('Video Ad $placementId failed: $error $message'),
-            onStart: (placementId) => print('Video Ad $placementId started'),
-            onClick: (placementId) => print('Video Ad $placementId click'),
+                log('Video Ad $placementId failed: $error $message'),
+            onStart: (placementId) => log('Video Ad $placementId started'),
+            onClick: (placementId) => log('Video Ad $placementId click'),
           );
         }
       } else if (state is RewardedAdFailure) {
         //create reward ad if ad is not loaded successfully
-        createRewardedAd(context, onFbRewardAdCompleted: onAdDismissedCallback);
+        createRewardedAd(context);
       }
     }
   }
 
   String unityRewardsPlacement() {
     if (Platform.isAndroid) {
-      return "Rewarded_Android";
+      return 'Rewarded_Android';
     }
     if (Platform.isIOS) {
-      return "Rewarded_iOS";
+      return 'Rewarded_iOS';
     }
 
-    return "";
+    return '';
   }
 
   @override
   Future<void> close() async {
-    _rewardedAd?.dispose();
+    await _rewardedAd?.dispose();
     return super.close();
   }
 }

@@ -1,431 +1,440 @@
 //Widget Terms and condition
-const termAgreement = "termAgreement";
-const termOfService = "termOfService";
-const andLbl = "andLbl";
-const privacyPolicy = "privacyPolicy";
+const andLbl = 'andLbl';
+const privacyPolicy = 'privacyPolicy';
+const termAgreement = 'termAgreement';
+const termOfService = 'termOfService';
 
 //fill otp screen
-const otpVerificationLbl = "otpVerificationLbl";
-const otpSendLbl = "otpSendLbl";
-const submitBtn = "submitBtn";
-const submittingButton = "submittingButton";
-const resetLbl = "resetLbl";
-const resendBtn = "resendBtn";
-const resendSnackBar = "resendSnackBar";
-const noInterNetSnackBar = "noInterNetSnackBar";
-const enterOtp = "enterOtpMsg";
-
-//otp screen
-const enterNumberLbl = "enterNumberLbl";
-const receiveOtpLbl = "receiveOtpLbl";
-const countryLbl = "countryLbl";
-const validMobMsg = "validMobMsg";
-const requestOtpLbl = "requestOtpLbl";
+const countryLbl = 'countryLbl';
+const enterNumberLbl = 'enterNumberLbl';
+const enterOtp = 'enterOtpMsg';
+const noInterNetSnackBar = 'noInterNetSnackBar';
+const otpSendLbl = 'otpSendLbl';
+const otpVerificationLbl = 'otpVerificationLbl';
+const receiveOtpLbl = 'receiveOtpLbl';
+const requestOtpLbl = 'requestOtpLbl';
+const resendBtn = 'resendBtn';
+const resendSnackBar = 'resendSnackBar';
+const resetLbl = 'resetLbl';
+const submitBtn = 'submitBtn';
+const submittingButton = 'submittingButton';
+const validMobMsg = 'validMobMsg';
 
 //signInScreen
-const userLoginLbl = "userLoginLbl";
-const emailRequiredMsg = "emailRequiredMsg";
-const validEmail = "validEmail";
-const emailLbl = "emailLbl";
-const pwdLengthMsg = "pwdLengthMsg";
-const pwdLbl = "pwdLbl";
-const loginLbl = "loginLbl";
-const enterEmailLbl = "enterEmailLbl";
-const forgotPwdLbl = "forgotPwdLbl";
-const resetPwdLbl = "resetPwdLbl";
-const resetEnterEmailLbl = "resetEnterEmailLbl";
+const emailLbl = 'emailLbl';
+const emailRequiredMsg = 'emailRequiredMsg';
+const enterEmailLbl = 'enterEmailLbl';
+const forgotPwdLbl = 'forgotPwdLbl';
+const loginLbl = 'loginLbl';
+const loginSocialMediaLbl = 'loginSocialMediaLbl';
+const noAccountLbl = 'noAccountLbl';
+const orLbl = 'orLbl';
+const pwdLbl = 'pwdLbl';
+const pwdLengthMsg = 'pwdLengthMsg';
 const pwdResetLinkLbl = 'pwdResetLinkLbl';
-const orLbl = "orLbl";
-const loginSocialMediaLbl = "loginSocialMediaLbl";
-const noAccountLbl = "noAccountLbl";
-const signUpLbl = "signUpLbl";
+const resetEnterEmailLbl = 'resetEnterEmailLbl';
+const resetPwdLbl = 'resetPwdLbl';
+const signUpLbl = 'signUpLbl';
+const userLoginLbl = 'userLoginLbl';
+const validEmail = 'validEmail';
 
 //SignUpScreen
-const cnPwdNotMatchMsg = "cnPwdNotMatchMsg";
-const cnPwdLbl = "cnPwdLbl";
-const alreadyAccountLbl = "alreadyAccountLbl";
-const emailVerify = "emailVerify";
+const alreadyAccountLbl = 'alreadyAccountLbl';
+const cnPwdLbl = 'cnPwdLbl';
+const cnPwdNotMatchMsg = 'cnPwdNotMatchMsg';
+const emailVerify = 'emailVerify';
 
 //battle CreateRoomDialog widget
-const liveChatLbl = "liveChatLbl";
-const entryLbl = "entryLbl";
-const creatingLoadingLbl = "creatingLoadingLbl";
-const creatingLbl = "creatingLbl"; //use as Uppercase also
-const enterCodeLbl = "enterCodeLbl";
-const joiningLoadingLbl = "joiningLoadingLbl";
-const joinLbl = "joinLbl"; //use as Uppercase also
+const creatingLbl = 'creatingLbl'; //use as Uppercase also
+const creatingLoadingLbl = 'creatingLoadingLbl';
+const enterCodeLbl = 'enterCodeLbl';
+const entryLbl = 'entryLbl';
+const joinLbl = 'joinLbl'; //use as Uppercase also
+const joiningLoadingLbl = 'joiningLoadingLbl';
+const liveChatLbl = 'liveChatLbl';
 
 // battle WaitForOthersContainer Widget
-const waitOtherComplete = "waitOtherComplete";
+const waitOtherComplete = 'waitOtherComplete';
 
 // battle WaitingForPlayerDialog Widget
-const waitingLbl = "waitingLbl";
-const roomDeletedOwnerLbl = "roomDeletedOwnerLbl";
-const okayLbl = "okayLbl";
-const entryAmountLbl = "entryAmountLbl";
-const roomCodeLbl = "roomCodeLbl";
-const shareRoomCodeLbl = "shareRoomCodeLbl";
-const vsLbl = "vsLbl";
-const startLbl = "startLbl";
+const entryAmountLbl = 'entryAmountLbl';
+const okayLbl = 'okayLbl';
+const roomCodeLbl = 'roomCodeLbl';
+const roomDeletedOwnerLbl = 'roomDeletedOwnerLbl';
+const shareRoomCodeLbl = 'shareRoomCodeLbl';
+const startLbl = 'startLbl';
+const vsLbl = 'vsLbl';
+const waitingLbl = 'waitingLbl';
 
 //BattleRoomFindOpponentScreen
-const findingOpponentLbl = "findingOpponentLbl";
-const foundOpponentLbl = "foundOpponentLbl";
-const getReadyLbl = "getReadyLbl";
-const bestOfLuckLbl = "bestOfLuckLbl";
-const opponentNotFoundLbl = "opponentNotFoundLbl";
-const retryLbl = "retryLbl";
+const bestOfLuckLbl = 'bestOfLuckLbl';
+const findingOpponentLbl = 'findingOpponentLbl';
+const foundOpponentLbl = 'foundOpponentLbl';
+const getReadyLbl = 'getReadyLbl';
+const opponentNotFoundLbl = 'opponentNotFoundLbl';
+const retryLbl = 'retryLbl';
 
 // battle BattleRoomQuizScreen
-const youWonLbl = "youWonLbl";
-const opponentLeftLbl = "opponentLeftLbl";
-const youLeftLbl = "youLeftLbl";
+const opponentLeftLbl = 'opponentLeftLbl';
+const youLeftLbl = 'youLeftLbl';
+const youWonLbl = 'youWonLbl';
 
 //MultiUserBattleRoomQuizScreen
-const everyOneLeftLbl = "everyOneLeftLbl";
+const everyOneLeftLbl = 'everyOneLeftLbl';
 
 //MultiUserBattleRoomResultScreen
-const resultLbl = "resultLbl";
-const youLostLbl = "youLostLbl";
-const exitLbl = "exitLbl";
+const exitLbl = 'exitLbl';
+const resultLbl = 'resultLbl';
+const youLostLbl = 'youLostLbl';
 
 //home QuizTypeContainer
-const referralCodeLbl = "referralCodeLbl";
-const enterReferralCodeLbl = "enterReferralCodeLbl";
+const enterReferralCodeLbl = 'enterReferralCodeLbl';
+const referralCodeLbl = 'referralCodeLbl';
 
 //homeScreen
-const selfChallengeLbl = "selfChallengeLbl";
-const challengeYourselfLbl = "challengeYourselfLbl";
+const challengeYourselfLbl = 'challengeYourselfLbl';
+const selfChallengeLbl = 'selfChallengeLbl';
 
 // profile ChooseProfileDialog widget
-const photoLibraryLbl = "photoLibraryLbl";
-const cameraLbl = "cameraLbl";
+const cameraLbl = 'cameraLbl';
+const photoLibraryLbl = 'photoLibraryLbl';
 
 // profile EditProfileFieldBottomSheetContainer
-const updatingLbl = "updatingLbl";
-const updateLbl = "updateLbl";
-const enterValidEmailMsg = "enterValidEmailMsg";
+const enterValidEmailMsg = 'enterValidEmailMsg';
+const updateLbl = 'updateLbl';
+const updatingLbl = 'updatingLbl';
 
 //EditProfileFieldDialog
-const enterValidNameMsg = "enterValidNameMsg";
+const enterValidNameMsg = 'enterValidNameMsg';
 
 //ProfileScreen
-const bookmarkLbl = "bookmarkLbl";
-const howToPlayLbl = "howToPlayLbl";
-const inviteFriendsLbl = "inviteFriendsLbl";
-const contactUs = "contactUs";
-const aboutUs = "aboutUs";
-const termsAndConditions = "termsAndConditions";
-const rateUsLbl = "rateUsLbl";
-const shareAppLbl = "shareAppLbl";
-const logoutLbl = "logoutLbl";
-const logoutDialogLbl = "logoutDialogLbl";
-const yesBtn = "yesBtn";
-const noBtn = "noBtn";
-const profileLbl = "profileLbl";
-const nameLbl = "nameLbl";
-const notEditNumberMsg = "notEditNumberMsg";
-const mobileNumberLbl = "mobileNumberLbl";
-const notEditMailLbl = "notEditMailLbl";
+const aboutUs = 'aboutUs';
+const bookmarkLbl = 'bookmarkLbl';
+const contactUs = 'contactUs';
+const howToPlayLbl = 'howToPlayLbl';
+const inviteFriendsLbl = 'inviteFriendsLbl';
+const logoutDialogLbl = 'logoutDialogLbl';
+const logoutLbl = 'logoutLbl';
+const mobileNumberLbl = 'mobileNumberLbl';
+const nameLbl = 'nameLbl';
+const noBtn = 'noBtn';
+const notEditMailLbl = 'notEditMailLbl';
+const notEditNumberMsg = 'notEditNumberMsg';
+const profileLbl = 'profileLbl';
+const rateUsLbl = 'rateUsLbl';
+const shareAppLbl = 'shareAppLbl';
+const termsAndConditions = 'termsAndConditions';
+const yesBtn = 'yesBtn';
 
 //SelectProfilePictureScreen
-const selectProfilePhotoLbl = "selectProfilePhotoLbl";
-const selectProfileLbl = "selectProfileLbl";
-const uploadProfilePictureLbl = "uploadProfilePictureLbl";
-const continueLbl = "continueLbl";
-const enterNameLbl = "enterNameLbl";
+const continueLbl = 'continueLbl';
+const enterNameLbl = 'enterNameLbl';
+const selectProfileLbl = 'selectProfileLbl';
+const selectProfilePhotoLbl = 'selectProfilePhotoLbl';
+const uploadProfilePictureLbl = 'uploadProfilePictureLbl';
 
 //MultipleUserDetailsContainer
-const completedLbl = "completedLbl";
-const playingLbl = "Playing";
+const completedLbl = 'completedLbl';
+const playingLbl = 'Playing';
 
 //BookmarkQuizScreen
-const completeAllQueLbl = "completeAllQueLbl";
-const goBAckLbl = "goBAckLbl";
+const completeAllQueLbl = 'completeAllQueLbl';
+const goBAckLbl = 'goBAckLbl';
 
 //'Contest LeaderBoardScreen
-const contestLeaderBoardLbl = "contestLeaderBoardLbl";
+const contestLeaderBoardLbl = 'contestLeaderBoardLbl';
 
 //"ContestScreen
-const pastLbl = "pastLbl";
-const liveLbl = "liveLbl";
-const upcomingLbl = "upcomingLbl";
-const contestLbl = "contestLbl";
-const noPastGameLbl = "noPastGameLbl";
-const entryFeesLbl = "entryFeesLbl";
-const endsOnLbl = "endsOnLbl";
-const playersLbl = "playersLbl";
-const leaderboardLbl = "leaderboardLbl";
-const playLbl = "playLbl";
-const playnowLbl = "playnowLbl";
+const contestLbl = 'contestLbl';
+const endsOnLbl = 'endsOnLbl';
+const entryFeesLbl = 'entryFeesLbl';
+const leaderboardLbl = 'leaderboardLbl';
+const liveLbl = 'liveLbl';
+const noPastGameLbl = 'noPastGameLbl';
+const pastLbl = 'pastLbl';
+const playLbl = 'playLbl';
+const playersLbl = 'playersLbl';
+const playnowLbl = 'playnowLbl';
+const upcomingLbl = 'upcomingLbl';
+
 //FunAndLearnTitleScreen
-const questionLbl = "questionLbl";
+const questionLbl = 'questionLbl';
 
-//resultScreen
-const victoryLbl = "victoryLbl";
-const congratulationsLbl = "congratulationsLbl";
-const defeatLbl = "defeatLbl";
-const betterNextLbl = "betterNextLbl";
-const winnerLbl = "winnerLbl";
-const youLossLbl = "youLossLbl";
-const matchDrawLbl = "matchDrawLbl";
-const looserLbl = "looserLbl";
-const playAgainBtn = "playAgainBtn";
-const nextLevelBtn = "nextLevelBtn";
-const shareScoreBtn = "shareScoreBtn";
-const myScoreLbl = "myScoreLbl";
-const reviewAnsBtn = "reviewAnsBtn";
-const anotherOpponentBtn = "anotherOpponentBtn";
-const homeBtn = "homeBtn";
+/// resultScreen
+const anotherOpponentBtn = 'anotherOpponentBtn';
+const betterNextLbl = 'betterNextLbl';
+const congratulationsLbl = 'congratulationsLbl';
+const defeatLbl = 'defeatLbl';
+const homeBtn = 'homeBtn';
+const looserLbl = 'looserLbl';
+const matchDrawLbl = 'matchDrawLbl';
+const myScoreLbl = 'myScoreLbl';
+const nextLevelBtn = 'nextLevelBtn';
+const playAgainBtn = 'playAgainBtn';
+const reviewAnsBtn = 'reviewAnsBtn';
+const shareScoreBtn = 'shareScoreBtn';
+const victoryLbl = 'victoryLbl';
+const winnerLbl = 'winnerLbl';
+const youLossLbl = 'youLossLbl';
 
-//reviewAnswerScreen
-const notesLbl = "notesLbl";
-const yourAnsLbl = "yourAnsLbl";
-const correctAndLbl = "correctAndLbl";
-const reviewAnswerLbl = "reviewAnswerLbl";
-//SelectRoomScreen
-const oneToOneLbl = "oneToOneLbl";
-const privateRoomLbl = "privateRoomLbl";
-const publicRoomLbl = "publicRoomLbl";
-const enterRoomCodeMsg = "enterroomerrorMSG";
+// scored 30% or less
+const goodEffort = 'goodEffort';
+const keepLearning = 'keepLearning';
+// scored between 30% and 50%
+const wellDone = 'wellDone';
+const makingProgress = 'makingProgress';
+// scored between 50% and 70%
+const greatJob = 'greatJob';
+const closerToMastery = 'closerToMastery';
+// scored between 70% and 90%
+const excellentWork = 'excellentWork';
+const keepGoing = 'keepGoing';
+// scored between 90% and 100%
+const fantasticJob = 'fantasticJob';
+const achievedMastery = 'achievedMastery';
+
+/// reviewAnswerScreen
+const correctAndLbl = 'correctAndLbl';
+const notesLbl = 'notesLbl';
+const reviewAnswerLbl = 'reviewAnswerLbl';
+const yourAnsLbl = 'yourAnsLbl';
+
+/// SelectRoomScreen
+const enterRoomCodeMsg = 'enterroomerrorMSG';
+const oneToOneLbl = 'oneToOneLbl';
+const privateRoomLbl = 'privateRoomLbl';
+const publicRoomLbl = 'publicRoomLbl';
 
 //SelfChallengeQuestionsScreen
-const attemptedLbl = "attemptedLbl";
-const unAttemptedLbl = "unAttemptedLbl";
-const selfChallenge = "selfChallenge";
+const attemptedLbl = 'attemptedLbl';
+const unAttemptedLbl = 'unAttemptedLbl';
+const selfChallenge = 'selfChallenge';
 
 //self-challenge Screen
-const selectNoQusLbl = "selectNoQusLbl";
-const selectTimeLbl = "selectTimeLbl";
+const selectNoQusLbl = 'selectNoQusLbl';
+const selectTimeLbl = 'selectTimeLbl';
 
 //SubCategoryAndLevelScreen
-const levelLbl = "levelLbl";
+const levelLbl = 'levelLbl';
 
 //bookmark Screen
-const noBookmarkQueLbl = "noBookmarkQueLbl";
-const playBookmarkBtn = "playBookmarkBtn";
+const noBookmarkQueLbl = 'noBookmarkQueLbl';
+const playBookmarkBtn = 'playBookmarkBtn';
 //CoinStoreScreen
-const coinsLbl = "coinsLbl";
-const offerLbl = "offerLbl";
-const storeLbl = "storeLbl";
+const coinsLbl = 'coinsLbl';
+const offerLbl = 'offerLbl';
+const removeAdsLbl = 'removeAds';
+const storeLbl = 'storeLbl';
 //IntroSliderScreen
-const title1 = "title1";
-const title2 = "title2";
-const title3 = "title3";
-const description1 = "description1";
-const description2 = "description2";
-const description3 = "description3";
+const description1 = 'description1';
+const description2 = 'description2';
+const description3 = 'description3';
+const title1 = 'title1';
+const title2 = 'title2';
+const title3 = 'title3';
 
 //LeaderBoardScreen
-const dailyLbl = "dailyLbl";
-const monthLbl = "monthLbl";
-const allTimeLbl = "allTimeLbl";
+const dailyLbl = 'dailyLbl';
+const monthLbl = 'monthLbl';
+const allTimeLbl = 'allTimeLbl';
 
 //ReferAndEarnScreen
-const referAndEarn = "referAndEarn";
-const referFrdLbl = "referFrdLbl";
-const yourRefCOdeLbl = "yourRefCOdeLbl";
-const referCodeCopyMsg = "referCodeCopyMsg";
-const shareNowLbl = "shareNowLbl";
+const referAndEarn = 'referAndEarn';
+const referCodeCopyMsg = 'referCodeCopyMsg';
+const referFrdLbl = 'referFrdLbl';
+const shareNowLbl = 'shareNowLbl';
+const yourRefCOdeLbl = 'yourRefCOdeLbl';
 
 //RewardsScreen
-const quizFanLbl = "quizFanLbl";
-const completeSubTitle = "completeSubTitle";
-const rewardsLbl = "rewardsLbl";
+const completeSubTitle = 'completeSubTitle';
+const quizFanLbl = 'quizFanLbl';
+const rewardsLbl = 'rewardsLbl';
 
 //SplashScreen
-const quizLbl = "quizLbl";
+const quizLbl = 'quizLbl';
 //ExitGameDialog
-const quizExitLbl = "quizExitLbl";
+const quizExitLbl = 'quizExitLbl';
 //FontSizeDialog
-const fontSizeLbl = "fontSizeLbl";
+const fontSizeLbl = 'fontSizeLbl';
 //SettingsDialogContainer
-const soundLbl = "soundLbl";
-const vibrationLbl = "vibrationLbl";
-const settingLbl = "settingLbl";
+const settingLbl = 'settingLbl';
+const soundLbl = 'soundLbl';
+const vibrationLbl = 'vibrationLbl';
 
 //quizTypes
-const quizZone = "quizZone";
-const dailyQuiz = "dailyQuiz";
-const groupPlay = "groupPlay";
-const battleQuiz = "battleQuiz";
-const contest = "contest";
-const guessTheWord = "guessTheWord";
-const funAndLearn = "funAndLearn";
-const trueAndFalse = "trueAndFalse";
-const mathManiaKey = "mathMania";
-const truefalseKey = "truefalse";
-const desTrueFalseKey = "desTrueFalse";
 const audioQuestionsKey = 'audioQuestions';
-const examKey = "exam";
-const tournamentKey = "tournament";
+const battleQuiz = 'battleQuiz';
+const contest = 'contest';
+const dailyQuiz = 'dailyQuiz';
+const desTrueFalseKey = 'desTrueFalse';
+const examKey = 'exam';
+const funAndLearn = 'funAndLearn';
+const groupPlay = 'groupPlay';
+const guessTheWord = 'guessTheWord';
+const mathManiaKey = 'mathMania';
+const quizZone = 'quizZone';
+const trueAndFalse = 'trueAndFalse';
+const truefalseKey = 'truefalse';
 
-const desQuizZone = "desQuizZone";
-const desDailyQuiz = "desDailyQuiz";
-const desGroupPlay = "desGroupPlay";
-const desBattleQuiz = "desBattleQuiz";
-const desContest = "desContest";
-const desGuessTheWord = "desGuessTheWord";
-const desFunAndLearn = "desFunAndLearn";
-const desTrueAndFalse = "desTrueAndFalse";
-const desMathManiaKey = "desMathMania";
-const desAudioQuestionsKey = "desAudioQuestions";
-const desExamKey = "desExam";
-const desTournamentKey = "desTournament";
+const desAudioQuestionsKey = 'desAudioQuestions';
+const desBattleQuiz = 'desBattleQuiz';
+const desContest = 'desContest';
+const desDailyQuiz = 'desDailyQuiz';
+const desExamKey = 'desExam';
+const desFunAndLearn = 'desFunAndLearn';
+const desGroupPlay = 'desGroupPlay';
+const desGuessTheWord = 'desGuessTheWord';
+const desMathManiaKey = 'desMathMania';
+const desQuizZone = 'desQuizZone';
+const desTrueAndFalse = 'desTrueAndFalse';
 
-const noCoinsMsg = "noCoinsMsg";
+const noCoinsMsg = 'noCoinsMsg';
 
-const uploadingBtn = "uploadingBtn";
-const rankLbl = "rankLbl";
-const scoreLbl = "scoreLbl";
-const otpNotMatchMsg = "otpNotMatchMsg";
+const otpNotMatchMsg = 'otpNotMatchMsg';
+const rankLbl = 'rankLbl';
+const scoreLbl = 'scoreLbl';
+const uploadingBtn = 'uploadingBtn';
 
-const unableToCreateRoomKey = "unableToCreateRoom";
-const unableToFindRoomKey = "unableToFindRoom";
-const unableToJoinRoomKey = "unableToJoinRoom";
-const unableToSubmitAnswerKey = "unableToSubmitAnswer";
-const iHaveInviteCodeKey = "iHaveInviteCode";
-const cancelButtonKey = "cancel";
-const reportQuestionKey = "reportQuestion";
-const enterReasonKey = "enterReason";
-const notesKey = "notesLbl";
-const letsStart = "letsStart";
+const cancelButtonKey = 'cancel';
+const enterReasonKey = 'enterReason';
+const iHaveInviteCodeKey = 'iHaveInviteCode';
+const letsStart = 'letsStart';
+const notesKey = 'notesLbl';
+const reportQuestionKey = 'reportQuestion';
+const unableToCreateRoomKey = 'unableToCreateRoom';
+const unableToFindRoomKey = 'unableToFindRoom';
+const unableToJoinRoomKey = 'unableToJoinRoom';
+const unableToSubmitAnswerKey = 'unableToSubmitAnswer';
 
-const createRoomKey = "createRoom";
-const joinRoomKey = "joinRoom";
-const accountDeactivatedKey = "accountDeactivated";
-const currentlyNotAvailableKey = "currentlyNotAvailable";
-const coinStoreKey = "coinStore";
-const purchaseErrorKey = "purchaseError";
-const productsFetchedFailureKey = "productsFetchedFailure";
-const noProductsKey = "noProducts";
-const inAppPurchaseUnavailableKey = "inAppPurchaseUnavailable";
-const coinsBoughtSuccessKey = "coinsBoughtSuccess";
-const themeKey = "theme";
-const lightThemeKey = "lightTheme";
-const darkThemeKey = "darkTheme";
-const selectCategoryKey = "selectCategory";
-const selectSubCategoryKey = "selectSubCategory";
-const languageKey = "language";
-const accountKey = "account";
-const aboutQuizAppKey = "aboutQuizApp";
-const chatKey = "chat";
-const messagesKey = "messages";
-const emojisKey = "emojis";
-const badgesKey = "badges";
-const showOptionsKey = "showOptions";
-const enterRoomCodeHereKey = "enterRoomCodeHere";
-const currentCoinsKey = "currentCoins";
-const pleaseSelectCategoryKey = "pleaseSelectCategory";
-const moreThanZeroCoinsKey = "moreThanZeroCoins";
-const updateApplicationKey = "updateApplication";
-const updateKey = "update";
-const warningKey = "warning";
-const failedToGetAppUrlKey = "failedToGetAppUrl";
+const aboutQuizAppKey = 'aboutQuizApp';
+const accountKey = 'account';
+const badgesKey = 'badges';
+const chatKey = 'chat';
+const coinStoreKey = 'coinStore';
+const coinsBoughtSuccessKey = 'coinsBoughtSuccess';
+const createRoomKey = 'createRoom';
+const currentCoinsKey = 'currentCoins';
+const currentlyNotAvailableKey = 'currentlyNotAvailable';
+const darkThemeKey = 'darkTheme';
+const emojisKey = 'emojis';
+const enterRoomCodeHereKey = 'enterRoomCodeHere';
+const failedToGetAppUrlKey = 'failedToGetAppUrl';
+const inAppPurchaseUnavailableKey = 'inAppPurchaseUnavailable';
+const joinRoomKey = 'joinRoom';
+const languageKey = 'language';
+const lightThemeKey = 'lightTheme';
+const messagesKey = 'messages';
+const moreThanZeroCoinsKey = 'moreThanZeroCoins';
+const noProductsKey = 'noProducts';
+const pleaseSelectCategoryKey = 'pleaseSelectCategory';
+const productsFetchedFailureKey = 'productsFetchedFailure';
+const purchaseErrorKey = 'purchaseError';
+const removeAdsBoughtSuccessKey = 'removeAdsBoughtSuccess';
+const selectCategoryKey = 'selectCategory';
+const selectSubCategoryKey = 'selectSubCategory';
+const showOptionsKey = 'showOptions';
+const themeKey = 'theme';
+const updateApplicationKey = 'updateApplication';
+const updateKey = 'update';
+const warningKey = 'warning';
 
-const needMoreKey = "needMore";
-const correctAnswerToUnlockKey = "correctAnswerToUnlock";
+const needMoreKey = 'needMore';
+const correctAnswerToUnlockKey = 'correctAnswerToUnlock';
 
-const getKey = "get";
-const coinsUnlockingByBadgeKey = "coinsUnlockingByBadge";
-const totalRewardsEarnedKey = "totalRewardsEarned"; //
-const byUnlockingKey = "byUnlocking";
-const scratchHereKey = "scratchHere";
-const noRewardsKey = "noRewards";
-const questionsKey = "questions";
-const backKey = "back";
-const hintKey = "hint";
+const backKey = 'back';
+const byUnlockingKey = 'byUnlocking';
+const coinsUnlockingByBadgeKey = 'coinsUnlockingByBadge';
+const getKey = 'get';
+const hintKey = 'hint';
+const noRewardsKey = 'noRewards';
+const questionsKey = 'questions';
+const scratchHereKey = 'scratchHere';
+const totalRewardsEarnedKey = 'totalRewardsEarned'; //
 
-const myRankKey = "myRank";
+const myRankKey = 'myRank';
 
-const enterValidExamKey = "enterValidExamKey";
-const enterExamKey = "enterExamKey";
-const examResultKey = "examResult";
-const examDurationKey = "examDuration";
-const completedInKey = "completedIn";
-const totalQuestionsKey = "totalQuestions";
-const obtainedMarksKey = "obtainedMarks";
-const markKey = "mark";
-const totalKey = "total";
-const correctKey = "correct";
-const incorrectKey = "incorrect";
-const youLeftTheExamKey = "youLeftTheExam";
-const iAgreeWithExamRulesKey = "iAgreeWithExamRules";
-const pleaseAcceptExamRulesKey = "pleaseAcceptExamRules";
-const examRulesKey = "examRules";
-const viewAllRulesKey = "viewAllRules";
-const statisticsLabelKey = "statisticsLabel";
-const helloKey = "hello";
-const collectedBadgesKey = "collectedBadges";
-const quizDetailsKey = "quizDetails";
-const questionDetailsKey = "questionDetails";
-const battleStatisticsKey = "battleStatistics";
-const viewAllKey = "viewAll";
-const playedKey = "played";
-const wonKey = "won";
-const lostKey = "lost";
-const deleteAccountKey = "deleteAccount";
-const deleteAccountConfirmationKey = "deleteAccountConfirmation";
-const deletingAccountKey = "deletingAccount";
-const accountDeletedSuccessfullyKey = "accountDeletedSuccessfully";
-const coinHistoryKey = "coinHistory";
-const walletKey = "wallet";
-const requestKey = "request";
-const transactionKey = "transaction";
-const redeemableAmountKey = "redeemableAmount";
-const totalCoinsKey = "totalCoins";
-const redeemNowKey = "redeemNow";
-const minimumRedeemableAmountKey = "minimumRedeemableAmount";
-const notEnoughCoinsToRedeemAmountKey = "notEnoughCoinsToRedeemAmount";
-const totalEarningsKey = "totalEarnings";
-const redeemRequestKey = "redeemRequest";
+const accountDeletedSuccessfullyKey = 'accountDeletedSuccessfully';
+const battleStatisticsKey = 'battleStatistics';
+const coinHistoryKey = 'coinHistory';
+const collectedBadgesKey = 'collectedBadges';
+const completedInKey = 'completedIn';
+const correctKey = 'correct';
+const deletingAccountKey = 'deletingAccount';
+const enterExamKey = 'enterExamKey';
+const enterValidExamKey = 'enterValidExamKey';
+const examDurationKey = 'examDuration';
+const examResultKey = 'examResult';
+const examRulesKey = 'examRules';
+const helloKey = 'hello';
+const iAgreeWithExamRulesKey = 'iAgreeWithExamRules';
+const incorrectKey = 'incorrect';
+const lostKey = 'lost';
+const markKey = 'mark';
+const minimumRedeemableAmountKey = 'minimumRedeemableAmount';
+const notEnoughCoinsToRedeemAmountKey = 'notEnoughCoinsToRedeemAmount';
+const obtainedMarksLblKey = 'obtainedMarks';
+const playedKey = 'played';
+const pleaseAcceptExamRulesKey = 'pleaseAcceptExamRules';
+const questionDetailsKey = 'questionDetails';
+const quizDetailsKey = 'quizDetails';
+const redeemNowKey = 'redeemNow';
+const redeemRequestKey = 'redeemRequest';
+const redeemableAmountKey = 'redeemableAmount';
+const requestKey = 'request';
+const statisticsLabelKey = 'statisticsLabel';
+const totalCoinsKey = 'totalCoins';
+const totalEarningsKey = 'totalEarnings';
+const totalKey = 'total';
+const totalQuestionsKey = 'totalQuestions';
+const transactionKey = 'transaction';
+const viewAllKey = 'viewAll';
+const viewAllRulesKey = 'viewAllRules';
+const walletKey = 'wallet';
+const wonKey = 'won';
+const youLeftTheExamKey = 'youLeftTheExam';
 
 //coins type
-const wonQuizZoneKey = "wonQuizZone";
-const wonMathQuizKey = "wonMathQuiz";
-const wonBattleKey = "wonBattle";
-const playedBattleKey = "playedBattle";
-const playedContestKey = "playedContest";
-const wonContestKey = "wonContest";
-const playedGroupBattleKey = "playedGroupBattle";
-const wonGroupBattleKey = "wonGroupBattle";
-const wonGuessTheWordKey = "wonGuessTheWord";
-const wonFunNLearnKey = "wonFunNLearn";
-const wonTrueFalseKey = "wonTrueFalse";
-const wonDailyQuizKey = "wonDailyQuiz";
-const wonAudioQuizKey = "wonAudioQuiz";
-const watchedRewardAdKey = "watchedRewardAd";
-const boughtCoinsKey = "boughtCoins";
-const rewardByScratchingCardKey = "rewardByScratchingCard";
-const referredCodeToFriendKey = "referredCodeToFriend";
-const used5050lifelineKey = "used5050lifeline";
-const usedResetTimerLifelineKey = "usedResetTimerlifeline";
-const usedAudiencePollLifelineKey = "usedAudiencePolllifeline";
-const usedSkipLifelineKey = "usedSkiplifeline";
-const usedHintLifelineKey = "usedHintLifeline";
-const redeemedAmountKey = "redeemedAmount";
-const pendingKey = "pending";
-const coinsWillBeDeductedKey = "coinsWillBeDeducted";
-const selectPayoutOptionKey = "selectPayoutOption";
-const successfullyRequestedKey = "successfullyRequested";
-const trackRequestKey = "trackRequest";
-const payoutMethodKey = "payoutMethod";
-const makeRequestKey = "makeRequest";
-const requestingKey = "requesting";
-
-const completedKey = "completedLbl";
-const wrongDetailsKey = "wrongDetails";
-const pleaseFillAllDataKey = "pleaseFillAllData";
-const changePayoutMethodKey = "changePayoutMethod";
-// coinsWillDeductToReviewAnswerKey = "coinsWillDeductToReviewAnswer";
-const appUnderMaintenanceKey = "appUnderMaintenance";
-const youWillGetKey = "youWillGet";
-const theyWillGetKey = "theyWillGet";
-
-const alreadyLoggedInKey = "alreadyLoggedIn";
-const letsPlay = "letsplay";
-
-const battleOfTheDayKey = "battleOfTheDay";
-const selfExamZoneKey = "selfExamZone";
-const playDifferentZoneKey = "playDifferentZone";
-const guestMode = "guestMode";
+const alreadyLoggedInKey = 'alreadyLoggedIn';
+const appUnderMaintenanceKey = 'appUnderMaintenance';
+const battleOfTheDayKey = 'battleOfTheDay';
+const boughtCoinsKey = 'boughtCoins';
+const changePayoutMethodKey = 'changePayoutMethod';
+const coinsWillBeDeductedKey = 'coinsWillBeDeducted';
+const completedKey = 'completedLbl';
+const guestMode = 'guestMode';
+const letsPlay = 'letsplay';
+const makeRequestKey = 'makeRequest';
+const payoutMethodKey = 'payoutMethod';
+const pendingKey = 'pending';
+const playDifferentZoneKey = 'playDifferentZone';
+const playedBattleKey = 'playedBattle';
+const playedContestKey = 'playedContest';
+const playedGroupBattleKey = 'playedGroupBattle';
+const pleaseFillAllDataKey = 'pleaseFillAllData';
+const redeemedAmountKey = 'redeemedAmount';
+const referredCodeToFriendKey = 'referredCodeToFriend';
+const requestingKey = 'requesting';
+const rewardByScratchingCardKey = 'rewardByScratchingCard';
+const selectPayoutOptionKey = 'selectPayoutOption';
+const selfExamZoneKey = 'selfExamZone';
+const successfullyRequestedKey = 'successfullyRequested';
+const theyWillGetKey = 'theyWillGet';
+const trackRequestKey = 'trackRequest';
+const used5050lifelineKey = 'used5050lifeline';
+const usedAudiencePollLifelineKey = 'usedAudiencePolllifeline';
+const usedHintLifelineKey = 'usedHintLifeline';
+const usedResetTimerLifelineKey = 'usedResetTimerlifeline';
+const usedSkipLifelineKey = 'usedSkiplifeline';
+const watchedRewardAdKey = 'watchedRewardAd';
+const wonAudioQuizKey = 'wonAudioQuiz';
+const wonBattleKey = 'wonBattle';
+const wonContestKey = 'wonContest';
+const wonDailyQuizKey = 'wonDailyQuiz';
+const wonFunNLearnKey = 'wonFunNLearn';
+const wonGroupBattleKey = 'wonGroupBattle';
+const wonGuessTheWordKey = 'wonGuessTheWord';
+const wonMathQuizKey = 'wonMathQuiz';
+const wonQuizZoneKey = 'wonQuizZone';
+const wonTrueFalseKey = 'wonTrueFalse';
+const wrongDetailsKey = 'wrongDetails';
+const youWillGetKey = 'youWillGet';

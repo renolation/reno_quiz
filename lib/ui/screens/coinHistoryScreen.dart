@@ -1,32 +1,36 @@
+import 'dart:developer';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutterquiz/app/app_localization.dart';
 import 'package:flutterquiz/features/coinHistory/coinHistoryCubit.dart';
 import 'package:flutterquiz/features/coinHistory/coinHistoryRepository.dart';
 import 'package:flutterquiz/features/coinHistory/models/coinHistory.dart';
 import 'package:flutterquiz/features/profileManagement/cubits/userDetailsCubit.dart';
 import 'package:flutterquiz/ui/styles/colors.dart';
+import 'package:flutterquiz/ui/widgets/alreadyLoggedInDialog.dart';
 import 'package:flutterquiz/ui/widgets/circularProgressContainer.dart';
 import 'package:flutterquiz/ui/widgets/customAppbar.dart';
 import 'package:flutterquiz/ui/widgets/errorContainer.dart';
 import 'package:flutterquiz/utils/constants/error_message_keys.dart';
 import 'package:flutterquiz/utils/constants/fonts.dart';
 import 'package:flutterquiz/utils/constants/string_labels.dart';
+import 'package:flutterquiz/utils/datetime_utils.dart';
+import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
-import 'package:intl/intl.dart';
 
 class CoinHistoryScreen extends StatefulWidget {
   const CoinHistoryScreen({super.key});
 
   @override
-  _CoinHistoryScreenState createState() => _CoinHistoryScreenState();
+  State<CoinHistoryScreen> createState() => _CoinHistoryScreenState();
 
   static Route<dynamic> route(RouteSettings routeSettings) {
     return CupertinoPageRoute(
       builder: (_) => BlocProvider<CoinHistoryCubit>(
-          create: (_) => CoinHistoryCubit(CoinHistoryRepository()),
-          child: const CoinHistoryScreen()),
+        create: (_) => CoinHistoryCubit(CoinHistoryRepository()),
+        child: const CoinHistoryScreen(),
+      ),
     );
   }
 }
@@ -37,9 +41,7 @@ class _CoinHistoryScreenState extends State<CoinHistoryScreen> {
 
   void getCoinHistory() {
     Future.delayed(Duration.zero, () {
-      context
-          .read<CoinHistoryCubit>()
-          .getCoinHistory(userId: context.read<UserDetailsCubit>().getUserId());
+      context.read<CoinHistoryCubit>().getCoinHistory();
     });
   }
 
@@ -52,22 +54,20 @@ class _CoinHistoryScreenState extends State<CoinHistoryScreen> {
   @override
   void dispose() {
     _coinHistoryScrollController
-        .removeListener(hasMoreCoinHistoryScrollListener);
-    _coinHistoryScrollController.dispose();
+      ..removeListener(hasMoreCoinHistoryScrollListener)
+      ..dispose();
     super.dispose();
   }
 
   void hasMoreCoinHistoryScrollListener() {
     if (_coinHistoryScrollController.position.maxScrollExtent ==
         _coinHistoryScrollController.offset) {
-      print("At the end of the list");
       if (context.read<CoinHistoryCubit>().hasMoreCoinHistory()) {
         //
         context.read<CoinHistoryCubit>().getMoreCoinHistory(
-            userId: context.read<UserDetailsCubit>().getUserId());
-      } else {
-        print("No more coin history");
-      }
+              userId: context.read<UserDetailsCubit>().userId(),
+            );
+      } else {}
     }
   }
 
@@ -84,12 +84,12 @@ class _CoinHistoryScreenState extends State<CoinHistoryScreen> {
         if (hasMoreCoinHistoryFetchError) {
           return Center(
             child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 15.0, vertical: 8.0),
+              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
               child: IconButton(
                 onPressed: () {
                   context.read<CoinHistoryCubit>().getMoreCoinHistory(
-                      userId: context.read<UserDetailsCubit>().getUserId());
+                        userId: context.read<UserDetailsCubit>().userId(),
+                      );
                 },
                 icon: Icon(Icons.error, color: Theme.of(context).primaryColor),
               ),
@@ -98,25 +98,26 @@ class _CoinHistoryScreenState extends State<CoinHistoryScreen> {
         } else {
           return const Center(
             child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 15.0, vertical: 8.0),
-                child: CircularProgressContainer()),
+              padding: EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+              child: CircularProgressContainer(),
+            ),
           );
         }
       }
     }
-    final formattedDate = DateFormat("d MMM, y").format(
+    final formattedDate = DateTimeUtils.dateFormat.format(
       DateTime.parse(coinHistory.date),
     );
     final size = MediaQuery.of(context).size;
     final colorScheme = Theme.of(context).colorScheme;
 
     return GestureDetector(
-      onTap: () => print(coinHistory.type),
+      onTap: () => log(coinHistory.type),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 15.0, vertical: 8.0),
+        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
         decoration: BoxDecoration(
           color: colorScheme.background,
-          borderRadius: BorderRadius.circular(10.0),
+          borderRadius: BorderRadius.circular(10),
         ),
         height: size.height * (0.1),
         child: Row(
@@ -130,9 +131,7 @@ class _CoinHistoryScreenState extends State<CoinHistoryScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    AppLocalization.of(context)!
-                            .getTranslatedValues(coinHistory.type) ??
-                        coinHistory.type,
+                    context.tr(coinHistory.type) ?? coinHistory.type,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -157,20 +156,20 @@ class _CoinHistoryScreenState extends State<CoinHistoryScreen> {
               height: size.width * 0.1,
               width: size.width * .180,
               decoration: BoxDecoration(
-                color: coinHistory.status == "1"
-                    ? hurryUpTimerColor
-                    : addCoinColor,
+                color: coinHistory.status == '1'
+                    ? kHurryUpTimerColor
+                    : kAddCoinColor,
                 borderRadius: BorderRadius.circular(5),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 2),
               child: Text(
-                coinHistory.status == "0"
-                    ? "+ ${UiUtils.formatNumber(int.parse(coinHistory.points))}"
+                coinHistory.status == '0'
+                    ? '+ ${UiUtils.formatNumber(int.parse(coinHistory.points))}'
                     : UiUtils.formatNumber(int.parse(coinHistory.points)),
                 maxLines: 1,
                 style: TextStyle(
                   color: colorScheme.background,
-                  fontSize: 17.0,
+                  fontSize: 17,
                 ),
               ),
             ),
@@ -184,8 +183,8 @@ class _CoinHistoryScreenState extends State<CoinHistoryScreen> {
     return BlocConsumer<CoinHistoryCubit, CoinHistoryState>(
       listener: (context, state) {
         if (state is CoinHistoryFetchFailure) {
-          if (state.errorMessage == unauthorizedAccessCode) {
-            UiUtils.showAlreadyLoggedInDialog(context: context);
+          if (state.errorMessage == errorCodeUnauthorizedAccess) {
+            showAlreadyLoggedInDialog(context);
           }
         }
       },
@@ -199,8 +198,7 @@ class _CoinHistoryScreenState extends State<CoinHistoryScreen> {
           return Center(
             child: ErrorContainer(
               errorMessageColor: Theme.of(context).primaryColor,
-              errorMessage: AppLocalization.of(context)!.getTranslatedValues(
-                  convertErrorCodeToLanguageKey(state.errorMessage)),
+              errorMessage: convertErrorCodeToLanguageKey(state.errorMessage),
               onTapRetry: getCoinHistory,
               showErrorImage: true,
             ),
@@ -233,7 +231,8 @@ class _CoinHistoryScreenState extends State<CoinHistoryScreen> {
     return Scaffold(
       appBar: QAppBar(
         title: Text(
-            AppLocalization.of(context)!.getTranslatedValues(coinHistoryKey)!),
+          context.tr(coinHistoryKey)!,
+        ),
       ),
       body: _buildCoinHistory(),
     );

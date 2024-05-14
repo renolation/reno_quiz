@@ -9,35 +9,38 @@ class BadgesInitial extends BadgesState {}
 class BadgesFetchInProgress extends BadgesState {}
 
 class BadgesFetchSuccess extends BadgesState {
-  final List<Badges> badges;
-
   BadgesFetchSuccess(this.badges);
+
+  final List<Badges> badges;
 }
 
 class BadgesFetchFailure extends BadgesState {
-  final String errorMessage;
-
   BadgesFetchFailure(this.errorMessage);
+
+  final String errorMessage;
 }
 
 class BadgesCubit extends Cubit<BadgesState> {
-  final BadgesRepository badgesRepository;
   BadgesCubit(this.badgesRepository) : super(BadgesInitial());
+  final BadgesRepository badgesRepository;
 
   void updateState(BadgesState updatedState) {
     emit(updatedState);
   }
 
-  void getBadges({required String userId, bool? refreshBadges}) async {
-    bool callRefreshBadge = refreshBadges ?? false;
+  Future<void> getBadges({
+    required String languageId,
+    bool? refreshBadges,
+  }) async {
+    final callRefreshBadge = refreshBadges ?? false;
     emit(BadgesFetchInProgress());
-    badgesRepository.getBadges(userId: userId).then((value) {
+    await badgesRepository.getBadges(languageId: languageId).then((value) {
       //call this
       if (!callRefreshBadge) {
-        setBadge(badgeType: "streak", userId: userId);
+        setBadge(badgeType: 'streak', languageId: languageId);
       }
       emit(BadgesFetchSuccess(value));
-    }).catchError((e) {
+    }).catchError((dynamic e) {
       emit(BadgesFetchFailure(e.toString()));
     });
   }
@@ -45,9 +48,9 @@ class BadgesCubit extends Cubit<BadgesState> {
   //update badges
   void _updateBadge(String badgeType, String status) {
     if (state is BadgesFetchSuccess) {
-      List<Badges> currentBadges = (state as BadgesFetchSuccess).badges;
-      List<Badges> updatedBadges = List.from(currentBadges);
-      int badgeIndex =
+      final currentBadges = (state as BadgesFetchSuccess).badges;
+      final updatedBadges = List<Badges>.from(currentBadges);
+      final badgeIndex =
           currentBadges.indexWhere((element) => element.type == badgeType);
       updatedBadges[badgeIndex] =
           currentBadges[badgeIndex].copyWith(updatedStatus: status);
@@ -56,50 +59,45 @@ class BadgesCubit extends Cubit<BadgesState> {
   }
 
   void unlockBadge(String badgeType) {
-    _updateBadge(badgeType, "1");
+    _updateBadge(badgeType, '1');
   }
 
   void unlockReward(String badgeType) {
-    _updateBadge(badgeType, "2");
+    _updateBadge(badgeType, '2');
   }
 
   //
-  bool isBadgeLocked(String badgeType) {
-    if (state is BadgesFetchSuccess) {
-      final badge = (state as BadgesFetchSuccess)
+  bool isBadgeLocked(String badgeType) => state is BadgesFetchSuccess
+      ? (state as BadgesFetchSuccess)
+              .badges
+              .firstWhere((e) => e.type == badgeType)
+              .status ==
+          '0'
+      : true;
+
+  List<Badges> getUnlockedBadges() => state is BadgesFetchSuccess
+      ? (state as BadgesFetchSuccess)
           .badges
-          .where((element) => element.type == badgeType)
+          .where((e) => e.status != '0')
           .toList()
-          .first;
-      return badge.status == "0";
-    }
-    return true;
-  }
+      : [];
 
-  List<Badges> getUnlockedBadges() {
-    if (state is BadgesFetchSuccess) {
-      return (state as BadgesFetchSuccess)
-          .badges
-          .where((element) => element.status != "0")
-          .toList();
-    }
-    return [];
-  }
+  bool isRewardUnlocked(String badgeType) => state is BadgesFetchSuccess
+      ? (state as BadgesFetchSuccess)
+              .badges
+              .firstWhere((e) => e.type == badgeType)
+              .status ==
+          '2'
+      : true;
 
-  bool isRewardUnlocked(String badgeType) {
-    if (state is BadgesFetchSuccess) {
-      final badge = (state as BadgesFetchSuccess)
-          .badges
-          .where((element) => element.type == badgeType)
-          .toList()
-          .first;
-      return badge.status == "2";
-    }
-    return true;
-  }
-
-  void setBadge({required String badgeType, required String userId}) async {
-    badgesRepository.setBadge(userId: userId, badgeType: badgeType);
+  Future<void> setBadge({
+    required String badgeType,
+    required String languageId,
+  }) async {
+    await badgesRepository.setBadge(
+      badgeType: badgeType,
+      languageId: languageId,
+    );
   }
 
   List<Badges> getAllBadges() {
@@ -113,31 +111,30 @@ class BadgesCubit extends Cubit<BadgesState> {
     if (state is BadgesFetchSuccess) {
       final badges = (state as BadgesFetchSuccess).badges;
       return int.parse(
-          badges[badges.indexWhere((element) => element.type == type)]
-              .badgeCounter);
+        badges[badges.indexWhere((element) => element.type == type)]
+            .badgeCounter,
+      );
     }
     return -1;
   }
 
   List<Badges> getRewards() {
-    List<Badges> rewards =
-        getAllBadges().where((element) => element.status != "0").toList();
-    List<Badges> scratchedRewards =
-        rewards.where((element) => element.status == "2").toList();
-    List<Badges> unscratchedRewards =
-        rewards.where((element) => element.status == "1").toList();
-    unscratchedRewards.addAll(scratchedRewards);
-    return unscratchedRewards;
+    final rewards = getAllBadges().where((e) => e.status != '0').toList();
+
+    final scratchedRewards = rewards.where((e) => e.status == '2').toList();
+    final unscratchedRewards = rewards.where((e) => e.status == '1').toList();
+
+    return [...unscratchedRewards, ...scratchedRewards];
   }
 
   int getRewardedCoins() {
     final rewards = getRewards();
-    int totalCoins = 0;
-    rewards.forEach((element) {
-      if (element.status == "2") {
+    var totalCoins = 0;
+    for (final element in rewards) {
+      if (element.status == '2') {
         totalCoins = int.parse(element.badgeReward) + totalCoins;
       }
-    });
+    }
 
     return totalCoins;
   }

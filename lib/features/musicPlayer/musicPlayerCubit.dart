@@ -8,17 +8,17 @@ abstract class MusicPlayerState {}
 class MusicPlayerInitial extends MusicPlayerState {}
 
 class MusicPlayerLoaded extends MusicPlayerState {
-  final Duration audioDuration;
-
   MusicPlayerLoaded({
     required this.audioDuration,
   });
+
+  final Duration audioDuration;
 }
 
 class MusicPlayerFailure extends MusicPlayerState {
-  final String errorMessage;
-
   MusicPlayerFailure(this.errorMessage);
+
+  final String errorMessage;
 }
 
 class MusicPlayerLoading extends MusicPlayerState {}
@@ -29,18 +29,19 @@ class MusicPlayerCubit extends Cubit<MusicPlayerState> {
 
   AudioPlayer get audioPlayer => _audioPlayer;
 
-  void initPlayer(String url) async {
+  Future<void> initPlayer(String url) async {
     try {
       emit(MusicPlayerLoading());
 
-      var result = await _audioPlayer.setUrl(url);
+      final result = await _audioPlayer.setUrl(url);
 
-      emit(MusicPlayerLoaded(
-        audioDuration: result!,
-      ));
+      emit(
+        MusicPlayerLoaded(
+          audioDuration: result!,
+        ),
+      );
     } catch (e) {
-      print(e.toString());
-      emit(MusicPlayerFailure("Error while plyaing music"));
+      emit(MusicPlayerFailure('Error while playing music'));
     }
   }
 
@@ -48,8 +49,7 @@ class MusicPlayerCubit extends Cubit<MusicPlayerState> {
 
   @override
   Future<void> close() async {
-    print("Dispose this audio player");
-    _audioPlayer.dispose();
-    super.close();
+    await _audioPlayer.dispose();
+    await super.close();
   }
 }

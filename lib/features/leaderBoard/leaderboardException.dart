@@ -1,7 +1,6 @@
 class LeaderBoardException implements Exception {
-  final String errorMessageCode;
-
   LeaderBoardException({required this.errorMessageCode});
+  final String errorMessageCode;
 
   @override
   String toString() => errorMessageCode;

@@ -2,8 +2,8 @@ import 'dart:developer' as dev;
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:flutterquiz/app/app_localization.dart';
 import 'package:flutterquiz/features/ads/interstitial_ad_cubit.dart';
 import 'package:flutterquiz/features/profileManagement/cubits/userDetailsCubit.dart';
 import 'package:flutterquiz/features/systemConfig/cubits/systemConfigCubit.dart';
@@ -11,17 +11,14 @@ import 'package:flutterquiz/features/wallet/cubits/paymentRequestCubit.dart';
 import 'package:flutterquiz/features/wallet/cubits/transactionsCubit.dart';
 import 'package:flutterquiz/features/wallet/models/paymentRequest.dart';
 import 'package:flutterquiz/features/wallet/walletRepository.dart';
+import 'package:flutterquiz/ui/screens/wallet/widgets/cancel_redeem_request_dialog.dart';
 import 'package:flutterquiz/ui/screens/wallet/widgets/redeemAmountRequestBottomSheetContainer.dart';
 import 'package:flutterquiz/ui/styles/colors.dart';
-import 'package:flutterquiz/ui/widgets/circularProgressContainer.dart';
-import 'package:flutterquiz/ui/widgets/customAppbar.dart';
-import 'package:flutterquiz/ui/widgets/customRoundedButton.dart';
-import 'package:flutterquiz/ui/widgets/errorContainer.dart';
+import 'package:flutterquiz/ui/widgets/all.dart';
 import 'package:flutterquiz/utils/constants/constants.dart';
-import 'package:flutterquiz/utils/constants/error_message_keys.dart';
-import 'package:flutterquiz/utils/constants/string_labels.dart';
+import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
@@ -50,8 +47,6 @@ class _WalletScreenState extends State<WalletScreen>
     with SingleTickerProviderStateMixin {
   //int _currentSelectedTab = 1;
 
-  late final String userId = context.read<UserDetailsCubit>().getUserId();
-
   late TabController tabController;
 
   TextEditingController? redeemableAmountTextEditingController;
@@ -65,23 +60,24 @@ class _WalletScreenState extends State<WalletScreen>
       if (context.read<TransactionsCubit>().hasMoreTransactions()) {
         fetchMoreTransactions();
       } else {
-        dev.log(name: 'Payout Transactions', "No more transactions");
+        dev.log(name: 'Payout Transactions', 'No more transactions');
       }
     }
   }
 
   void fetchTransactions() {
-    context.read<TransactionsCubit>().getTransactions(userId: userId);
+    context.read<TransactionsCubit>().getTransactions();
   }
 
   void fetchMoreTransactions() {
-    context.read<TransactionsCubit>().getMoreTransactions(userId: userId);
+    context.read<TransactionsCubit>().getMoreTransactions();
   }
 
   @override
   void initState() {
     super.initState();
-    tabController = TabController(length: 2, vsync: this);
+    tabController = TabController(length: 2, vsync: this)
+      ..addListener(() => FocusScope.of(context).unfocus());
     Future.delayed(Duration.zero, () {
       fetchTransactions();
       //
@@ -91,8 +87,8 @@ class _WalletScreenState extends State<WalletScreen>
               .toInt(),
           amount: context
               .read<SystemConfigCubit>()
-              .coinAmount(), //per x coin y amount
-          coins: context.read<SystemConfigCubit>().perCoin(), //per x coins
+              .coinAmount, //per x coin y amount
+          coins: context.read<SystemConfigCubit>().perCoin, //per x coins
         ).toString(),
       );
 
@@ -107,9 +103,9 @@ class _WalletScreenState extends State<WalletScreen>
 
   double _minimumRedeemableAmount() {
     return UiUtils.calculateAmountPerCoins(
-      userCoins: context.read<SystemConfigCubit>().minimumCoinLimit(),
-      amount: context.read<SystemConfigCubit>().coinAmount(),
-      coins: context.read<SystemConfigCubit>().perCoin(),
+      userCoins: context.read<SystemConfigCubit>().minimumCoinLimit,
+      amount: context.read<SystemConfigCubit>().coinAmount,
+      coins: context.read<SystemConfigCubit>().perCoin,
     );
   }
 
@@ -117,8 +113,8 @@ class _WalletScreenState extends State<WalletScreen>
   void dispose() {
     redeemableAmountTextEditingController?.dispose();
     _transactionsScrollController
-        .removeListener(hasMoreTransactionsScrollListener);
-    _transactionsScrollController.dispose();
+      ..removeListener(hasMoreTransactionsScrollListener)
+      ..dispose();
     tabController.dispose();
     super.dispose();
   }
@@ -128,28 +124,28 @@ class _WalletScreenState extends State<WalletScreen>
     required double redeemableAmount,
   }) {
     showModalBottomSheet<bool>(
-        isDismissible: true,
-        enableDrag: true,
-        isScrollControlled: true,
-        elevation: 5.0,
-        context: context,
-        shape: const RoundedRectangleBorder(
-          borderRadius: UiUtils.bottomSheetTopRadius,
-        ),
-        builder: (_) {
-          return RedeemAmountRequestBottomSheetContainer(
-            paymentRequestCubit: context.read<PaymentRequestCubit>(),
-            deductedCoins: deductedCoins,
-            redeemableAmount: redeemableAmount,
-          );
-        }).then((value) {
+      isScrollControlled: true,
+      elevation: 5,
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: UiUtils.bottomSheetTopRadius,
+      ),
+      builder: (_) {
+        return RedeemAmountRequestBottomSheetContainer(
+          paymentRequestCubit: context.read<PaymentRequestCubit>(),
+          deductedCoins: deductedCoins,
+          redeemableAmount: redeemableAmount,
+        );
+      },
+    ).then((value) {
       if (value != null && value) {
+        context.read<PaymentRequestCubit>().reset();
         fetchTransactions();
         redeemableAmountTextEditingController?.text =
             UiUtils.calculateAmountPerCoins(
           userCoins: int.parse(context.read<UserDetailsCubit>().getCoins()!),
-          amount: context.read<SystemConfigCubit>().coinAmount(),
-          coins: context.read<SystemConfigCubit>().perCoin(),
+          amount: context.read<SystemConfigCubit>().coinAmount,
+          coins: context.read<SystemConfigCubit>().perCoin,
         ).toString();
         tabController.animateTo(1);
       }
@@ -158,10 +154,8 @@ class _WalletScreenState extends State<WalletScreen>
 
   Widget _buildPayoutRequestNote(String note) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5.0),
+      padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        mainAxisAlignment: MainAxisAlignment.start,
         children: [
           Container(
             width: 6,
@@ -171,7 +165,7 @@ class _WalletScreenState extends State<WalletScreen>
               borderRadius: BorderRadius.circular(3),
             ),
           ),
-          const SizedBox(width: 8.0),
+          const SizedBox(width: 8),
           Flexible(
             child: Text(
               note,
@@ -181,7 +175,7 @@ class _WalletScreenState extends State<WalletScreen>
                 fontSize: 12,
               ),
             ),
-          )
+          ),
         ],
       ),
     );
@@ -189,6 +183,7 @@ class _WalletScreenState extends State<WalletScreen>
 
   //Build request tab
   Widget _buildRequestContainer() {
+    final configCubit = context.read<SystemConfigCubit>();
     return SingleChildScrollView(
       padding: EdgeInsets.only(
         top: MediaQuery.of(context).size.height * 0.02,
@@ -213,15 +208,13 @@ class _WalletScreenState extends State<WalletScreen>
             padding: const EdgeInsets.all(18),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.start,
               children: [
                 /// Total Coins
                 Text(
-                  AppLocalization.of(context)!
-                      .getTranslatedValues(totalCoinsKey)!,
+                  context.tr(totalCoinsKey)!,
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.onTertiary,
-                    fontSize: 16.0,
+                    fontSize: 16,
                   ),
                 ),
                 BlocBuilder<UserDetailsCubit, UserDetailsState>(
@@ -232,17 +225,17 @@ class _WalletScreenState extends State<WalletScreen>
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           SvgPicture.asset(
-                            UiUtils.getImagePath("coin.svg"),
+                            Assets.coin,
                             width: 20,
                             height: 20,
                           ),
                           const SizedBox(width: 10),
                           Text(
-                            "${context.read<UserDetailsCubit>().getCoins()}",
+                            '${context.read<UserDetailsCubit>().getCoins()}',
                             style: TextStyle(
                               color: Theme.of(context).colorScheme.onTertiary,
                               fontWeight: FontWeight.bold,
-                              fontSize: 22.0,
+                              fontSize: 22,
                             ),
                           ),
                         ],
@@ -257,12 +250,11 @@ class _WalletScreenState extends State<WalletScreen>
 
                 /// Redeemable Amount
                 Text(
-                  AppLocalization.of(context)!
-                      .getTranslatedValues(redeemableAmountKey)!,
+                  context.tr(redeemableAmountKey)!,
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.onTertiary,
                     fontWeight: FontWeight.w500,
-                    fontSize: 20.0,
+                    fontSize: 20,
                   ),
                 ),
 
@@ -281,7 +273,7 @@ class _WalletScreenState extends State<WalletScreen>
                           .onTertiary
                           .withOpacity(0.5),
                       fontWeight: FontWeight.w600,
-                      fontSize: 16.0,
+                      fontSize: 16,
                     ),
                     keyboardType: TextInputType.number,
                     cursorColor: Theme.of(context)
@@ -292,10 +284,11 @@ class _WalletScreenState extends State<WalletScreen>
                       fillColor: Theme.of(context).colorScheme.background,
                       isDense: true,
                       border: InputBorder.none,
-                      hintText: "00",
-                      prefixText: "\$ ",
+                      hintText: context.tr('payoutInputHintText'),
+                      prefixText:
+                          '${context.read<SystemConfigCubit>().payoutRequestCurrency} ',
                       hintStyle: TextStyle(
-                        fontSize: 16.0,
+                        fontSize: 16,
                         color: Theme.of(context)
                             .colorScheme
                             .onTertiary
@@ -305,24 +298,16 @@ class _WalletScreenState extends State<WalletScreen>
                     controller: redeemableAmountTextEditingController,
                   ),
                 ),
-                //SizedBox(height: MediaQuery.of(context).size.height * 0.01),
-                // Row(
-                //   children: [
-                //     redeemCoinOptions("100"),
-                //     const SizedBox(width: 8),
-                //     redeemCoinOptions("200"),
-                //     const SizedBox(width: 8),
-                //     redeemCoinOptions("300"),
-                //   ],
-                // ),
                 SizedBox(height: MediaQuery.of(context).size.height * 0.02),
 
                 /// Payout Notes
                 Column(
                   children: payoutRequestNotes(
-                    context.read<SystemConfigCubit>().coinAmount().toString(),
-                    context.read<SystemConfigCubit>().perCoin().toString(),
-                  ).map((e) => _buildPayoutRequestNote(e)).toList(),
+                    context.read<SystemConfigCubit>().payoutRequestCurrency,
+                    (configCubit.minimumCoinLimit / configCubit.perCoin)
+                        .toString(),
+                    configCubit.minimumCoinLimit.toString(),
+                  ).map(_buildPayoutRequestNote).toList(),
                 ),
               ],
             ),
@@ -332,69 +317,52 @@ class _WalletScreenState extends State<WalletScreen>
 
           /// Redeem Now Btn
           CustomRoundedButton(
-            widthPercentage: 1.0,
+            widthPercentage: 1,
             backgroundColor: Theme.of(context).primaryColor,
-            buttonTitle: AppLocalization.of(context)!
-                    .getTranslatedValues(redeemNowKey) ??
-                "",
-            radius: 8.0,
+            buttonTitle: context.tr(redeemNowKey) ?? '',
+            radius: 8,
             showBorder: false,
             titleColor: Theme.of(context).colorScheme.background,
             fontWeight: FontWeight.bold,
-            textSize: 18.0,
+            textSize: 18,
             onTap: () {
-              if (redeemableAmountTextEditingController!.text.trim().isEmpty) {
-                return;
-              }
+              final enteredRedeemAmount =
+                  redeemableAmountTextEditingController!.text.trim();
 
-              if (double.parse(
-                      redeemableAmountTextEditingController!.text.trim()) <
-                  _minimumRedeemableAmount()) {
-                UiUtils.setSnackbar(
-                    "${AppLocalization.of(context)!.getTranslatedValues(minimumRedeemableAmountKey)} $payoutRequestCurrency${_minimumRedeemableAmount()} ",
-                    context,
-                    false);
+              if (enteredRedeemAmount.isEmpty ||
+                  double.parse(enteredRedeemAmount) <
+                      _minimumRedeemableAmount()) {
+                UiUtils.showSnackBar(
+                  '${context.tr(minimumRedeemableAmountKey)} ${context.read<SystemConfigCubit>().payoutRequestCurrency}${_minimumRedeemableAmount()} ',
+                  context,
+                );
                 return;
               }
-              double maxRedeemableAmount = UiUtils.calculateAmountPerCoins(
+              final maxRedeemableAmount = UiUtils.calculateAmountPerCoins(
                 userCoins:
                     int.parse(context.read<UserDetailsCubit>().getCoins()!),
-                amount: context
-                    .read<SystemConfigCubit>()
-                    .coinAmount(), //per x coin y amount
-                coins:
-                    context.read<SystemConfigCubit>().perCoin(), //per x coins
+                amount: configCubit.coinAmount, //per x coin y amount
+                coins: configCubit.perCoin, //per x coins
               );
-              if (double.parse(
-                      redeemableAmountTextEditingController!.text.trim()) >
-                  maxRedeemableAmount) {
-                //
-
-                UiUtils.setSnackbar(
-                    AppLocalization.of(context)!
-                        .getTranslatedValues(notEnoughCoinsToRedeemAmountKey)!,
-                    context,
-                    false);
+              if (double.parse(enteredRedeemAmount) > maxRedeemableAmount) {
+                UiUtils.showSnackBar(
+                  context.tr(notEnoughCoinsToRedeemAmountKey)!,
+                  context,
+                );
                 return;
               }
 
               showRedeemRequestAmountBottomSheet(
                 deductedCoins:
                     UiUtils.calculateDeductedCoinsForRedeemableAmount(
-                  amount: context
-                      .read<SystemConfigCubit>()
-                      .coinAmount(), //per x coin y amount
-                  coins:
-                      context.read<SystemConfigCubit>().perCoin(), //per x coins
-                  userEnteredAmount: double.parse(
-                    redeemableAmountTextEditingController!.text.trim(),
-                  ),
+                  amount: configCubit.coinAmount, //per x coin y amount
+                  coins: configCubit.perCoin, //per x coins
+                  userEnteredAmount: double.parse(enteredRedeemAmount),
                 ),
-                redeemableAmount: double.parse(
-                    redeemableAmountTextEditingController!.text.trim()),
+                redeemableAmount: double.parse(enteredRedeemAmount),
               );
             },
-            height: 50.0,
+            height: 50,
           ),
         ],
       ),
@@ -405,25 +373,21 @@ class _WalletScreenState extends State<WalletScreen>
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.onTertiary.withOpacity(0.09),
-        borderRadius: BorderRadius.circular(4.0),
+        borderRadius: BorderRadius.circular(4),
         boxShadow: [
           BoxShadow(
             color: Theme.of(context).colorScheme.onTertiary.withOpacity(0.06),
             spreadRadius: 1,
-            blurRadius: 0,
             offset: const Offset(1, 1), // changes position of shadow
           ),
         ],
       ),
-      padding: const EdgeInsets.symmetric(
-        vertical: 2,
-        horizontal: 4,
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 4),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           SvgPicture.asset(
-            UiUtils.getImagePath("coin.svg"),
+            Assets.coin,
             width: 15,
             height: 15,
           ),
@@ -452,8 +416,7 @@ class _WalletScreenState extends State<WalletScreen>
         if (hasMoreTransactionsFetchError) {
           return Center(
             child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 15.0, vertical: 8.0),
+              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
               child: IconButton(
                 onPressed: fetchMoreTransactions,
                 icon: Icon(
@@ -466,11 +429,8 @@ class _WalletScreenState extends State<WalletScreen>
         } else {
           return const Center(
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 15.0, vertical: 8.0),
-              child: CircularProgressContainer(
-                whiteLoader: false,
-                size: 40,
-              ),
+              padding: EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+              child: CircularProgressContainer(),
             ),
           );
         }
@@ -478,145 +438,166 @@ class _WalletScreenState extends State<WalletScreen>
     }
 
     final String paymentStatus;
+    final Color statusColor;
+    String? paymentLogo;
 
     if (paymentRequest.status == '0') {
       paymentStatus = pendingKey;
+      statusColor = kPendingColor;
     } else if (paymentRequest.status == '1') {
       paymentStatus = completedKey;
+      statusColor = kAddCoinColor;
     } else {
       paymentStatus = wrongDetailsKey;
+      statusColor = kHurryUpTimerColor;
+    }
+
+    final payoutIndex = payoutMethods.indexWhere(
+      (e) => e.type.toLowerCase() == paymentRequest.paymentType.toLowerCase(),
+    );
+
+    if (payoutIndex != -1) {
+      paymentLogo = payoutMethods[payoutIndex].image;
     }
 
     return LayoutBuilder(
-      builder: (context, boxConstraints) {
+      builder: (context, constraint) {
         return Container(
-          padding: EdgeInsets.symmetric(
-            horizontal: MediaQuery.of(context).size.width * (0.0265),
-            vertical: 15,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          margin: const EdgeInsets.symmetric(vertical: 4),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.background,
-            borderRadius: BorderRadius.circular(10.0),
+            borderRadius: BorderRadius.circular(10),
           ),
-          height: MediaQuery.of(context).size.height * 0.13,
-          //
-          margin: const EdgeInsets.symmetric(vertical: 10.0),
-          child: Row(
+          child: Column(
             children: [
-              SizedBox(
-                width: boxConstraints.maxWidth * (0.66),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      color: statusColor.withOpacity(.1),
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: statusColor),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 4,
+                      horizontal: 8,
+                    ),
+                    child: Text(
+                      context.tr(paymentStatus)!,
+                      maxLines: 1,
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: statusColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                  ),
+                  Text(
+                    DateFormat('yyyy-MM-dd').format(
+                      DateTime.parse(paymentRequest.date),
+                    ),
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onTertiary
+                              .withOpacity(.4),
+                          fontWeight: FontWeight.w500,
+                        ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
                       paymentRequest.details,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onTertiary,
-                        fontSize: 18,
-                      ),
-                    ),
-                    const Spacer(),
-
-                    /// Payment Type
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "${AppLocalization.of(context)!.getTranslatedValues("payment")!} : ",
-                          style: TextStyle(
-                            fontSize: 16.0,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onTertiary
-                                .withOpacity(0.4),
-                          ),
-                        ),
-                        Text(
-                          paymentRequest.paymentType,
-                          style: TextStyle(
-                            fontSize: 16.0,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
                             color: Theme.of(context).colorScheme.onTertiary,
                           ),
-                        ),
-                      ],
                     ),
-                    SizedBox(height: MediaQuery.of(context).size.height * .004),
-
-                    /// Date
-                    Row(
-                      children: [
-                        Text(
-                          paymentRequest.date.length < 11
-                              ? paymentRequest.date
-                              : paymentRequest.date.substring(0, 11),
-                          style: TextStyle(
-                            fontSize: 14.0,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onTertiary
-                                .withOpacity(0.4),
+                  ),
+                  SizedBox(
+                    width: constraint.maxWidth * 0.23,
+                    child: Text(
+                      NumberFormat.compactCurrency(
+                        symbol: context
+                            .read<SystemConfigCubit>()
+                            .payoutRequestCurrency,
+                      ).format(double.parse(paymentRequest.paymentAmount)),
+                      maxLines: 1,
+                      textAlign: TextAlign.right,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            color: Theme.of(context).primaryColor,
+                            fontWeight: FontWeights.bold,
                           ),
-                        ),
-                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              const Spacer(),
-              SizedBox(
-                width: boxConstraints.maxWidth * 0.28,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
-                        color: Theme.of(context).primaryColor,
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (paymentLogo != null && paymentLogo.isNotEmpty)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: QImage(
+                        imageUrl: paymentLogo,
+                        width: 40,
+                        height: 40,
                       ),
-                      padding: const EdgeInsets.symmetric(vertical: 5),
-                      width: boxConstraints.maxWidth * 0.18,
-                      alignment: Alignment.center,
+                    )
+                  else
+                    Expanded(
                       child: Text(
-                        "\$ ${UiUtils.formatNumber(double.parse(paymentRequest.paymentAmount).toInt())}",
-                        maxLines: 1,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.background,
-                          fontSize: 16,
-                        ),
+                        "${context.tr("payment")!}: ${paymentRequest.paymentType}",
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                              color: Theme.of(context).colorScheme.onTertiary,
+                            ),
                       ),
                     ),
-                    const Spacer(),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: paymentRequest.status == "0"
-                            ? hurryUpTimerColor.withOpacity(0.4)
-                            : addCoinColor.withOpacity(0.4),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 6,
-                        horizontal: 12,
-                      ),
+                  if (paymentRequest.status == '0')
+                    GestureDetector(
+                      onTap: () {
+                        showCancelRequestDialog(
+                          paymentId: paymentRequest.id,
+                          context: context,
+                        ).then((canceled) {
+                          if (canceled != null && canceled) {
+                            fetchTransactions();
+
+                            redeemableAmountTextEditingController?.text =
+                                UiUtils.calculateAmountPerCoins(
+                              userCoins: int.parse(
+                                context.read<UserDetailsCubit>().getCoins()!,
+                              ),
+                              amount:
+                                  context.read<SystemConfigCubit>().coinAmount,
+                              coins: context.read<SystemConfigCubit>().perCoin,
+                            ).toString();
+                          }
+                        });
+                      },
                       child: Text(
-                        AppLocalization.of(context)!
-                            .getTranslatedValues(paymentStatus)!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: paymentRequest.status == "0"
-                              ? hurryUpTimerColor
-                              : addCoinColor,
-                          fontSize: 12.0,
-                        ),
+                        context.tr('cancel')!,
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(
+                              color: Theme.of(context).colorScheme.onTertiary,
+                            ),
                       ),
-                    ),
-                  ],
-                ),
-              )
+                    )
+                  else
+                    const SizedBox.shrink(),
+                ],
+              ),
             ],
           ),
         );
@@ -628,8 +609,8 @@ class _WalletScreenState extends State<WalletScreen>
     return BlocConsumer<TransactionsCubit, TransactionsState>(
       listener: (context, state) {
         if (state is TransactionsFetchFailure) {
-          if (state.errorMessage == unauthorizedAccessCode) {
-            UiUtils.showAlreadyLoggedInDialog(context: context);
+          if (state.errorMessage == errorCodeUnauthorizedAccess) {
+            showAlreadyLoggedInDialog(context);
           }
         }
       },
@@ -641,9 +622,7 @@ class _WalletScreenState extends State<WalletScreen>
         if (state is TransactionsFetchFailure) {
           return Center(
             child: ErrorContainer(
-              errorMessage: AppLocalization.of(context)!.getTranslatedValues(
-                convertErrorCodeToLanguageKey(state.errorMessage),
-              ),
+              errorMessage: convertErrorCodeToLanguageKey(state.errorMessage),
               onTapRetry: fetchTransactions,
               showErrorImage: true,
             ),
@@ -655,7 +634,7 @@ class _WalletScreenState extends State<WalletScreen>
         return SingleChildScrollView(
           controller: _transactionsScrollController,
           padding: EdgeInsets.only(
-            bottom: 20.0,
+            bottom: 20,
             top: MediaQuery.of(context).size.height * 0.02,
             left: MediaQuery.of(context).size.width * (0.05),
             right: MediaQuery.of(context).size.width * (0.05),
@@ -673,22 +652,20 @@ class _WalletScreenState extends State<WalletScreen>
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Text(
-                      AppLocalization.of(context)!
-                          .getTranslatedValues(totalEarningsKey)!,
+                      context.tr(totalEarningsKey)!,
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.onTertiary,
-                        fontSize: 16.0,
+                        fontSize: 16,
                       ),
                     ),
                     Text(
-                      "\$ ${context.read<TransactionsCubit>().calculateTotalEarnings()}",
+                      '${context.read<SystemConfigCubit>().payoutRequestCurrency} ${context.read<TransactionsCubit>().calculateTotalEarnings()}',
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.onTertiary,
                         fontWeight: FontWeight.bold,
-                        fontSize: 22.0,
+                        fontSize: 22,
                       ),
                     ),
                   ],
@@ -704,7 +681,7 @@ class _WalletScreenState extends State<WalletScreen>
                   totalTransactions: state.paymentRequests.length,
                   hasMoreTransactionsFetchError: state.hasMoreFetchError,
                   hasMore: state.hasMore,
-                )
+                ),
               ],
             ],
           ),
@@ -717,19 +694,17 @@ class _WalletScreenState extends State<WalletScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: QAppBar(
-        title:
-            Text(AppLocalization.of(context)!.getTranslatedValues(walletKey)!),
+        title: Text(context.tr(walletKey)!),
         bottom: TabBar(
+          tabAlignment: TabAlignment.fill,
           controller: tabController,
           tabs: [
             Tab(
-              text:
-                  AppLocalization.of(context)!.getTranslatedValues(requestKey)!,
+              text: context.tr(requestKey),
             ),
             Tab(
-              text: AppLocalization.of(context)!
-                  .getTranslatedValues(transactionKey)!,
-            )
+              text: context.tr(transactionKey),
+            ),
           ],
         ),
       ),

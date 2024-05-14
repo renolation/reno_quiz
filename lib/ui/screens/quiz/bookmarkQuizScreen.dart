@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutterquiz/app/app_localization.dart';
 import 'package:flutterquiz/features/bookmark/bookmarkRepository.dart';
 import 'package:flutterquiz/features/bookmark/cubits/audioQuestionBookmarkCubit.dart';
 import 'package:flutterquiz/features/bookmark/cubits/bookmarkCubit.dart';
@@ -15,6 +14,7 @@ import 'package:flutterquiz/features/quiz/cubits/questionsCubit.dart';
 import 'package:flutterquiz/features/quiz/models/quizType.dart';
 import 'package:flutterquiz/features/quiz/quizRepository.dart';
 import 'package:flutterquiz/features/systemConfig/cubits/systemConfigCubit.dart';
+import 'package:flutterquiz/features/systemConfig/model/answer_mode.dart';
 import 'package:flutterquiz/ui/screens/quiz/widgets/audioQuestionContainer.dart';
 import 'package:flutterquiz/ui/screens/quiz/widgets/guessTheWordQuestionContainer.dart';
 import 'package:flutterquiz/ui/widgets/customAppbar.dart';
@@ -23,18 +23,16 @@ import 'package:flutterquiz/ui/widgets/errorContainer.dart';
 import 'package:flutterquiz/ui/widgets/exitGameDialog.dart';
 import 'package:flutterquiz/ui/widgets/questionsContainer.dart';
 import 'package:flutterquiz/utils/constants/constants.dart';
-import 'package:flutterquiz/utils/constants/error_message_keys.dart';
-import 'package:flutterquiz/utils/constants/fonts.dart';
-import 'package:flutterquiz/utils/constants/string_labels.dart';
+import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
 
 class BookmarkQuizScreen extends StatefulWidget {
+  const BookmarkQuizScreen({required this.quizType, super.key});
+
   final QuizTypes quizType;
 
-  const BookmarkQuizScreen({super.key, required this.quizType});
-
   @override
-  _BookmarkQuizScreenState createState() => _BookmarkQuizScreenState();
+  State<BookmarkQuizScreen> createState() => _BookmarkQuizScreenState();
 
   static Route<dynamic> route(RouteSettings routeSettings) {
     return CupertinoPageRoute(
@@ -51,7 +49,7 @@ class BookmarkQuizScreen extends StatefulWidget {
           ),
         ],
         child: BookmarkQuizScreen(
-          quizType: routeSettings.arguments as QuizTypes,
+          quizType: routeSettings.arguments! as QuizTypes,
         ),
       ),
     );
@@ -63,10 +61,12 @@ class _BookmarkQuizScreenState extends State<BookmarkQuizScreen>
   late AnimationController questionAnimationController;
   late AnimationController questionContentAnimationController;
   late AnimationController timerAnimationController = AnimationController(
-      vsync: this,
-      duration:
-          Duration(seconds: context.read<SystemConfigCubit>().getQuizTime()))
-    ..addStatusListener(currentUserTimerAnimationStatusListener);
+    vsync: this,
+    duration: Duration(
+      seconds:
+          context.read<SystemConfigCubit>().quizTimer(QuizTypes.bookmarkQuiz),
+    ),
+  )..addStatusListener(currentUserTimerAnimationStatusListener);
   late Animation<double> questionSlideAnimation;
   late Animation<double> questionScaleUpAnimation;
   late Animation<double> questionScaleDownAnimation;
@@ -89,7 +89,9 @@ class _BookmarkQuizScreenState extends State<BookmarkQuizScreen>
       [];
 
   late AnimationController showOptionAnimationController = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 500));
+    vsync: this,
+    duration: const Duration(milliseconds: 500),
+  );
 
   void _getQuestions() {
     Future.delayed(Duration.zero, () {
@@ -98,11 +100,15 @@ class _BookmarkQuizScreenState extends State<BookmarkQuizScreen>
       //other parameters need to pass so cubit functionlity does not break
 
       if (widget.quizType == QuizTypes.audioQuestions) {
-        context.read<QuestionsCubit>().updateState(QuestionsFetchSuccess(
-            questions: List.from(
-                context.read<AudioQuestionBookmarkCubit>().questions()),
-            currentPoints: 0,
-            quizType: QuizTypes.bookmarkQuiz));
+        context.read<QuestionsCubit>().updateState(
+              QuestionsFetchSuccess(
+                questions: List.from(
+                  context.read<AudioQuestionBookmarkCubit>().questions(),
+                ),
+                currentPoints: 0,
+                quizType: QuizTypes.bookmarkQuiz,
+              ),
+            );
 
         context
             .read<AudioQuestionBookmarkCubit>()
@@ -112,19 +118,23 @@ class _BookmarkQuizScreenState extends State<BookmarkQuizScreen>
               .add(GlobalKey<AudioQuestionContainerState>());
         });
       } else if (widget.quizType == QuizTypes.quizZone) {
-        context.read<QuestionsCubit>().updateState(QuestionsFetchSuccess(
-            questions: List.from(context.read<BookmarkCubit>().questions()),
-            currentPoints: 0,
-            quizType: QuizTypes.bookmarkQuiz));
+        context.read<QuestionsCubit>().updateState(
+              QuestionsFetchSuccess(
+                questions: List.from(context.read<BookmarkCubit>().questions()),
+                currentPoints: 0,
+                quizType: QuizTypes.bookmarkQuiz,
+              ),
+            );
         timerAnimationController.forward();
       } else {
-        context
-            .read<GuessTheWordQuizCubit>()
-            .updateState(GuessTheWordQuizFetchSuccess(
-              questions: List.from(
-                  context.read<GuessTheWordBookmarkCubit>().questions()),
-              currentPoints: 0,
-            ));
+        context.read<GuessTheWordQuizCubit>().updateState(
+              GuessTheWordQuizFetchSuccess(
+                questions: List.from(
+                  context.read<GuessTheWordBookmarkCubit>().questions(),
+                ),
+                currentPoints: 0,
+              ),
+            );
 
         context.read<GuessTheWordQuizCubit>().getQuestions().forEach((element) {
           guessTheWordQuestionContainerKeys
@@ -144,25 +154,37 @@ class _BookmarkQuizScreenState extends State<BookmarkQuizScreen>
 
   void initializeAnimation() {
     questionContentAnimationController = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 250))
-      ..forward();
+      vsync: this,
+      duration: const Duration(milliseconds: 250),
+    )..forward();
     questionAnimationController = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 525));
-    questionSlideAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-        CurvedAnimation(
-            parent: questionAnimationController, curve: Curves.easeInOut));
-    questionScaleUpAnimation = Tween<double>(begin: 0.0, end: 0.1).animate(
-        CurvedAnimation(
-            parent: questionAnimationController,
-            curve: const Interval(0.0, 0.5, curve: Curves.easeInQuad)));
-    questionContentAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-        CurvedAnimation(
-            parent: questionContentAnimationController,
-            curve: Curves.easeInQuad));
-    questionScaleDownAnimation = Tween<double>(begin: 0.0, end: 0.05).animate(
-        CurvedAnimation(
-            parent: questionAnimationController,
-            curve: const Interval(0.5, 1.0, curve: Curves.easeOutQuad)));
+      vsync: this,
+      duration: const Duration(milliseconds: 525),
+    );
+    questionSlideAnimation = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(
+        parent: questionAnimationController,
+        curve: Curves.easeInOut,
+      ),
+    );
+    questionScaleUpAnimation = Tween<double>(begin: 0, end: 0.1).animate(
+      CurvedAnimation(
+        parent: questionAnimationController,
+        curve: const Interval(0, 0.5, curve: Curves.easeInQuad),
+      ),
+    );
+    questionContentAnimation = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(
+        parent: questionContentAnimationController,
+        curve: Curves.easeInQuad,
+      ),
+    );
+    questionScaleDownAnimation = Tween<double>(begin: 0, end: 0.05).animate(
+      CurvedAnimation(
+        parent: questionAnimationController,
+        curve: const Interval(0.5, 1, curve: Curves.easeOutQuad),
+      ),
+    );
   }
 
   void toggleSettingDialog() {
@@ -171,7 +193,7 @@ class _BookmarkQuizScreenState extends State<BookmarkQuizScreen>
 
   //change to next Question
   void changeQuestion() {
-    questionAnimationController.forward(from: 0.0).then((value) {
+    questionAnimationController.forward(from: 0).then((value) {
       //need to dispose the animation controllers
       questionAnimationController.dispose();
       questionContentAnimationController.dispose();
@@ -195,24 +217,31 @@ class _BookmarkQuizScreenState extends State<BookmarkQuizScreen>
             .attempted;
   }
 
-  void submitAnswer(String submittedAnswer) async {
+  Future<void> submitAnswer(String submittedAnswer) async {
     timerAnimationController.stop();
     if (!context
         .read<QuestionsCubit>()
         .questions()[currentQuestionIndex]
         .attempted) {
       context.read<QuestionsCubit>().updateQuestionWithAnswerAndLifeline(
-          context.read<QuestionsCubit>().questions()[currentQuestionIndex].id,
-          submittedAnswer,
-          context.read<UserDetailsCubit>().getUserFirebaseId(),
-          context.read<SystemConfigCubit>().getPlayScore()); //change question
-      await Future.delayed(
-          const Duration(seconds: inBetweenQuestionTimeInSeconds));
+            context.read<QuestionsCubit>().questions()[currentQuestionIndex].id,
+            submittedAnswer,
+            context.read<UserDetailsCubit>().getUserFirebaseId(),
+            context
+                .read<SystemConfigCubit>()
+                .quizCorrectAnswerCreditScore(QuizTypes.bookmarkQuiz),
+            context
+                .read<SystemConfigCubit>()
+                .quizWrongAnswerDeductScore(QuizTypes.bookmarkQuiz),
+          ); //change question
+      await Future<void>.delayed(
+        const Duration(seconds: inBetweenQuestionTimeInSeconds),
+      );
       if (currentQuestionIndex !=
           (context.read<QuestionsCubit>().questions().length - 1)) {
         changeQuestion();
         if (widget.quizType == QuizTypes.quizZone) {
-          timerAnimationController.forward(from: 0.0);
+          await timerAnimationController.forward(from: 0);
         } else {
           timerAnimationController.value = 0.0;
         }
@@ -224,7 +253,7 @@ class _BookmarkQuizScreenState extends State<BookmarkQuizScreen>
     }
   }
 
-  void submitGuessTheWordAnswer(List<String> submittedAnswer) async {
+  Future<void> submitGuessTheWordAnswer(List<String> submittedAnswer) async {
     timerAnimationController.stop();
     final guessTheWordQuizCubit = context.read<GuessTheWordQuizCubit>();
     //if answer not submitted then submit answer
@@ -233,11 +262,19 @@ class _BookmarkQuizScreenState extends State<BookmarkQuizScreen>
         .hasAnswered) {
       //submitted answer
       guessTheWordQuizCubit.submitAnswer(
-          guessTheWordQuizCubit.getQuestions()[currentQuestionIndex].id,
-          submittedAnswer);
+        guessTheWordQuizCubit.getQuestions()[currentQuestionIndex].id,
+        submittedAnswer,
+        context
+            .read<SystemConfigCubit>()
+            .quizCorrectAnswerCreditScore(QuizTypes.guessTheWord),
+        context
+            .read<SystemConfigCubit>()
+            .quizWrongAnswerDeductScore(QuizTypes.guessTheWord),
+      );
       //wait for some seconds
-      await Future.delayed(
-          const Duration(seconds: inBetweenQuestionTimeInSeconds));
+      await Future<void>.delayed(
+        const Duration(seconds: inBetweenQuestionTimeInSeconds),
+      );
       //if currentQuestion is last then complete quiz to result screen
       if (currentQuestionIndex ==
           (guessTheWordQuizCubit.getQuestions().length - 1)) {
@@ -248,7 +285,7 @@ class _BookmarkQuizScreenState extends State<BookmarkQuizScreen>
       } else {
         //change question
         changeQuestion();
-        timerAnimationController.forward(from: 0.0);
+        await timerAnimationController.forward(from: 0);
       }
     }
   }
@@ -256,15 +293,15 @@ class _BookmarkQuizScreenState extends State<BookmarkQuizScreen>
   //listener for current user timer
   void currentUserTimerAnimationStatusListener(AnimationStatus status) {
     if (status == AnimationStatus.completed) {
-      submitAnswer("-1");
+      submitAnswer('-1');
     }
   }
 
   @override
   void dispose() {
     timerAnimationController
-        .removeStatusListener(currentUserTimerAnimationStatusListener);
-    timerAnimationController.dispose();
+      ..removeStatusListener(currentUserTimerAnimationStatusListener)
+      ..dispose();
     questionAnimationController.dispose();
     questionContentAnimationController.dispose();
     showOptionAnimationController.dispose();
@@ -273,85 +310,33 @@ class _BookmarkQuizScreenState extends State<BookmarkQuizScreen>
 
   void onTapBackButton() {
     isExitDialogOpen = true;
-    showDialog(context: context, builder: (context) => const ExitGameDialog())
-        .then((value) => isExitDialogOpen = false);
+    showDialog<void>(
+      context: context,
+      builder: (_) => const ExitGameDialog(),
+    ).then((_) => isExitDialogOpen = false);
   }
 
   Widget _buildQuestions() {
     if (widget.quizType == QuizTypes.guessTheWord) {
       return BlocConsumer<GuessTheWordQuizCubit, GuessTheWordQuizState>(
-          bloc: context.read<GuessTheWordQuizCubit>(),
-          listener: (context, state) {},
-          builder: (context, state) {
-            if (state is GuessTheWordQuizFetchInProgress ||
-                state is GuessTheWordQuizIntial) {
-              return Center(
-                child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                        Theme.of(context).primaryColor)),
-              );
-            }
-            if (state is GuessTheWordQuizFetchFailure) {
-              return Center(
-                child: ErrorContainer(
-                  showBackButton: true,
-                  errorMessage: AppLocalization.of(context)!
-                      .getTranslatedValues(
-                          convertErrorCodeToLanguageKey(state.errorMessage)),
-                  onTapRetry: () {
-                    _getQuestions();
-                  },
-                  showErrorImage: true,
-                ),
-              );
-            }
-            final questions = (state as GuessTheWordQuizFetchSuccess).questions;
-
-            return Align(
-                alignment: Alignment.topCenter,
-                child: QuestionsContainer(
-                  showGuessTheWordHint: false,
-                  timerAnimationController: timerAnimationController,
-                  quizType: widget.quizType,
-                  topPadding: MediaQuery.of(context).size.height *
-                      UiUtils.getQuestionContainerTopPaddingPercentage(
-                          MediaQuery.of(context).size.height),
-                  showAnswerCorrectness: true,
-                  lifeLines: const {},
-                  hasSubmittedAnswerForCurrentQuestion: () {},
-                  questions: const [],
-                  submitAnswer: () {},
-                  questionContentAnimation: questionContentAnimation,
-                  questionScaleDownAnimation: questionScaleDownAnimation,
-                  questionScaleUpAnimation: questionScaleUpAnimation,
-                  questionSlideAnimation: questionSlideAnimation,
-                  currentQuestionIndex: currentQuestionIndex,
-                  questionAnimationController: questionAnimationController,
-                  questionContentAnimationController:
-                      questionContentAnimationController,
-                  guessTheWordQuestions: questions,
-                  guessTheWordQuestionContainerKeys:
-                      guessTheWordQuestionContainerKeys,
-                ));
-          });
-    }
-    return BlocConsumer<QuestionsCubit, QuestionsState>(
-        bloc: context.read<QuestionsCubit>(),
+        bloc: context.read<GuessTheWordQuizCubit>(),
         listener: (context, state) {},
         builder: (context, state) {
-          if (state is QuestionsFetchInProgress || state is QuestionsIntial) {
+          if (state is GuessTheWordQuizFetchInProgress ||
+              state is GuessTheWordQuizIntial) {
             return Center(
               child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                      Theme.of(context).primaryColor)),
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  Theme.of(context).primaryColor,
+                ),
+              ),
             );
           }
-          if (state is QuestionsFetchFailure) {
+          if (state is GuessTheWordQuizFetchFailure) {
             return Center(
               child: ErrorContainer(
                 showBackButton: true,
-                errorMessage: AppLocalization.of(context)!.getTranslatedValues(
-                    convertErrorCodeToLanguageKey(state.errorMessage)),
+                errorMessage: convertErrorCodeToLanguageKey(state.errorMessage),
                 onTapRetry: () {
                   _getQuestions();
                 },
@@ -359,35 +344,97 @@ class _BookmarkQuizScreenState extends State<BookmarkQuizScreen>
               ),
             );
           }
-          final questions = (state as QuestionsFetchSuccess).questions;
+          final questions = (state as GuessTheWordQuizFetchSuccess).questions;
 
           return Align(
-              alignment: Alignment.topCenter,
-              child: QuestionsContainer(
-                audioQuestionContainerKeys: audioQuestionContainerKeys,
-                timerAnimationController: timerAnimationController,
-                quizType: widget.quizType,
-                topPadding: MediaQuery.of(context).size.height *
-                    UiUtils.getQuestionContainerTopPaddingPercentage(
-                        MediaQuery.of(context).size.height),
-                showAnswerCorrectness: true,
-                lifeLines: const {},
-                hasSubmittedAnswerForCurrentQuestion:
-                    hasSubmittedAnswerForCurrentQuestion,
-                questions: questions,
-                submitAnswer: submitAnswer,
-                questionContentAnimation: questionContentAnimation,
-                questionScaleDownAnimation: questionScaleDownAnimation,
-                questionScaleUpAnimation: questionScaleUpAnimation,
-                questionSlideAnimation: questionSlideAnimation,
-                currentQuestionIndex: currentQuestionIndex,
-                questionAnimationController: questionAnimationController,
-                questionContentAnimationController:
-                    questionContentAnimationController,
-                guessTheWordQuestions: const [],
-                guessTheWordQuestionContainerKeys: const [],
-              ));
-        });
+            alignment: Alignment.topCenter,
+            child: QuestionsContainer(
+              showGuessTheWordHint: false,
+              timerAnimationController: timerAnimationController,
+              quizType: widget.quizType,
+              topPadding: MediaQuery.of(context).size.height *
+                  UiUtils.getQuestionContainerTopPaddingPercentage(
+                    MediaQuery.of(context).size.height,
+                  ),
+              answerMode: AnswerMode.noAnswerCorrectness,
+              lifeLines: const {},
+              hasSubmittedAnswerForCurrentQuestion: () {
+                return false;
+              },
+              questions: const [],
+              submitAnswer: (_) {},
+              questionContentAnimation: questionContentAnimation,
+              questionScaleDownAnimation: questionScaleDownAnimation,
+              questionScaleUpAnimation: questionScaleUpAnimation,
+              questionSlideAnimation: questionSlideAnimation,
+              currentQuestionIndex: currentQuestionIndex,
+              questionAnimationController: questionAnimationController,
+              questionContentAnimationController:
+                  questionContentAnimationController,
+              guessTheWordQuestions: questions,
+              guessTheWordQuestionContainerKeys:
+                  guessTheWordQuestionContainerKeys,
+            ),
+          );
+        },
+      );
+    }
+    return BlocBuilder<QuestionsCubit, QuestionsState>(
+      bloc: context.read<QuestionsCubit>(),
+      builder: (context, state) {
+        if (state is QuestionsFetchInProgress || state is QuestionsIntial) {
+          return Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(
+                Theme.of(context).primaryColor,
+              ),
+            ),
+          );
+        }
+        if (state is QuestionsFetchFailure) {
+          return Center(
+            child: ErrorContainer(
+              showBackButton: true,
+              errorMessage: convertErrorCodeToLanguageKey(state.errorMessage),
+              onTapRetry: () {
+                _getQuestions();
+              },
+              showErrorImage: true,
+            ),
+          );
+        }
+        final questions = (state as QuestionsFetchSuccess).questions;
+
+        return Align(
+          alignment: Alignment.topCenter,
+          child: QuestionsContainer(
+            audioQuestionContainerKeys: audioQuestionContainerKeys,
+            timerAnimationController: timerAnimationController,
+            quizType: widget.quizType,
+            topPadding: MediaQuery.of(context).size.height *
+                UiUtils.getQuestionContainerTopPaddingPercentage(
+                  MediaQuery.of(context).size.height,
+                ),
+            answerMode: AnswerMode.noAnswerCorrectness,
+            lifeLines: const {},
+            hasSubmittedAnswerForCurrentQuestion:
+                hasSubmittedAnswerForCurrentQuestion,
+            questions: questions,
+            submitAnswer: submitAnswer,
+            questionContentAnimation: questionContentAnimation,
+            questionScaleDownAnimation: questionScaleDownAnimation,
+            questionScaleUpAnimation: questionScaleUpAnimation,
+            questionSlideAnimation: questionSlideAnimation,
+            currentQuestionIndex: currentQuestionIndex,
+            questionAnimationController: questionAnimationController,
+            questionContentAnimationController:
+                questionContentAnimationController,
+            guessTheWordQuestions: const [],
+            guessTheWordQuestionContainerKeys: const [],
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildBottomButton() {
@@ -396,24 +443,24 @@ class _BookmarkQuizScreenState extends State<BookmarkQuizScreen>
         alignment: Alignment.bottomCenter,
         child: Padding(
           padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).size.height * (0.025)),
+            bottom: MediaQuery.of(context).size.height * (0.025),
+          ),
           child: CustomRoundedButton(
             widthPercentage: 0.5,
             backgroundColor: Theme.of(context).primaryColor,
-            buttonTitle: AppLocalization.of(context)!
-                .getTranslatedValues("submitBtn")!
-                .toUpperCase(),
-            elevation: 5.0,
+            buttonTitle: context.tr('submitBtn')!.toUpperCase(),
+            elevation: 5,
             shadowColor: Colors.black45,
             titleColor: Theme.of(context).colorScheme.background,
             fontWeight: FontWeight.bold,
             onTap: () {
               submitGuessTheWordAnswer(
-                  guessTheWordQuestionContainerKeys[currentQuestionIndex]
-                      .currentState!
-                      .getSubmittedAnswer());
+                guessTheWordQuestionContainerKeys[currentQuestionIndex]
+                    .currentState!
+                    .getSubmittedAnswer(),
+              );
             },
-            radius: 10.0,
+            radius: 10,
             showBorder: false,
             height: 45,
           ),
@@ -424,11 +471,13 @@ class _BookmarkQuizScreenState extends State<BookmarkQuizScreen>
       return Align(
         alignment: Alignment.bottomCenter,
         child: SlideTransition(
-          position:
-              Tween<Offset>(begin: Offset.zero, end: const Offset(0.0, 1.5))
-                  .animate(CurvedAnimation(
-                      parent: showOptionAnimationController,
-                      curve: Curves.easeInOut)),
+          position: Tween<Offset>(begin: Offset.zero, end: const Offset(0, 1.5))
+              .animate(
+            CurvedAnimation(
+              parent: showOptionAnimationController,
+              curve: Curves.easeInOut,
+            ),
+          ),
           child: Padding(
             padding: EdgeInsets.only(
               bottom: MediaQuery.of(context).size.height * (0.025),
@@ -438,8 +487,7 @@ class _BookmarkQuizScreenState extends State<BookmarkQuizScreen>
             child: CustomRoundedButton(
               widthPercentage: MediaQuery.of(context).size.width * (0.5),
               backgroundColor: Theme.of(context).primaryColor,
-              buttonTitle: AppLocalization.of(context)!
-                  .getTranslatedValues(showOptionsKey)!,
+              buttonTitle: context.tr(showOptionsKey),
               radius: 5,
               onTap: () {
                 if (!showOptionAnimationController.isAnimating) {
@@ -447,13 +495,13 @@ class _BookmarkQuizScreenState extends State<BookmarkQuizScreen>
                   audioQuestionContainerKeys[currentQuestionIndex]
                       .currentState!
                       .changeShowOption();
-                  timerAnimationController.forward(from: 0.0);
+                  timerAnimationController.forward(from: 0);
                 }
               },
               titleColor: Theme.of(context).colorScheme.background,
               showBorder: false,
-              height: 40.0,
-              elevation: 5.0,
+              height: 40,
+              elevation: 5,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -465,13 +513,12 @@ class _BookmarkQuizScreenState extends State<BookmarkQuizScreen>
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () {
-        if (completedQuiz) {
-          return Future.value(true);
-        }
+    return PopScope(
+      canPop: completedQuiz,
+      onPopInvoked: (didPop) {
+        if (didPop) return;
+
         onTapBackButton();
-        return Future.value(false);
       },
       child: Scaffold(
         appBar: const QAppBar(roundedAppBar: false, title: SizedBox()),
@@ -481,35 +528,34 @@ class _BookmarkQuizScreenState extends State<BookmarkQuizScreen>
               duration: const Duration(milliseconds: 500),
               child: completedQuiz
                   ? Align(
-                      alignment: Alignment.center,
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            "${AppLocalization.of(context)!.getTranslatedValues("completeAllQueLbl")!} (:",
+                            "${context.tr("completeAllQueLbl")!} (:",
                             style: TextStyle(
                               color: Theme.of(context).colorScheme.onTertiary,
-                              fontSize: 18.0,
+                              fontSize: 18,
                               fontWeight: FontWeights.bold,
                             ),
                           ),
-                          const SizedBox(height: 10.0),
+                          const SizedBox(height: 10),
                           Padding(
                             padding: EdgeInsets.symmetric(
-                                horizontal:
-                                    MediaQuery.of(context).size.width * (0.3)),
+                              horizontal:
+                                  MediaQuery.of(context).size.width * (0.3),
+                            ),
                             child: CustomRoundedButton(
                               widthPercentage:
                                   MediaQuery.of(context).size.width * (0.3),
                               backgroundColor:
                                   Theme.of(context).colorScheme.background,
-                              buttonTitle: AppLocalization.of(context)!
-                                  .getTranslatedValues("goBAckLbl")!,
+                              buttonTitle: context.tr('goBAckLbl'),
                               titleColor: Theme.of(context).primaryColor,
-                              radius: 5.0,
+                              radius: 5,
                               showBorder: false,
-                              elevation: 5.0,
+                              elevation: 5,
                               onTap: () {
                                 if (isSettingDialogOpen) {
                                   Navigator.of(context).pop();
@@ -520,7 +566,7 @@ class _BookmarkQuizScreenState extends State<BookmarkQuizScreen>
 
                                 Navigator.of(context).pop();
                               },
-                              height: 35.0,
+                              height: 35,
                             ),
                           ),
                         ],
@@ -528,7 +574,10 @@ class _BookmarkQuizScreenState extends State<BookmarkQuizScreen>
                     )
                   : _buildQuestions(),
             ),
-            _buildBottomButton(),
+            if (!completedQuiz)
+              _buildBottomButton()
+            else
+              const SizedBox.shrink(),
           ],
         ),
       ),

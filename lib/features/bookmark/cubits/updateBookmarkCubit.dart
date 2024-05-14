@@ -12,24 +12,30 @@ class UpdateBookmarkInProgress extends UpdateBookmarkState {}
 class UpdateBookmarkSuccess extends UpdateBookmarkState {}
 
 class UpdateBookmarkFailure extends UpdateBookmarkState {
+  UpdateBookmarkFailure(this.errorMessageCode, this.failedStatus);
+
   final String errorMessageCode;
   final String failedStatus;
-  UpdateBookmarkFailure(this.errorMessageCode, this.failedStatus);
 }
 
 class UpdateBookmarkCubit extends Cubit<UpdateBookmarkState> {
-  final BookmarkRepository _bookmarkRepository;
   UpdateBookmarkCubit(this._bookmarkRepository) : super(UpdateBookmarkIntial());
+  final BookmarkRepository _bookmarkRepository;
 
-  void updateBookmark(
-      String userId, String questionId, String status, String type) async {
+  Future<void> updateBookmark(
+    String questionId,
+    String status,
+    String type,
+  ) async {
     emit(UpdateBookmarkInProgress());
     try {
       await _bookmarkRepository.updateBookmark(
-          userId, questionId, status, type);
+        questionId,
+        status,
+        type,
+      );
       emit(UpdateBookmarkSuccess());
     } catch (e) {
-      print(e.toString());
       emit(UpdateBookmarkFailure(e.toString(), status));
     }
   }

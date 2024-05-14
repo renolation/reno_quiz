@@ -1,7 +1,6 @@
 class WalletException implements Exception {
-  final String errorMessageCode;
-
   WalletException({required this.errorMessageCode});
+  final String errorMessageCode;
   @override
   String toString() => errorMessageCode;
 }

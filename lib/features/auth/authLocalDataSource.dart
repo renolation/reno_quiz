@@ -1,37 +1,41 @@
-import 'package:flutterquiz/utils/constants/constants.dart';
-import 'package:hive/hive.dart';
+import 'package:flutterquiz/utils/constants/hive_constants.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 //AuthLocalDataSource will communicate with local database (hive)
 class AuthLocalDataSource {
   static String getJwtToken() {
-    return Hive.box(authBox).get(jwtTokenKey, defaultValue: "");
+    return Hive.box<dynamic>(authBox).get(jwtTokenKey, defaultValue: '')
+        as String;
   }
 
   static Future<void> setJwtToken(String jwtToken) async {
-    await Hive.box(authBox).put(jwtTokenKey, jwtToken);
+    await Hive.box<dynamic>(authBox).put(jwtTokenKey, jwtToken);
   }
 
   static bool checkIsAuth() {
-    return Hive.box(authBox).get(isLoginKey, defaultValue: false);
+    return Hive.box<dynamic>(authBox).get(isLoginKey, defaultValue: false)
+        as bool;
   }
 
   static String getAuthType() {
-    return Hive.box(authBox).get(authTypeKey, defaultValue: "");
+    return Hive.box<dynamic>(authBox).get(authTypeKey, defaultValue: '')
+        as String;
   }
 
   static String getUserFirebaseId() {
-    return Hive.box(authBox).get(firebaseIdBoxKey, defaultValue: "");
+    return Hive.box<dynamic>(authBox).get(firebaseIdBoxKey, defaultValue: '')
+        as String;
   }
 
   Future<void> setUserFirebaseId(String? userId) async {
-    Hive.box(authBox).put(firebaseIdBoxKey, userId);
+    await Hive.box<dynamic>(authBox).put(firebaseIdBoxKey, userId);
   }
 
   Future<void> setAuthType(String? authType) async {
-    Hive.box(authBox).put(authTypeKey, authType);
+    await Hive.box<dynamic>(authBox).put(authTypeKey, authType);
   }
 
-  Future<void> changeAuthStatus(bool? authStatus) async {
-    Hive.box(authBox).put(isLoginKey, authStatus);
+  Future<void> changeAuthStatus({bool? authStatus}) async {
+    await Hive.box<dynamic>(authBox).put(isLoginKey, authStatus);
   }
 }

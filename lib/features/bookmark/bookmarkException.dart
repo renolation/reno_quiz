@@ -1,7 +1,6 @@
 class BookmarkException implements Exception {
-  final String errorMessageCode;
-
   BookmarkException({required this.errorMessageCode});
+  final String errorMessageCode;
 
   @override
   String toString() => errorMessageCode;

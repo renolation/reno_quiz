@@ -2,25 +2,21 @@ import 'dart:async';
 import 'dart:developer';
 import 'dart:io';
 
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:flutterquiz/app/app_localization.dart';
 import 'package:flutterquiz/app/routes.dart';
 import 'package:flutterquiz/features/ads/interstitial_ad_cubit.dart';
+import 'package:flutterquiz/features/ads/rewarded_ad_cubit.dart';
 import 'package:flutterquiz/features/auth/authRepository.dart';
-import 'package:flutterquiz/features/auth/cubits/authCubit.dart';
 import 'package:flutterquiz/features/auth/cubits/referAndEarnCubit.dart';
 import 'package:flutterquiz/features/badges/cubits/badgesCubit.dart';
 import 'package:flutterquiz/features/battleRoom/cubits/battleRoomCubit.dart';
 import 'package:flutterquiz/features/battleRoom/cubits/multiUserBattleRoomCubit.dart';
 import 'package:flutterquiz/features/exam/cubits/examCubit.dart';
-import 'package:flutterquiz/features/localization/appLocalizationCubit.dart';
 import 'package:flutterquiz/features/profileManagement/cubits/updateScoreAndCoinsCubit.dart';
 import 'package:flutterquiz/features/profileManagement/cubits/updateUserDetailsCubit.dart';
 import 'package:flutterquiz/features/profileManagement/cubits/userDetailsCubit.dart';
@@ -28,43 +24,30 @@ import 'package:flutterquiz/features/profileManagement/profileManagementLocalDat
 import 'package:flutterquiz/features/profileManagement/profileManagementRepository.dart';
 import 'package:flutterquiz/features/quiz/cubits/contestCubit.dart';
 import 'package:flutterquiz/features/quiz/cubits/quizCategoryCubit.dart';
-import 'package:flutterquiz/features/quiz/cubits/quizoneCategoryCubit.dart';
+import 'package:flutterquiz/features/quiz/cubits/quizzone_category_cubit.dart';
 import 'package:flutterquiz/features/quiz/cubits/subCategoryCubit.dart';
-import 'package:flutterquiz/features/quiz/models/contest.dart';
 import 'package:flutterquiz/features/quiz/models/quizType.dart';
-import 'package:flutterquiz/features/settings/settingsLocalDataSource.dart';
 import 'package:flutterquiz/features/systemConfig/cubits/systemConfigCubit.dart';
 import 'package:flutterquiz/ui/screens/battle/create_or_join_screen.dart';
-import 'package:flutterquiz/ui/screens/home/widgets/app_under_maintenance_dialog.dart';
-import 'package:flutterquiz/ui/screens/home/widgets/guest_mode_dialog.dart';
-import 'package:flutterquiz/ui/screens/home/widgets/quiz_grid_card.dart';
-import 'package:flutterquiz/ui/screens/home/widgets/update_app_container.dart';
-import 'package:flutterquiz/ui/screens/home/widgets/user_achievements.dart';
-import 'package:flutterquiz/ui/screens/profile/widgets/editProfileFieldBottomSheetContainer.dart';
-import 'package:flutterquiz/ui/widgets/circularProgressContainer.dart';
-import 'package:flutterquiz/ui/widgets/errorContainer.dart';
+import 'package:flutterquiz/ui/screens/home/widgets/all.dart';
+import 'package:flutterquiz/ui/widgets/all.dart';
 import 'package:flutterquiz/utils/constants/constants.dart';
-import 'package:flutterquiz/utils/constants/error_message_keys.dart';
-import 'package:flutterquiz/utils/constants/fonts.dart';
-import 'package:flutterquiz/utils/constants/string_labels.dart';
+import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-import '../../../features/ads/app_lifecycle_reactor.dart';
-import '../../../features/ads/app_open_ad_manager.dart';
-
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, required this.isGuest});
+  const HomeScreen({required this.isGuest, super.key});
 
   final bool isGuest;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 
-  static Route route(RouteSettings routeSettings) {
+  static Route<HomeScreen> route(RouteSettings routeSettings) {
     return CupertinoPageRoute(
       builder: (_) => MultiBlocProvider(
         providers: [
@@ -79,66 +62,57 @@ class HomeScreen extends StatefulWidget {
             create: (_) => UpdateUserDetailCubit(ProfileManagementRepository()),
           ),
         ],
-        child: HomeScreen(isGuest: routeSettings.arguments as bool),
+        child: HomeScreen(isGuest: routeSettings.arguments! as bool),
       ),
     );
   }
 }
 
-class _HomeScreenState extends State<HomeScreen>
-    with TickerProviderStateMixin, WidgetsBindingObserver {
-  /// Animations
-  late AnimationController slideAnimationController;
-  late Animation<Offset> slideAnimation;
-  late AnimationController _controller;
-
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   /// Quiz Zone globals
-  int oldCateListLength = 0;
+  int oldCategoriesToShowCount = 0;
   bool isCateListExpanded = false;
-  bool isCateListExpandable = true;
-  bool showQuizZoneShadow = false;
-
-  bool isContestAvailable = true;
+  bool canExpandCategoryList = false;
 
   final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
-  List<String> battleName = ["groupPlay", "battleQuiz"];
+  List<String> battleName = ['groupPlay', 'battleQuiz'];
 
-  List<String> battleImg = ["group_battle_icon.svg", "one_vs_one_icon.svg"];
+  List<String> battleImg = [Assets.groupBattleIcon, Assets.oneVsOneIcon];
 
-  List<String> examSelf = ["exam", "selfChallenge"];
+  List<String> examSelf = ['exam', 'selfChallenge'];
 
-  List<String> examSelfDesc = ["desExam", "challengeYourselfLbl"];
+  List<String> examSelfDesc = ['desExam', 'challengeYourselfLbl'];
 
-  List<String> examSelfImg = ["exam_icon.svg", "self_challenge.svg"];
+  List<String> examSelfImg = [Assets.examQuizIcon, Assets.selfChallengeIcon];
 
-  List<String> battleDesc = ["desGroupPlay", "desBattleQuiz"];
+  List<String> battleDesc = ['desGroupPlay', 'desBattleQuiz'];
 
   List<String> playDifferentZone = [
-    "dailyQuiz",
-    "funAndLearn",
-    "guessTheWord",
-    "audioQuestions",
-    "mathMania",
-    "truefalse",
+    'dailyQuiz',
+    'funAndLearn',
+    'guessTheWord',
+    'audioQuestions',
+    'mathMania',
+    'truefalse',
   ];
 
   List<String> playDifferentImg = [
-    "daily_quiz_icon.svg",
-    "fun_icon.svg",
-    "guess_icon.svg",
-    "audio_icon.svg",
-    "maths_icon.svg",
-    "true_false_icon.svg",
+    Assets.dailyQuizIcon,
+    Assets.funNLearnIcon,
+    Assets.guessTheWordIcon,
+    Assets.audioQuizIcon,
+    Assets.mathsQuizIcon,
+    Assets.trueFalseQuizIcon,
   ];
 
   List<String> playDifferentZoneDesc = [
-    "desDailyQuiz",
-    "desFunAndLearn",
-    "desGuessTheWord",
-    "desAudioQuestions",
-    "desMathMania",
-    "desTrueFalse",
+    'desDailyQuiz',
+    'desFunAndLearn',
+    'desGuessTheWord',
+    'desAudioQuestions',
+    'desMathMania',
+    'desTrueFalse',
   ];
 
   // Screen dimensions
@@ -149,105 +123,64 @@ class _HomeScreenState extends State<HomeScreen>
   // HomeScreen horizontal margin, change from here
   double get hzMargin => scrWidth * UiUtils.hzMarginPct;
 
-  get _statusBarPadding => MediaQuery.of(context).padding.top;
+  double get _statusBarPadding => MediaQuery.of(context).padding.top;
 
   // TextStyles
   // check build() method
   late var _boldTextStyle = TextStyle(
     fontWeight: FontWeights.bold,
-    fontSize: 18.0,
+    fontSize: 18,
     color: Theme.of(context).colorScheme.onTertiary,
   );
 
   ///
-  late final String _userId;
-  late final String _currLangId;
+  late String _currLangId;
   late final SystemConfigCubit _sysConfigCubit;
-  late AppLifecycleReactor appLifecycleReactor;
-
+  final _quizZoneId =
+      UiUtils.getCategoryTypeNumberFromQuizType(QuizTypes.quizZone);
 
   @override
   void initState() {
-    initAnimations();
+    super.initState();
     showAppUnderMaintenanceDialog();
     setQuizMenu();
     _initLocalNotification();
     checkForUpdates();
     setupInteractedMessage();
-    initAppOpenAd();
-
 
     /// Create Ads
-    Future.delayed(Duration.zero, () {
+    Future.delayed(Duration.zero, () async {
+      await context.read<RewardedAdCubit>().createDailyRewardAd(context);
       context.read<InterstitialAdCubit>().createInterstitialAd(context);
     });
 
     WidgetsBinding.instance.addObserver(this);
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-      upperBound: 0.5,
-    );
 
     ///
     _currLangId = UiUtils.getCurrentQuestionLanguageId(context);
-    final String quizZoneType =
-        UiUtils.getCategoryTypeNumberFromQuizType(QuizTypes.quizZone);
     _sysConfigCubit = context.read<SystemConfigCubit>();
     final quizCubit = context.read<QuizCategoryCubit>();
     final quizZoneCubit = context.read<QuizoneCategoryCubit>();
 
     if (widget.isGuest) {
-      quizCubit.getQuizCategory(languageId: _currLangId, type: quizZoneType);
+      quizCubit.getQuizCategory(languageId: _currLangId, type: _quizZoneId);
       quizZoneCubit.getQuizCategory(languageId: _currLangId);
     } else {
-      _userId = context.read<UserDetailsCubit>().getUserId();
+      fetchUserDetails();
+
       quizCubit.getQuizCategoryWithUserId(
         languageId: _currLangId,
-        type: quizZoneType,
-        userId: context.read<UserDetailsCubit>().getUserId(),
+        type: _quizZoneId,
       );
-      quizZoneCubit.getQuizCategoryWithUserId(
-        languageId: _currLangId,
-        userId: context.read<UserDetailsCubit>().getUserId(),
-      );
-      context
-          .read<ContestCubit>()
-          .getContest(context.read<UserDetailsCubit>().getUserId());
-
-      // rank
+      quizZoneCubit.getQuizCategoryWithUserId(languageId: _currLangId);
+      context.read<ContestCubit>().getContest(languageId: _currLangId);
     }
-
-    super.initState();
-  }
-
-  void initAppOpenAd(){
-    AppOpenAdManager appOpenAdManager = AppOpenAdManager()..loadAd();
-    appLifecycleReactor = AppLifecycleReactor(
-        appOpenAdManager: appOpenAdManager);
-
-  }
-
-  void initAnimations() {
-    slideAnimationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 85),
-    );
-
-    slideAnimation =
-        Tween<Offset>(begin: Offset.zero, end: const Offset(0.0, -0.0415))
-            .animate(
-      CurvedAnimation(
-        parent: slideAnimationController,
-        curve: Curves.easeIn,
-      ),
-    );
   }
 
   void showAppUnderMaintenanceDialog() {
     Future.delayed(Duration.zero, () {
-      if (_sysConfigCubit.appUnderMaintenance()) {
-        showDialog(
+      if (_sysConfigCubit.isAppUnderMaintenance) {
+        showDialog<void>(
           context: context,
           builder: (_) => const AppUnderMaintenanceDialog(),
         );
@@ -255,19 +188,17 @@ class _HomeScreenState extends State<HomeScreen>
     });
   }
 
-  void _initLocalNotification() async {
-    const AndroidInitializationSettings initializationSettingsAndroid =
+  Future<void> _initLocalNotification() async {
+    const initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
-    final DarwinInitializationSettings initializationSettingsIOS =
-        DarwinInitializationSettings(
+    final initializationSettingsIOS = DarwinInitializationSettings(
       onDidReceiveLocalNotification:
           (int id, String? title, String? body, String? payLoad) {
-        print("For ios version <= 9 notification will be shown here");
+        log('For ios version <= 9 notification will be shown here');
       },
     );
 
-    final InitializationSettings initializationSettings =
-        InitializationSettings(
+    final initializationSettings = InitializationSettings(
       android: initializationSettingsAndroid,
       iOS: initializationSettingsIOS,
     );
@@ -278,7 +209,7 @@ class _HomeScreenState extends State<HomeScreen>
 
     /// Request Permissions for IOS
     if (Platform.isIOS) {
-      flutterLocalNotificationsPlugin
+      await flutterLocalNotificationsPlugin
           .resolvePlatformSpecificImplementation<
               IOSFlutterLocalNotificationsPlugin>()
           ?.requestPermissions();
@@ -287,100 +218,78 @@ class _HomeScreenState extends State<HomeScreen>
 
   void setQuizMenu() {
     Future.delayed(Duration.zero, () {
-      if (_sysConfigCubit.getIsContestAvailable() == "0") {
-        isContestAvailable = false;
-      }
-      if (_sysConfigCubit.getIsDailyQuizAvailable() == "0") {
-        playDifferentZone.removeWhere((element) => element == "dailyQuiz");
-        playDifferentImg
-            .removeWhere((element) => element == "daily_quiz_icon.svg");
-        playDifferentZoneDesc
-            .removeWhere((element) => element == "desDailyQuiz");
-      }
-      if (_sysConfigCubit.getIsTrueFalseAvailable() == "0") {
-        playDifferentZone.removeWhere((element) => element == "truefalse");
-        playDifferentImg
-            .removeWhere((element) => element == "true_false_icon.svg");
-        playDifferentZoneDesc
-            .removeWhere((element) => element == "desTrueFalse");
-      }
-      if (_sysConfigCubit.getIsFunNLearnAvailable() == "0") {
-        playDifferentZone.removeWhere((element) => element == "funAndLearn");
-        playDifferentImg.removeWhere((element) => element == "fun_icon.svg");
-        playDifferentZoneDesc
-            .removeWhere((element) => element == "desFunAndLearn");
-      }
-      if (!_sysConfigCubit.getIsGuessTheWordAvailable() &&
-              (AppLocalization.of(context)!.locale != const Locale('en')) ||
-          AppLocalization.of(context)!.locale != const Locale('en-GB')) {
-        playDifferentZone.removeWhere((element) => element == "guessTheWord");
-        playDifferentImg.removeWhere((element) => element == "guess_icon.svg");
-        playDifferentZoneDesc
-            .removeWhere((element) => element == "desGuessTheWord");
-      } else {
-        if (_sysConfigCubit.getIsGuessTheWordAvailable()) {
-          if (AppLocalization.of(context)!.locale.toString() == "en-GB" ||
-              AppLocalization.of(context)!.locale.toString() == "en") {
-            if ((playDifferentZone.contains("guessTheWord"))) {
-              playDifferentZone.insert(2, "guessTheWord");
-            }
-            if ((playDifferentImg.contains("guess_icon.svg"))) {
-              playDifferentImg.insert(2, "guess_icon.svg");
-            }
-            if ((playDifferentZoneDesc.contains("desGuessTheWord"))) {
-              playDifferentZoneDesc.insert(2, "desGuessTheWord");
-            }
-          }
-        }
-      }
-      if (!_sysConfigCubit.getIsAudioQuestionAvailable()) {
-        playDifferentZone.removeWhere((element) => element == "audioQuestions");
-        playDifferentImg.removeWhere((element) => element == "audio_icon.svg");
-        playDifferentZoneDesc
-            .removeWhere((element) => element == "desAudioQuestions");
-      }
-      if (!_sysConfigCubit.isMathQuizAvailable()) {
-        playDifferentZone.removeWhere((element) => element == "mathMania");
-        playDifferentImg.removeWhere((element) => element == "maths_icon.svg");
-        playDifferentZoneDesc
-            .removeWhere((element) => element == "desMathMania");
-      }
-      if (_sysConfigCubit.getIsExamAvailable() == "0") {
-        examSelf.removeWhere((element) => element == "exam");
-        examSelfDesc.removeWhere((element) => element == "desExam");
-        examSelfImg.removeWhere((element) => element == "exam_icon.svg");
-      }
-      if (!_sysConfigCubit.isSelfChallengeEnable()) {
-        examSelf.removeWhere((element) => element == "selfChallenge");
-        examSelfDesc
-            .removeWhere((element) => element == "challengeYourselfLbl");
-        examSelfImg.removeWhere((element) => element == "self_challenge.svg");
+      if (!_sysConfigCubit.isDailyQuizEnabled) {
+        playDifferentZone.removeWhere((e) => e == 'dailyQuiz');
+        playDifferentImg.removeWhere((e) => e == Assets.dailyQuizIcon);
+        playDifferentZoneDesc.removeWhere((e) => e == 'desDailyQuiz');
       }
 
-      if (_sysConfigCubit.getIsBattleModeGroupAvailable() == "0") {
-        battleName.removeWhere((element) => element == "groupPlay");
-        battleImg.removeWhere((element) => element == "group_battle_icon.svg");
-        battleDesc.removeWhere((element) => element == "desGroupPlay");
+      if (!_sysConfigCubit.isTrueFalseQuizEnabled) {
+        playDifferentZone.removeWhere((e) => e == 'truefalse');
+        playDifferentImg.removeWhere((e) => e == Assets.trueFalseQuizIcon);
+        playDifferentZoneDesc.removeWhere((e) => e == 'desTrueFalse');
       }
 
-      if (_sysConfigCubit.getIsBattleModeOneAvailable() == "0") {
-        battleName.removeWhere((element) => element == "battleQuiz");
-        battleImg.removeWhere((element) => element == "one_vs_one_icon.svg");
-        battleDesc.removeWhere((element) => element == "desBattleQuiz");
+      if (!_sysConfigCubit.isFunNLearnEnabled) {
+        playDifferentZone.removeWhere((e) => e == 'funAndLearn');
+        playDifferentImg.removeWhere((e) => e == Assets.funNLearnIcon);
+        playDifferentZoneDesc.removeWhere((e) => e == 'desFunAndLearn');
       }
 
+      if (!_sysConfigCubit.isGuessTheWordEnabled) {
+        playDifferentZone.removeWhere((e) => e == 'guessTheWord');
+        playDifferentImg.removeWhere((e) => e == Assets.guessTheWordIcon);
+        playDifferentZoneDesc.removeWhere((e) => e == 'desGuessTheWord');
+      }
+
+      if (!_sysConfigCubit.isAudioQuizEnabled) {
+        playDifferentZone.removeWhere((e) => e == 'audioQuestions');
+        playDifferentImg.removeWhere((e) => e == Assets.guessTheWordIcon);
+        playDifferentZoneDesc.removeWhere((e) => e == 'desAudioQuestions');
+      }
+
+      if (!_sysConfigCubit.isMathQuizEnabled) {
+        playDifferentZone.removeWhere((e) => e == 'mathMania');
+        playDifferentImg.removeWhere((e) => e == Assets.mathsQuizIcon);
+        playDifferentZoneDesc.removeWhere((e) => e == 'desMathMania');
+      }
+
+      if (!_sysConfigCubit.isExamQuizEnabled) {
+        examSelf.removeWhere((e) => e == 'exam');
+        examSelfDesc.removeWhere((e) => e == 'desExam');
+        examSelfImg.removeWhere((e) => e == Assets.examQuizIcon);
+      }
+
+      if (!_sysConfigCubit.isSelfChallengeQuizEnabled) {
+        examSelf.removeWhere((e) => e == 'selfChallenge');
+        examSelfDesc.removeWhere((e) => e == 'challengeYourselfLbl');
+        examSelfImg.removeWhere((e) => e == Assets.selfChallengeIcon);
+      }
+
+      if (!_sysConfigCubit.isGroupBattleEnabled) {
+        battleName.removeWhere((e) => e == 'groupPlay');
+        battleImg.removeWhere((e) => e == Assets.groupBattleIcon);
+        battleDesc.removeWhere((e) => e == 'desGroupPlay');
+      }
+
+      if (!_sysConfigCubit.isOneVsOneBattleEnabled &&
+          !_sysConfigCubit.isRandomBattleEnabled) {
+        battleName.removeWhere((e) => e == 'battleQuiz');
+        battleImg.removeWhere((e) => e == Assets.groupBattleIcon);
+        battleDesc.removeWhere((e) => e == 'desBattleQuiz');
+      }
       setState(() {});
     });
   }
 
   late bool showUpdateContainer = false;
 
-  void checkForUpdates() async {
-    await Future.delayed(Duration.zero);
-    if (_sysConfigCubit.isForceUpdateEnable()) {
+  Future<void> checkForUpdates() async {
+    await Future<void>.delayed(Duration.zero);
+    if (_sysConfigCubit.isForceUpdateEnable) {
       try {
-        bool forceUpdate =
-            await UiUtils.forceUpdate(_sysConfigCubit.getAppVersion());
+        final forceUpdate =
+            await UiUtils.forceUpdate(_sysConfigCubit.appVersion);
 
         if (forceUpdate) {
           setState(() => showUpdateContainer = true);
@@ -398,34 +307,31 @@ class _HomeScreenState extends State<HomeScreen>
         provisional: true,
       );
     } else {
-      Permission notificationPermission = Permission.notification;
-      bool permissonGiven = (await notificationPermission.status).isGranted;
-      if (!permissonGiven) {
-        Permission.notification.request();
-      }
+      final isGranted = (await Permission.notification.status).isGranted;
+      if (!isGranted) await Permission.notification.request();
     }
-    FirebaseMessaging.instance.getInitialMessage();
+    await FirebaseMessaging.instance.getInitialMessage();
     FirebaseMessaging.onMessageOpenedApp.listen(_handleMessage);
     // handle background notification
     FirebaseMessaging.onBackgroundMessage(UiUtils.onBackgroundMessage);
     //handle foreground notification
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      print("Notification arrives : $message");
-      Map<String, dynamic> data = message.data;
-      log(data.toString(), name: "notification data msg");
+      log('Notification arrives : ${message.toMap()}');
+      final data = message.data;
+      log(data.toString(), name: 'notification data msg');
       final title = data['title'].toString();
       final body = data['body'].toString();
       final type = data['type'].toString();
       final image = data['image'].toString();
 
       //if notification type is badges then update badges in cubit list
-      if (type == "badges") {
+      if (type == 'badges') {
         Future.delayed(Duration.zero, () {
           context.read<BadgesCubit>().unlockBadge(data['badge_type'] as String);
         });
       }
 
-      if (type == "payment_request") {
+      if (type == 'payment_request') {
         Future.delayed(Duration.zero, () {
           context.read<UserDetailsCubit>().updateCoins(
                 addCoin: true,
@@ -433,10 +339,10 @@ class _HomeScreenState extends State<HomeScreen>
               );
         });
       }
-      log(image.toString(), name: "notification image data");
+      log(image, name: 'notification image data');
       //payload is some data you want to pass in local notification
-      if (image != "null" && image.isNotEmpty) {
-        log("image ${image.runtimeType}");
+      if (image != 'null' && image.isNotEmpty) {
+        log('image ${image.runtimeType}');
         generateImageNotification(title, body, image, type, type);
       } else {
         generateSimpleNotification(title, body, type);
@@ -444,36 +350,52 @@ class _HomeScreenState extends State<HomeScreen>
     });
   }
 
+  //quiz_type according to the notification category
+  QuizTypes _getQuizTypeFromCategory(String category) {
+    return switch (category) {
+      'audio-question-category' => QuizTypes.audioQuestions,
+      'guess-the-word-category' => QuizTypes.guessTheWord,
+      'fun-n-learn-category' => QuizTypes.funAndLearn,
+      _ => QuizTypes.quizZone,
+    };
+  }
+
   // notification type is category then move to category screen
   Future<void> _handleMessage(RemoteMessage message) async {
     try {
-      if (message.data['type'] == 'category') {
-        Navigator.of(context).pushNamed(Routes.category,
-            arguments: {"quizType": QuizTypes.quizZone});
+      if (message.data['type'].toString().contains('category')) {
+        await Navigator.of(context).pushNamed(
+          Routes.category,
+          arguments: {
+            'quizType':
+                _getQuizTypeFromCategory(message.data['type'] as String),
+          },
+        );
       } else if (message.data['type'] == 'badges') {
         //if user open app by tapping
         UiUtils.updateBadgesLocally(context);
-        Navigator.of(context).pushNamed(Routes.badges);
-      } else if (message.data['type'] == "payment_request") {
-        //UiUtils.needToUpdateCoinsLocally(context);
-        Navigator.of(context).pushNamed(Routes.wallet);
+        await Navigator.of(context).pushNamed(Routes.badges);
+      } else if (message.data['type'] == 'payment_request') {
+        await Navigator.of(context).pushNamed(Routes.wallet);
       }
     } catch (e) {
-      print(e);
+      log(e.toString(), error: e);
     }
   }
 
   Future<void> _onTapLocalNotification(NotificationResponse? payload) async {
-    //
-    String type = payload!.payload ?? "";
-    if (type == "badges") {
-      Navigator.of(context).pushNamed(Routes.badges);
-    } else if (type == "category") {
-      Navigator.of(context).pushNamed(
+    final type = payload!.payload ?? '';
+    if (type == 'badges') {
+      await Navigator.of(context).pushNamed(Routes.badges);
+    } else if (type.contains('category')) {
+      await Navigator.of(context).pushNamed(
         Routes.category,
+        arguments: {
+          'quizType': _getQuizTypeFromCategory(type),
+        },
       );
-    } else if (type == "payment_request") {
-      Navigator.of(context).pushNamed(Routes.wallet);
+    } else if (type == 'payment_request') {
+      await Navigator.of(context).pushNamed(Routes.wallet);
     }
   }
 
@@ -484,34 +406,43 @@ class _HomeScreenState extends State<HomeScreen>
     String payloads,
     String type,
   ) async {
-    var largeIconPath = await _downloadAndSaveFile(image, 'largeIcon');
-    var bigPicturePath = await _downloadAndSaveFile(image, 'bigPicture');
-    var bigPictureStyleInformation = BigPictureStyleInformation(
-        FilePathAndroidBitmap(bigPicturePath),
-        hideExpandedLargeIcon: true,
-        contentTitle: title,
-        htmlFormatContentTitle: true,
-        summaryText: msg,
-        htmlFormatSummaryText: true);
-    var androidPlatformChannelSpecifics = AndroidNotificationDetails(
-      packageName, //channel id
-      appName, //channel name
+    final largeIconPath = await _downloadAndSaveFile(image, 'largeIcon');
+    final bigPicturePath = await _downloadAndSaveFile(image, 'bigPicture');
+    final bigPictureStyleInformation = BigPictureStyleInformation(
+      FilePathAndroidBitmap(bigPicturePath),
+      hideExpandedLargeIcon: true,
+      contentTitle: title,
+      htmlFormatContentTitle: true,
+      summaryText: msg,
+      htmlFormatSummaryText: true,
+    );
+    final androidPlatformChannelSpecifics = AndroidNotificationDetails(
+      packageName,
+      appName,
+      icon: '@drawable/ic_notification',
       channelDescription: appName,
       largeIcon: FilePathAndroidBitmap(largeIconPath),
       styleInformation: bigPictureStyleInformation,
     );
-    var platformChannelSpecifics =
-        NotificationDetails(android: androidPlatformChannelSpecifics);
-    await flutterLocalNotificationsPlugin
-        .show(0, title, msg, platformChannelSpecifics, payload: payloads);
+    final platformChannelSpecifics = NotificationDetails(
+      android: androidPlatformChannelSpecifics,
+    );
+    await flutterLocalNotificationsPlugin.show(
+      0,
+      title,
+      msg,
+      platformChannelSpecifics,
+      payload: payloads,
+    );
   }
 
   Future<String> _downloadAndSaveFile(String url, String fileName) async {
-    final Directory directory = await getApplicationDocumentsDirectory();
-    final String filePath = '${directory.path}/$fileName';
-    final http.Response response = await http.get(Uri.parse(url));
-    final File file = File(filePath);
+    final directory = await getApplicationDocumentsDirectory();
+    final filePath = '${directory.path}/$fileName';
+    final response = await http.get(Uri.parse(url));
+    final file = File(filePath);
     await file.writeAsBytes(response.bodyBytes);
+
     return filePath;
   }
 
@@ -521,7 +452,7 @@ class _HomeScreenState extends State<HomeScreen>
     String body,
     String payloads,
   ) async {
-    var androidPlatformChannelSpecifics = const AndroidNotificationDetails(
+    const androidPlatformChannelSpecifics = AndroidNotificationDetails(
       packageName, //channel id
       appName, //channel name
       channelDescription: appName,
@@ -529,44 +460,25 @@ class _HomeScreenState extends State<HomeScreen>
       priority: Priority.high,
       ticker: 'ticker',
     );
-    const DarwinNotificationDetails iosNotificationDetails =
-        DarwinNotificationDetails();
 
-    var platformChannelSpecifics = NotificationDetails(
-        android: androidPlatformChannelSpecifics, iOS: iosNotificationDetails);
-    await flutterLocalNotificationsPlugin
-        .show(0, title, body, platformChannelSpecifics, payload: payloads);
-  }
+    const platformChannelSpecifics = NotificationDetails(
+      android: androidPlatformChannelSpecifics,
+      iOS: DarwinNotificationDetails(),
+    );
 
-  void showUpdateNameBottomSheet() {
-    final updateUserDetailCubit = context.read<UpdateUserDetailCubit>();
-    showModalBottomSheet(
-      isDismissible: false,
-      enableDrag: false,
-      isScrollControlled: true,
-      elevation: 5.0,
-      shape: const RoundedRectangleBorder(
-        borderRadius: UiUtils.bottomSheetTopRadius,
-      ),
-      context: context,
-      builder: (context) => EditProfileFieldBottomSheetContainer(
-        canCloseBottomSheet: false,
-        fieldTitle: nameLbl,
-        fieldValue: context.read<UserDetailsCubit>().getUserName(),
-        numericKeyboardEnable: false,
-        updateUserDetailCubit: updateUserDetailCubit,
-      ),
+    await flutterLocalNotificationsPlugin.show(
+      0,
+      title,
+      body,
+      platformChannelSpecifics,
+      payload: payloads,
     );
   }
 
   @override
   void dispose() {
     ProfileManagementLocalDataSource.updateReversedCoins(0);
-    slideAnimationController.dispose();
-
     WidgetsBinding.instance.removeObserver(this);
-    _controller.dispose();
-
     super.dispose();
   }
 
@@ -587,61 +499,82 @@ class _HomeScreenState extends State<HomeScreen>
         arguments: widget.isGuest,
       );
 
-  void _onTapLeaderboard() => widget.isGuest
-      ? showLoginDialog()
-      : Navigator.of(context).pushNamed(Routes.leaderBoard);
+  void _onTapLeaderboard() => Navigator.of(context).pushNamed(
+        widget.isGuest ? Routes.login : Routes.leaderBoard,
+      );
 
   void _onPressedZone(String index) {
-    if (index == "dailyQuiz") {
-      if (_sysConfigCubit.getIsDailyQuizAvailable() == "1") {
-        Navigator.of(context).pushNamed(Routes.quiz, arguments: {
-          "quizType": QuizTypes.dailyQuiz,
-          "numberOfPlayer": 1,
-          "quizName": "Daily Quiz"
-        });
-      } else {
-        UiUtils.setSnackbar(
-          AppLocalization.of(context)!
-              .getTranslatedValues(currentlyNotAvailableKey)!,
-          context,
-          false,
+    if (widget.isGuest) {
+      _showLoginDialog();
+      return;
+    }
+
+    switch (index) {
+      case 'dailyQuiz':
+        Navigator.of(context).pushNamed(
+          Routes.quiz,
+          arguments: {
+            'quizType': QuizTypes.dailyQuiz,
+            'numberOfPlayer': 1,
+            'quizName': 'Daily Quiz',
+          },
         );
-      }
-    } else if (index == "funAndLearn") {
-      Navigator.of(context).pushNamed(Routes.category,
-          arguments: {"quizType": QuizTypes.funAndLearn});
-    } else if (index == "guessTheWord") {
-      Navigator.of(context).pushNamed(Routes.category,
-          arguments: {"quizType": QuizTypes.guessTheWord});
-    } else if (index == "audioQuestions") {
-      Navigator.of(context).pushNamed(Routes.category,
-          arguments: {"quizType": QuizTypes.audioQuestions});
-    } else if (index == "mathMania") {
-      Navigator.of(context).pushNamed(Routes.category,
-          arguments: {"quizType": QuizTypes.mathMania});
-    } else if (index == "truefalse") {
-      if (_sysConfigCubit.getIsTrueFalseAvailable() == "1") {
-        Navigator.of(context).pushNamed(Routes.quiz, arguments: {
-          "quizType": QuizTypes.trueAndFalse,
-          "numberOfPlayer": 1,
-          "quizName": "True/False Quiz"
-        });
-      } else {
-        UiUtils.setSnackbar(
-            AppLocalization.of(context)!
-                .getTranslatedValues(currentlyNotAvailableKey)!,
-            context,
-            false);
-      }
+        return;
+      case 'funAndLearn':
+        Navigator.of(context).pushNamed(
+          Routes.category,
+          arguments: {
+            'quizType': QuizTypes.funAndLearn,
+          },
+        );
+        return;
+      case 'guessTheWord':
+        Navigator.of(context).pushNamed(
+          Routes.category,
+          arguments: {
+            'quizType': QuizTypes.guessTheWord,
+          },
+        );
+        return;
+      case 'audioQuestions':
+        Navigator.of(context).pushNamed(
+          Routes.category,
+          arguments: {
+            'quizType': QuizTypes.audioQuestions,
+          },
+        );
+        return;
+      case 'mathMania':
+        Navigator.of(context).pushNamed(
+          Routes.category,
+          arguments: {
+            'quizType': QuizTypes.mathMania,
+          },
+        );
+        return;
+      case 'truefalse':
+        Navigator.of(context).pushNamed(
+          Routes.quiz,
+          arguments: {
+            'quizType': QuizTypes.trueAndFalse,
+            'numberOfPlayer': 1,
+            'quizName': 'True/False Quiz',
+          },
+        );
+        return;
     }
   }
 
   void _onPressedSelfExam(String index) {
-    if (index == "exam") {
+    if (widget.isGuest) {
+      _showLoginDialog();
+      return;
+    }
+
+    if (index == 'exam') {
       context.read<ExamCubit>().updateState(ExamInitial());
       Navigator.of(context).pushNamed(Routes.exams);
-    } else if (index == "selfChallenge") {
-      // isCateListExpanded = false;
+    } else if (index == 'selfChallenge') {
       context.read<QuizCategoryCubit>().updateState(QuizCategoryInitial());
       context.read<SubCategoryCubit>().updateState(SubCategoryInitial());
       Navigator.of(context).pushNamed(Routes.selfChallenge);
@@ -649,208 +582,180 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   void _onPressedBattle(String index) {
-    if (index == "groupPlay") {
-      {
-        context
-            .read<MultiUserBattleRoomCubit>()
-            .updateState(MultiUserBattleRoomInitial());
-        context.read<QuizCategoryCubit>().updateState(QuizCategoryInitial());
+    if (widget.isGuest) {
+      _showLoginDialog();
+      return;
+    }
 
+    context.read<QuizCategoryCubit>().updateState(QuizCategoryInitial());
+    if (index == 'groupPlay') {
+      context
+          .read<MultiUserBattleRoomCubit>()
+          .updateState(MultiUserBattleRoomInitial());
+
+      Navigator.of(context).push(
+        CupertinoPageRoute<void>(
+          builder: (_) => BlocProvider<UpdateScoreAndCoinsCubit>(
+            create: (context) =>
+                UpdateScoreAndCoinsCubit(ProfileManagementRepository()),
+            child: CreateOrJoinRoomScreen(
+              quizType: QuizTypes.groupPlay,
+              title: context.tr('groupPlay')!,
+            ),
+          ),
+        ),
+      );
+    } else if (index == 'battleQuiz') {
+      context.read<BattleRoomCubit>().updateState(
+            BattleRoomInitial(),
+            cancelSubscription: true,
+          );
+
+      if (_sysConfigCubit.isRandomBattleEnabled) {
+        // TODO(J): if only random battle is enabled then in home screen also it should show random battle ? maybe
+        Navigator.of(context).pushNamed(Routes.randomBattle);
+      } else {
         Navigator.of(context).push(
-          CupertinoPageRoute(
+          CupertinoPageRoute<CreateOrJoinRoomScreen>(
             builder: (_) => BlocProvider<UpdateScoreAndCoinsCubit>(
-              create: (context) =>
+              create: (_) =>
                   UpdateScoreAndCoinsCubit(ProfileManagementRepository()),
               child: CreateOrJoinRoomScreen(
-                quizType: QuizTypes.groupPlay,
-                title: AppLocalization.of(context)!
-                    .getTranslatedValues("groupPlay")!,
+                quizType: QuizTypes.oneVsOneBattle,
+                title: context.tr('playWithFrdLbl')!,
               ),
             ),
           ),
         );
-        // Navigator.pushNamed(context, Routes.groupBattle);
-        // showDialog(
-        //   context: context,
-        //   builder: (context) => MultiBlocProvider(
-        //     providers: [
-        //       BlocProvider<UpdateScoreAndCoinsCubit>(
-        //         create: (_) =>
-        //             UpdateScoreAndCoinsCubit(ProfileManagementRepository()),
-        //       ),
-        //     ],
-        //     child: const RoomDialog(quizType: QuizTypes.groupPlay),
-        //   ),
-        // );
-      }
-    } else if (index == "battleQuiz") {
-      {
-        context.read<BattleRoomCubit>().updateState(BattleRoomInitial());
-        context.read<QuizCategoryCubit>().updateState(QuizCategoryInitial());
-
-        Navigator.of(context).pushNamed(Routes.randomBattle);
-
-        /// RandomBattle
-        // showDialog(
-        //   context: context,
-        //   builder: (context) => MultiBlocProvider(
-        //     providers: [
-        //       BlocProvider<UpdateScoreAndCoinsCubit>(
-        //         create: (_) =>
-        //             UpdateScoreAndCoinsCubit(ProfileManagementRepository()),
-        //       ),
-        //     ],
-        //     child: const RandomOrPlayFrdDialog(),
-        //   ),
-        // );
       }
     }
   }
 
-  Future<dynamic> showLoginDialog() {
-    return showDialog(
-      context: context,
-      builder: (_) => GuestModeDialog(
-        onTapYesButton: () {
-          Navigator.of(context).pop();
-          Navigator.of(context).pushNamed(Routes.login);
-        },
-      ),
+  Future<void> _showLoginDialog() {
+    return showLoginDialog(
+      context,
+      onTapYes: () {
+        Navigator.of(context).pop();
+        Navigator.of(context).pushNamed(Routes.login);
+      },
     );
   }
 
-  late String _userName =
-      AppLocalization.of(context)!.getTranslatedValues("guest")!;
-  late String _userProfileImg = UiUtils.getprofileImagePath("2.png");
+  late String _userName = context.tr('guest')!;
+  late String _userProfileImg = Assets.profile('2.png');
 
   Widget _buildProfileContainer() {
     return Align(
       alignment: Alignment.topCenter,
       child: GestureDetector(
         onTap: _onTapProfile,
-        child: SlideTransition(
-          position: slideAnimation,
-          child: Container(
-            margin: EdgeInsets.only(
-              top: _statusBarPadding * .2,
-              left: hzMargin,
-              right: hzMargin,
-            ),
-            width: scrWidth,
-            child: LayoutBuilder(
-              builder: (_, constraint) {
-                return Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(3),
-                      width: constraint.maxWidth * 0.15,
-                      height: constraint.maxWidth * 0.15,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
+        child: Container(
+          margin: EdgeInsets.only(
+            top: _statusBarPadding * .2,
+            left: hzMargin,
+            right: hzMargin,
+          ),
+          width: scrWidth,
+          child: LayoutBuilder(
+            builder: (_, constraint) {
+              final size = MediaQuery.of(context).size;
 
-                        /// profile Border
-                        border: Border.all(
+              return Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(3),
+                    width: constraint.maxWidth * 0.15,
+                    height: constraint.maxWidth * 0.15,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onTertiary
+                            .withOpacity(0.3),
+                      ),
+                    ),
+                    child: QImage.circular(imageUrl: _userProfileImg),
+                  ),
+                  SizedBox(width: size.width * .03),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: constraint.maxWidth * 0.5,
+                        child: Text(
+                          '${context.tr(helloKey)!} $_userName',
+                          maxLines: 1,
+                          style: _boldTextStyle,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Text(
+                        context.tr(letsPlay)!,
+                        style: TextStyle(
+                          fontSize: 13,
                           color: Theme.of(context)
                               .colorScheme
                               .onTertiary
                               .withOpacity(0.3),
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      child: widget.isGuest
-                          ? CircleAvatar(
-                              backgroundColor: Theme.of(context)
-                                  .primaryColor
-                                  .withOpacity(.2),
-                              foregroundImage: AssetImage(_userProfileImg))
-                          : CircleAvatar(
-                              backgroundColor: Theme.of(context)
-                                  .primaryColor
-                                  .withOpacity(.2),
-                              foregroundImage: CachedNetworkImageProvider(
-                                _userProfileImg,
-                              ),
+                    ],
+                  ),
+
+                  const Spacer(),
+
+                  /// LeaderBoard
+                  Container(
+                    width: size.width * 0.11,
+                    height: size.width * 0.11,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).primaryColor,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: IconButton(
+                      onPressed: _onTapLeaderboard,
+                      icon: widget.isGuest
+                          ? const Icon(
+                              Icons.login_rounded,
+                              color: Colors.white,
+                            )
+                          : QImage(
+                              imageUrl: Assets.leaderboardIcon,
+                              color: Colors.white,
+                              width: size.width * 0.08,
+                              height: size.width * 0.08,
                             ),
                     ),
-                    SizedBox(width: MediaQuery.of(context).size.width * .03),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        SizedBox(
-                          width: constraint.maxWidth * 0.5,
-                          child: Text(
-                            "${AppLocalization.of(context)!.getTranslatedValues(helloKey)!} $_userName",
-                            maxLines: 1,
-                            style: _boldTextStyle,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        Text(
-                          AppLocalization.of(context)!
-                              .getTranslatedValues(letsPlay)!,
-                          style: TextStyle(
-                            fontSize: 13.0,
-                            color:
-                                Theme.of(context).canvasColor.withOpacity(0.5),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
+                  ),
+                  const SizedBox(width: 10),
+
+                  /// Settings
+                  Container(
+                    width: size.width * 0.11,
+                    height: size.width * 0.11,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).primaryColor,
+                      borderRadius: BorderRadius.circular(10),
                     ),
-
-                    const Spacer(),
-
-                    /// LeaderBoard
-                    Container(
-                      width: MediaQuery.of(context).size.width * 0.11,
-                      height: MediaQuery.of(context).size.width * 0.11,
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).primaryColor,
-                        borderRadius: BorderRadius.circular(10.0),
-                      ),
-                      child: IconButton(
-                        onPressed: _onTapLeaderboard,
-                        icon: widget.isGuest
-                            ? const Icon(
-                                Icons.login_rounded,
-                                color: Colors.white,
-                              )
-                            : SvgPicture.asset(
-                                UiUtils.getImagePath("icon_leaderboard.svg"),
-                                color: Colors.white,
-                                width: MediaQuery.of(context).size.width * 0.08,
-                                height:
-                                    MediaQuery.of(context).size.width * 0.08,
-                              ),
+                    child: IconButton(
+                      onPressed: () {
+                        Navigator.of(context).pushNamed(Routes.settings);
+                      },
+                      icon: QImage(
+                        imageUrl: Assets.settingsIcon,
+                        color: Colors.white,
+                        width: size.width * 0.08,
+                        height: size.width * 0.08,
                       ),
                     ),
-                    const SizedBox(width: 10),
-
-                    /// Settings
-                    Container(
-                      width: MediaQuery.of(context).size.width * 0.11,
-                      height: MediaQuery.of(context).size.width * 0.11,
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).primaryColor,
-                        borderRadius: BorderRadius.circular(10.0),
-                      ),
-                      child: IconButton(
-                        onPressed: () {
-                          Navigator.of(context).pushNamed(Routes.settings);
-                        },
-                        icon: SvgPicture.asset(
-                          UiUtils.getImagePath("settings.svg"),
-                          color: Colors.white,
-                          width: MediaQuery.of(context).size.width * 0.08,
-                          height: MediaQuery.of(context).size.width * 0.08,
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),
@@ -865,28 +770,28 @@ class _HomeScreenState extends State<HomeScreen>
           child: Row(
             children: [
               Text(
-                AppLocalization.of(context)!.getTranslatedValues("quizZone")!,
+                context.tr('quizZone')!,
                 style: _boldTextStyle,
               ),
               const Spacer(),
               GestureDetector(
                 onTap: () {
                   widget.isGuest
-                      ? showLoginDialog()
-                      : Navigator.of(context).pushNamed(Routes.category,
-                          arguments: {"quizType": QuizTypes.quizZone});
+                      ? _showLoginDialog()
+                      : Navigator.of(context).pushNamed(
+                          Routes.category,
+                          arguments: {'quizType': QuizTypes.quizZone},
+                        );
                 },
                 child: Text(
-                  AppLocalization.of(context)
-                          ?.getTranslatedValues(viewAllKey) ??
-                      viewAllKey,
+                  context.tr(viewAllKey) ?? viewAllKey,
                   style: TextStyle(
-                    fontSize: 14.0,
+                    fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: Theme.of(context)
                         .colorScheme
                         .onTertiary
-                        .withOpacity(0.6),
+                        .withOpacity(.6),
                   ),
                 ),
               ),
@@ -898,38 +803,12 @@ class _HomeScreenState extends State<HomeScreen>
             Stack(
               clipBehavior: Clip.none,
               children: [
-                if (showQuizZoneShadow) ...[
-                  Positioned(
-                    top: 0,
-                    left: scrWidth * .1,
-                    right: scrWidth * .1,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.transparent,
-                        boxShadow: const [
-                          BoxShadow(
-                            offset: Offset(0, 40),
-                            blurRadius: 30,
-                            spreadRadius: 2,
-                            color: Color(0xbf000000),
-                          ),
-                        ],
-                        borderRadius: BorderRadius.vertical(
-                          bottom: Radius.circular(scrWidth * (0.225)),
-                        ),
-                      ),
-                      width: scrWidth,
-                      height: scrWidth * .3,
-                    ),
-                  ),
-                ],
                 Positioned(
                   child: Container(
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(10.0),
+                      borderRadius: BorderRadius.circular(10),
                       color: Theme.of(context).colorScheme.background,
                     ),
-                    clipBehavior: Clip.none,
                     margin: EdgeInsets.only(
                       left: hzMargin,
                       right: hzMargin,
@@ -937,12 +816,12 @@ class _HomeScreenState extends State<HomeScreen>
                       bottom: 26,
                     ),
                     width: MediaQuery.of(context).size.width,
-                    child: quiZoneCategories(),
+                    child: quizZoneCategories(),
                   ),
                 ),
 
                 /// Expand Arrow
-                if (isCateListExpandable) ...[
+                if (canExpandCategoryList) ...[
                   Positioned(
                     left: 0,
                     right: 0,
@@ -972,7 +851,7 @@ class _HomeScreenState extends State<HomeScreen>
                             !isCateListExpanded
                                 ? Icons.keyboard_arrow_down_rounded
                                 : Icons.keyboard_arrow_up_rounded,
-                            color: Theme.of(context).indicatorColor,
+                            color: Theme.of(context).primaryColor,
                             size: 32,
                           ),
                         ),
@@ -988,116 +867,111 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget quiZoneCategories() {
+  Widget quizZoneCategories() {
     return BlocConsumer<QuizoneCategoryCubit, QuizoneCategoryState>(
       bloc: context.read<QuizoneCategoryCubit>(),
       listener: (context, state) {
         if (state is QuizoneCategoryFailure) {
-          if (state.errorMessage == unauthorizedAccessCode) {
-            UiUtils.showAlreadyLoggedInDialog(context: context);
+          if (state.errorMessage == errorCodeUnauthorizedAccess) {
+            showAlreadyLoggedInDialog(context);
           }
         }
       },
       builder: (context, state) {
-        if (state is QuizoneCategoryProgress ||
-            state is QuizoneCategoryInitial) {
-          return const Center(child: CircularProgressContainer());
-        }
         if (state is QuizoneCategoryFailure) {
           return ErrorContainer(
             showRTryButton: false,
             showBackButton: false,
             showErrorImage: false,
-            errorMessage: AppLocalization.of(context)!.getTranslatedValues(
-              convertErrorCodeToLanguageKey(state.errorMessage),
-            ),
+            errorMessage: convertErrorCodeToLanguageKey(state.errorMessage),
             onTapRetry: () {
               context.read<QuizoneCategoryCubit>().getQuizCategoryWithUserId(
                     languageId: UiUtils.getCurrentQuestionLanguageId(context),
-                    userId: context.read<UserDetailsCubit>().getUserId(),
                   );
             },
           );
         }
-        // Show Shadow after it's loaded.
-        showQuizZoneShadow = true;
 
-        final categoryList = (state as QuizoneCategorySuccess).categories;
-        final int index;
+        if (state is QuizoneCategorySuccess) {
+          final categories = state.categories;
+          final int categoriesToShowCount;
 
-        /// Min/Max Categories to Show.
-        const minIdx = 2;
-        const maxIdx = 5;
+          /// Min/Max Categories to Show.
+          const minCount = 2;
+          const maxCount = 5;
 
-        /// need to check old cate list with new cate list, when we change languages.
-        /// and rebuild the list.
-        if (oldCateListLength != categoryList.length) {
-          Future.delayed(Duration.zero, () {
-            oldCateListLength = categoryList.length;
-            isCateListExpandable = oldCateListLength > minIdx;
-            setState(() {});
-          });
-        }
+          /// need to check old cate list with new cate list, when we change languages.
+          /// and rebuild the list.
+          if (oldCategoriesToShowCount != categories.length) {
+            Future.delayed(Duration.zero, () {
+              oldCategoriesToShowCount = categories.length;
+              canExpandCategoryList = oldCategoriesToShowCount > minCount;
+              setState(() {});
+            });
+          }
 
-        if (!isCateListExpanded) {
-          index = categoryList.length <= minIdx ? categoryList.length : minIdx;
-        } else {
-          index = categoryList.length <= maxIdx ? categoryList.length : maxIdx;
-        }
+          if (!isCateListExpanded) {
+            categoriesToShowCount =
+                categories.length <= minCount ? categories.length : minCount;
+          } else {
+            categoriesToShowCount =
+                categories.length <= maxCount ? categories.length : maxCount;
+          }
 
-        return ListView.separated(
-          separatorBuilder: (context, index) {
-            return Divider();
-          },
-          padding: const EdgeInsets.only(bottom: 10),
-          shrinkWrap: true,
-          itemCount: index,
-          physics: const NeverScrollableScrollPhysics(),
-          itemBuilder: (BuildContext context, int index) {
-            return ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-              onTap: () async {
-                //noOf means how many subcategory it has
-                //if subcategory is 0 then check for level
-                if (widget.isGuest) {
-                  showLoginDialog();
-                } else {
-                  if (categoryList[index].noOf == "0") {
+          return ListView.builder(
+            padding: const EdgeInsets.only(bottom: 10),
+            shrinkWrap: true,
+            itemCount: categoriesToShowCount,
+            physics: const NeverScrollableScrollPhysics(),
+            itemBuilder: (context, i) {
+              final category = categories[i];
+
+              return ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                onTap: () {
+                  if (widget.isGuest) {
+                    _showLoginDialog();
+                    return;
+                  }
+
+                  if (category.isPremium && !category.hasUnlocked) {
+                    showUnlockPremiumCategoryDialog(
+                      context,
+                      categoryId: category.id!,
+                      categoryName: category.categoryName!,
+                      requiredCoins: category.requiredCoins,
+                      isQuizZone: true,
+                    );
+                    return;
+                  }
+
+                  //noOf means how many subcategory it has
+                  //if subcategory is 0 then check for level
+                  if (category.noOf == '0') {
                     //means this category does not have level
-                    if (categoryList[index].maxLevel == "0") {
+                    if (category.maxLevel == '0') {
                       //direct move to quiz screen pass level as 0
-
-
-
-                      Navigator.of(context).pushNamed(Routes.quiz, arguments: {
-                        "numberOfPlayer": 1,
-                        "quizType": QuizTypes.quizZone,
-                        "categoryId": categoryList[index].id,
-                        "subcategoryId": "",
-                        "level": "0",
-                        "subcategoryMaxLevel": "0",
-                        "unlockedLevel": 0,
-                        "contestId": "",
-                        "comprehensionId": "",
-                        "quizName": "Quiz Zone",
-                        'showRetryButton': categoryList[index].noOfQues! != '0'
-                      });
-                      await FirebaseAnalytics.instance.logEvent(
-                        name: "select_category",
-                        parameters: {
-                          "category": categoryList[index].categoryName,
+                      Navigator.of(context).pushNamed(
+                        Routes.quiz,
+                        arguments: {
+                          'numberOfPlayer': 1,
+                          'quizType': QuizTypes.quizZone,
+                          'categoryId': category.id,
+                          'subcategoryId': '',
+                          'level': '0',
+                          'subcategoryMaxLevel': '0',
+                          'unlockedLevel': 0,
+                          'contestId': '',
+                          'comprehensionId': '',
+                          'quizName': 'Quiz Zone',
+                          'showRetryButton': category.noOfQues! != '0',
                         },
                       );
                     } else {
-                      //navigate to level screen
-
-
-                      Navigator.of(context).pushNamed(Routes.levels,
-                          arguments: {"Category": categoryList[index]});
-                      await FirebaseAnalytics.instance.logEvent(
-                        name: "select_category",
-                        parameters: {
-                          "category": categoryList[index].categoryName,
+                      Navigator.of(context).pushNamed(
+                        Routes.levels,
+                        arguments: {
+                          'Category': category,
                         },
                       );
                     }
@@ -1105,81 +979,81 @@ class _HomeScreenState extends State<HomeScreen>
                     Navigator.of(context).pushNamed(
                       Routes.subcategoryAndLevel,
                       arguments: {
-                        "category_id": categoryList[index].id,
-                        "category_name": categoryList[index].categoryName
-                      },
-                    );
-                    await FirebaseAnalytics.instance.logEvent(
-                      name: "select_category",
-                      parameters: {
-                        "category": categoryList[index].categoryName,
+                        'category_id': category.id,
+                        'category_name': category.categoryName,
                       },
                     );
                   }
-                }
-              },
-              horizontalTitleGap: 15,
-              leading: AspectRatio(
-                aspectRatio: 1,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.transparent,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: Theme.of(context).scaffoldBackgroundColor,
+                },
+                horizontalTitleGap: 15,
+                leading: AspectRatio(
+                  aspectRatio: 1,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.transparent,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: Theme.of(context).scaffoldBackgroundColor,
+                      ),
                     ),
-                  ),
-                  padding: const EdgeInsets.all(5),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
-                    child: CachedNetworkImage(
-                      memCacheWidth: 90,
-                      memCacheHeight: 90,
-                      fit: BoxFit.fill,
-                      width: MediaQuery.of(context).size.width * 0.125,
-                      height: MediaQuery.of(context).size.width * 0.125,
-                      placeholder: (_, __) => const SizedBox(),
-                      imageUrl: categoryList[index].image!,
-                      errorWidget: (_, i, e) => Image(
-                        image: AssetImage(
-                          UiUtils.getImagePath("ic_launcher.png"),
-                        ),
+                    padding: const EdgeInsets.all(5),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(1),
+                      child: QImage(
+                        imageUrl: category.image!,
+                        fit: BoxFit.fill,
                       ),
                     ),
                   ),
                 ),
-              ),
 
-              /// right_arrow
-              trailing: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                    color: Theme.of(context).indicatorColor,
+                /// right_arrow
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    PremiumCategoryAccessBadge(
+                      hasUnlocked: category.hasUnlocked,
+                      isPremium: category.isPremium,
+                    ),
+                    const SizedBox(width: 10),
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: Theme.of(context).scaffoldBackgroundColor,
+                        ),
+                      ),
+                      padding: const EdgeInsets.all(2),
+                      child: Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 20,
+                        color: Theme.of(context).colorScheme.onTertiary,
+                      ),
+                    ),
+                  ],
+                ),
+                title: Text(
+                  category.categoryName!,
+                  style: _boldTextStyle.copyWith(fontSize: 16),
+                ),
+                subtitle: Text(
+                  category.noOf == '0'
+                      ? "${context.tr("questionLbl")}: ${category.noOfQues!}"
+                      : "${context.tr('subCategoriesLbl')}: ${category.noOf}",
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onTertiary
+                        .withOpacity(0.6),
                   ),
                 ),
-                padding: const EdgeInsets.all(2),
-                child: Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  size: 20,
-                  color: Theme.of(context).indicatorColor,
-                ),
-              ),
-              title: Text(
-                categoryList[index].categoryName!,
-                style: _boldTextStyle.copyWith(fontSize: 16),
-              ),
-              subtitle: Text(
-                "Question: ${categoryList[index].noOfQues!}",
-                style: TextStyle(
-                  fontSize: 14,
-                  color:
-                      Theme.of(context).colorScheme.onTertiary.withOpacity(0.6),
-                ),
-              ),
-            );
-          },
-        );
+              );
+            },
+          );
+        }
+
+        return const Center(child: CircularProgressContainer());
       },
     );
   }
@@ -1197,9 +1071,7 @@ class _HomeScreenState extends State<HomeScreen>
               children: [
                 /// Zone Title: Battle
                 Text(
-                  AppLocalization.of(context)
-                          ?.getTranslatedValues(battleOfTheDayKey) ??
-                      battleOfTheDayKey, //
+                  context.tr(battleOfTheDayKey) ?? battleOfTheDayKey, //
                   style: _boldTextStyle,
                 ),
 
@@ -1212,23 +1084,17 @@ class _HomeScreenState extends State<HomeScreen>
                   mainAxisSpacing: 20,
                   padding: EdgeInsets.only(top: _statusBarPadding * 0.2),
                   crossAxisSpacing: 20,
-                  scrollDirection: Axis.vertical,
                   physics: const NeverScrollableScrollPhysics(),
                   // Generate 100 widgets that display their index in the List.
-                  children: List.generate(battleName.length, (index) {
-                    return QuizGridCard(
-                      onTap: () {
-                        widget.isGuest
-                            ? showLoginDialog()
-                            : _onPressedBattle(battleName[index]);
-                      },
-                      title: AppLocalization.of(context)!
-                          .getTranslatedValues(battleName[index])!,
-                      desc: AppLocalization.of(context)!
-                          .getTranslatedValues(battleDesc[index])!,
-                      img: UiUtils.getImagePath(battleImg[index]),
-                    );
-                  }),
+                  children: List.generate(
+                    battleName.length,
+                    (i) => QuizGridCard(
+                      onTap: () => _onPressedBattle(battleName[i]),
+                      title: context.tr(battleName[i])!,
+                      desc: context.tr(battleDesc[i])!,
+                      img: battleImg[i],
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -1248,36 +1114,26 @@ class _HomeScreenState extends State<HomeScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  AppLocalization.of(context)
-                          ?.getTranslatedValues(selfExamZoneKey) ??
-                      selfExamZoneKey,
+                  context.tr(selfExamZoneKey) ?? selfExamZoneKey,
                   style: _boldTextStyle,
                 ),
                 GridView.count(
-                  // Create a grid with 2 columns. If you change the scrollDirection to
-                  // horizontal, this produces 2 rows.
                   crossAxisCount: 2,
                   shrinkWrap: true,
                   mainAxisSpacing: 20,
                   padding: EdgeInsets.only(top: _statusBarPadding * 0.2),
                   crossAxisSpacing: 20,
-                  scrollDirection: Axis.vertical,
                   physics: const NeverScrollableScrollPhysics(),
                   // Generate 100 widgets that display their index in the List.
-                  children: List.generate(examSelf.length, (index) {
-                    return QuizGridCard(
-                      onTap: () {
-                        widget.isGuest
-                            ? showLoginDialog()
-                            : _onPressedSelfExam(examSelf[index]);
-                      },
-                      title: AppLocalization.of(context)!
-                          .getTranslatedValues(examSelf[index])!,
-                      desc: AppLocalization.of(context)!
-                          .getTranslatedValues(examSelfDesc[index])!,
-                      img: UiUtils.getImagePath(examSelfImg[index]),
-                    );
-                  }),
+                  children: List.generate(
+                    examSelf.length,
+                    (i) => QuizGridCard(
+                      onTap: () => _onPressedSelfExam(examSelf[i]),
+                      title: context.tr(examSelf[i])!,
+                      desc: context.tr(examSelfDesc[i])!,
+                      img: examSelfImg[i],
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -1295,17 +1151,14 @@ class _HomeScreenState extends State<HomeScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          playDifferentZone.isNotEmpty
-              ? Text(
-                  AppLocalization.of(context)
-                          ?.getTranslatedValues(playDifferentZoneKey) ??
-                      playDifferentZoneKey,
-                  style: _boldTextStyle,
-                )
-              : const SizedBox(),
+          if (playDifferentZone.isNotEmpty)
+            Text(
+              context.tr(playDifferentZoneKey) ?? playDifferentZoneKey,
+              style: _boldTextStyle,
+            )
+          else
+            const SizedBox(),
           GridView.count(
-            // Create a grid with 2 columns. If you change the scrollDirection to
-            // horizontal, this produces 2 rows.
             crossAxisCount: 2,
             shrinkWrap: true,
             mainAxisSpacing: 20,
@@ -1314,136 +1167,14 @@ class _HomeScreenState extends State<HomeScreen>
               bottom: _statusBarPadding * 0.6,
             ),
             crossAxisSpacing: 20,
-            scrollDirection: Axis.vertical,
             physics: const NeverScrollableScrollPhysics(),
-            // Generate 100 widgets that display their index in the List.
-            children: List.generate(playDifferentZone.length, (index) {
-              return QuizGridCard(
-                onTap: () {
-                  widget.isGuest
-                      ? showLoginDialog()
-                      : _onPressedZone(playDifferentZone[index]);
-                },
-                title: AppLocalization.of(context)!
-                    .getTranslatedValues(playDifferentZone[index])!,
-                desc: AppLocalization.of(context)!
-                    .getTranslatedValues(playDifferentZoneDesc[index])!,
-                img: UiUtils.getImagePath(playDifferentImg[index]),
-              );
-            }),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildContest() {
-    return Stack(
-      children: [
-        BlocConsumer<ContestCubit, ContestState>(
-          bloc: context.read<ContestCubit>(),
-          listener: (context, state) {
-            if (state is ContestFailure) {
-              if (state.errorMessage == unauthorizedAccessCode) {
-                UiUtils.showAlreadyLoggedInDialog(context: context);
-              }
-            }
-          },
-          builder: (context, state) {
-            if (state is ContestProgress || state is ContestInitial) {
-              return const Center(child: CircularProgressContainer());
-            }
-
-            if (state is ContestFailure) {
-              print(state.errorMessage);
-
-              return Container(
-                width: scrWidth,
-                height: scrWidth * 0.2,
-                margin: EdgeInsets.only(
-                  left: hzMargin,
-                  right: hzMargin,
-                  top: scrHeight * 0.02,
-                ),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
-                  color: Theme.of(context).colorScheme.background,
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: Stack(
-                    children: [
-                      Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: scrWidth * 0.02,
-                        ),
-                        child: Align(
-                          alignment: Alignment.center,
-                          child: Text(
-                            AppLocalization.of(context)!.getTranslatedValues(
-                              convertErrorCodeToLanguageKey(state.errorMessage),
-                            )!,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.normal,
-                              color: Theme.of(context).primaryColor,
-                            ),
-                            maxLines: 2,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }
-
-            final contestList = (state as ContestSuccess).contestList;
-
-            return live(contestList.live);
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget buildContestLive() {
-    return Padding(
-      padding: EdgeInsets.only(
-        left: hzMargin,
-        right: hzMargin,
-        top: scrHeight * 0.01,
-      ),
-      child: Row(
-        children: [
-          Text(
-            AppLocalization.of(context)!.getTranslatedValues(contest) ??
-                contest,
-            style: _boldTextStyle,
-          ),
-          const Spacer(),
-          GestureDetector(
-            onTap: () {
-              // isCateListExpanded = false;
-              if (_sysConfigCubit.getIsContestAvailable() == "1") {
-                Navigator.of(context).pushNamed(Routes.contest);
-              } else {
-                UiUtils.setSnackbar(
-                    AppLocalization.of(context)!
-                        .getTranslatedValues(currentlyNotAvailableKey)!,
-                    context,
-                    false);
-              }
-            },
-            child: Text(
-              AppLocalization.of(context)?.getTranslatedValues(viewAllKey) ??
-                  viewAllKey,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color:
-                    Theme.of(context).colorScheme.onTertiary.withOpacity(0.6),
+            children: List.generate(
+              playDifferentZone.length,
+              (i) => QuizGridCard(
+                onTap: () => _onPressedZone(playDifferentZone[i]),
+                title: context.tr(playDifferentZone[i])!,
+                desc: context.tr(playDifferentZoneDesc[i])!,
+                img: playDifferentImg[i],
               ),
             ),
           ),
@@ -1452,291 +1183,476 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget live(Contest data) {
-    return data.errorMessage.isNotEmpty
-        ? Container(
-            width: MediaQuery.of(context).size.width,
-            height: MediaQuery.of(context).size.width * 0.2,
-            margin: EdgeInsets.only(
-              left: hzMargin,
-              right: hzMargin,
-              top: scrHeight * 0.02,
-            ),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              color: Theme.of(context).colorScheme.background,
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: Stack(
+  Widget _buildDailyAds() {
+    var clicked = false;
+    return BlocBuilder<RewardedAdCubit, RewardedAdState>(
+      builder: (context, state) {
+        if (state is RewardedAdLoaded &&
+            context.read<UserDetailsCubit>().isDailyAdAvailable) {
+          return GestureDetector(
+            onTap: () async {
+              if (!clicked) {
+                await context
+                    .read<RewardedAdCubit>()
+                    .showDailyAd(context: context);
+                clicked = true;
+              }
+            },
+            child: Container(
+              margin: EdgeInsets.only(
+                left: hzMargin,
+                right: hzMargin,
+                top: scrHeight * 0.02,
+              ),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                color: Theme.of(context).colorScheme.background,
+              ),
+              width: scrWidth,
+              height: scrWidth * 0.3,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  Center(
-                    child: Text(
-                      AppLocalization.of(context)!.getTranslatedValues(
-                        convertErrorCodeToLanguageKey(data.errorMessage),
-                      )!,
-                      style: _boldTextStyle.copyWith(
-                        fontSize: 16,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                      maxLines: 2,
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).primaryColor,
+                      shape: BoxShape.circle,
                     ),
+                    child: SvgPicture.asset(
+                      Assets.dailyCoins,
+                      width: scrWidth * .23,
+                      height: scrWidth * .23,
+                    ),
+                  ),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        context.tr('dailyAdsTitle')!,
+                        style: TextStyle(
+                          fontWeight: FontWeights.bold,
+                          fontSize: 16,
+                          color: Theme.of(context).colorScheme.onTertiary,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        "${context.tr("get")!} "
+                        '${_sysConfigCubit.coinsPerDailyAdView} '
+                        "${context.tr("dailyAdsDesc")!}",
+                        style: TextStyle(
+                          fontWeight: FontWeights.regular,
+                          fontSize: 14,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onTertiary
+                              .withOpacity(.6),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-          )
-        : Column(
-            children: [
-              Container(
-                height: 180,
-                padding: const EdgeInsets.symmetric(vertical: 12.5),
-                margin: EdgeInsets.symmetric(horizontal: hzMargin),
-                decoration:
-                    BoxDecoration(borderRadius: BorderRadius.circular(10.0)),
-                child: LayoutBuilder(
-                  builder: (context, boxConstraints) {
-                    return Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        Positioned(
-                          top: 0,
-                          left: boxConstraints.maxWidth * (0.1),
-                          right: boxConstraints.maxWidth * (0.1),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.transparent,
-                              boxShadow: const [
-                                BoxShadow(
-                                  offset: Offset(0, 50),
-                                  blurRadius: 30,
-                                  spreadRadius: 5,
-                                  color: Color(0xbf000000),
-                                ),
-                              ],
-                              borderRadius: BorderRadius.only(
-                                  bottomRight: Radius.circular(
-                                      boxConstraints.maxWidth * (0.525)),
-                                  bottomLeft: Radius.circular(
-                                      boxConstraints.maxWidth * (0.525))),
-                            ),
-                            width: boxConstraints.maxWidth,
-                            height: boxConstraints.maxHeight * (0.6),
-                          ),
-                        ),
-                        Positioned(
-                          child: Container(
-                            padding: const EdgeInsets.all(12.5),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.background,
-                              borderRadius:
-                                  const BorderRadius.all(Radius.circular(10)),
-                            ),
-                            width: boxConstraints.maxWidth,
-                            height: boxConstraints.maxHeight,
-                            child: contestDesign(data, 0, 1),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ),
-            ],
           );
+        }
+
+        return const SizedBox.shrink();
+      },
+    );
   }
 
-  Widget contestDesign(dynamic data, int index, int type) {
-    final textStyle = GoogleFonts.nunito(
-      textStyle: TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeights.regular,
-        color: Theme.of(context).colorScheme.onTertiary.withOpacity(0.6),
-      ),
-    );
+  Widget _buildLiveContestSection() {
+    void onTapViewAll() {
+      if (_sysConfigCubit.isContestEnabled) {
+        Navigator.of(context).pushNamed(Routes.contest);
+      } else {
+        UiUtils.showSnackBar(
+          context.tr(currentlyNotAvailableKey)!,
+          context,
+        );
+      }
+    }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: hzMargin, vertical: 10),
+      child: Column(
+        children: [
+          /// Contest Section Title
+          Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(5),
-                decoration: BoxDecoration(
-                  color: Colors.transparent,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: Theme.of(context).scaffoldBackgroundColor,
-                  ),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(5),
-                  child: CachedNetworkImage(
-                    placeholder: (_, __) => const Center(
-                      child: CircularProgressContainer(),
-                    ),
-                    memCacheWidth: 90,
-                    memCacheHeight: 90,
-                    errorWidget: (_, i, e) => Center(
-                      child: Icon(
-                        Icons.error,
-                        color: Theme.of(context).primaryColor,
-                      ),
-                    ),
-                    width: 45,
-                    height: 45,
-                    fit: BoxFit.cover,
-                    imageUrl: data.contestDetails[index].image.toString(),
-                  ),
-                ),
+              Text(
+                context.tr(contest) ?? contest,
+                style: _boldTextStyle,
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      data.contestDetails[index].name.toString(),
-                      style: _boldTextStyle.copyWith(fontSize: 16),
-                    ),
-                    Text(
-                      data.contestDetails[index].description!,
-                      maxLines: 2,
-                      textAlign: TextAlign.left,
-                      style: textStyle,
-                    )
-                  ],
+              const Spacer(),
+              GestureDetector(
+                onTap: onTapViewAll,
+                child: Text(
+                  context.tr(viewAllKey) ?? viewAllKey,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onTertiary
+                        .withOpacity(0.6),
+                  ),
                 ),
               ),
             ],
           ),
-        ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                /// Entry Fees
-                RichText(
-                  text: TextSpan(
-                    style: textStyle,
-                    children: [
-                      TextSpan(
-                        text: AppLocalization.of(context)!
-                            .getTranslatedValues("entryFeesLbl")!,
-                      ),
-                      const TextSpan(text: " : "),
-                      TextSpan(
-                        text:
-                            "${data.contestDetails[index].entry} ${AppLocalization.of(context)!.getTranslatedValues("coinsLbl")!}",
-                        style: textStyle.copyWith(
-                          color: Theme.of(context).colorScheme.onTertiary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 5),
+          const SizedBox(height: 10),
 
-                /// Ends on
-                RichText(
-                  text: TextSpan(
-                    style: textStyle,
-                    children: [
-                      TextSpan(
-                        text: AppLocalization.of(context)!
-                            .getTranslatedValues("endsOnLbl")!,
-                      ),
-                      const TextSpan(text: " : "),
-                      TextSpan(
-                        text: "${data.contestDetails[index].endDate}  |  ",
-                        style: textStyle.copyWith(
-                          color: Theme.of(context).colorScheme.onTertiary,
-                        ),
-                      ),
-                      TextSpan(
-                        text:
-                            data.contestDetails[index].participants.toString(),
-                        style: textStyle.copyWith(
-                          color: Theme.of(context).colorScheme.onTertiary,
-                        ),
-                      ),
-                      const TextSpan(text: " : "),
-                      TextSpan(
-                          text: AppLocalization.of(context)!
-                              .getTranslatedValues("playersLbl")!),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-
-            /// Play Now
-            if (type == 1) ...[
-              GestureDetector(
-                onTap: () {
-                  // isCateListExpanded = false;
-                  if (int.parse(context.read<UserDetailsCubit>().getCoins()!) >=
-                      int.parse(data.contestDetails[index].entry!)) {
-                    context.read<UpdateScoreAndCoinsCubit>().updateCoins(
-                          context.read<UserDetailsCubit>().getUserId(),
-                          int.parse(data.contestDetails[index].entry!),
-                          false,
-                          AppLocalization.of(context)!
-                                  .getTranslatedValues(playedContestKey) ??
-                              "-",
-                        );
-
-                    context.read<UserDetailsCubit>().updateCoins(
-                        addCoin: false,
-                        coins: int.parse(data.contestDetails[index].entry!));
-                    Navigator.of(context).pushNamed(Routes.quiz, arguments: {
-                      "numberOfPlayer": 1,
-                      "quizType": QuizTypes.contest,
-                      "contestId": data.contestDetails[index].id,
-                      "quizName": "Contest"
-                    });
-                  } else {
-                    UiUtils.setSnackbar(
-                        AppLocalization.of(context)!
-                            .getTranslatedValues("noCoinsMsg")!,
-                        context,
-                        false);
-                  }
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 8,
-                    horizontal: 5,
-                  ),
+          /// Contest Card
+          BlocConsumer<ContestCubit, ContestState>(
+            bloc: context.read<ContestCubit>(),
+            listener: (context, state) {
+              if (state is ContestFailure) {
+                if (state.errorMessage == errorCodeUnauthorizedAccess) {
+                  showAlreadyLoggedInDialog(context);
+                }
+              }
+            },
+            builder: (context, state) {
+              if (state is ContestFailure) {
+                return Container(
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    color: Theme.of(context).scaffoldBackgroundColor,
+                    color: Theme.of(context).colorScheme.background,
+                    borderRadius: BorderRadius.circular(10),
                   ),
+                  height: 100,
+                  alignment: Alignment.center,
                   child: Text(
-                    AppLocalization.of(context)!
-                        .getTranslatedValues("playnowLbl")!,
+                    context.tr(
+                      convertErrorCodeToLanguageKey(state.errorMessage),
+                    )!,
+                    textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeights.regular,
                       color: Theme.of(context).primaryColor,
                     ),
+                    maxLines: 2,
                   ),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ],
+                );
+              }
+
+              if (state is ContestSuccess) {
+                final colorScheme = Theme.of(context).colorScheme;
+                final textStyle = GoogleFonts.nunito(
+                  textStyle: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeights.regular,
+                    color: colorScheme.onTertiary.withOpacity(0.6),
+                  ),
+                );
+
+                ///
+                final live = state.contestList.live;
+
+                /// No Contest
+                if (live.errorMessage.isNotEmpty) {
+                  return Container(
+                    decoration: BoxDecoration(
+                      color: colorScheme.background,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    height: 100,
+                    alignment: Alignment.center,
+                    child: Text(
+                      context.tr(
+                        convertErrorCodeToLanguageKey(live.errorMessage),
+                      )!,
+                      style: _boldTextStyle.copyWith(
+                        fontSize: 16,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    ),
+                  );
+                }
+
+                final contest = live.contestDetails.first;
+                final entryFee = int.parse(contest.entry!);
+
+                return SizedBox(
+                  height: 150,
+                  width: scrWidth,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final maxWidth = constraints.maxWidth;
+                      final maxHeight = constraints.maxHeight;
+
+                      void onTapPlayNow() {
+                        final userDetailsCubit =
+                            context.read<UserDetailsCubit>();
+
+                        if (int.parse(userDetailsCubit.getCoins()!) >=
+                            entryFee) {
+                          context.read<UpdateScoreAndCoinsCubit>().updateCoins(
+                                coins: entryFee,
+                                addCoin: false,
+                                title: context.tr(playedContestKey) ?? '-',
+                              );
+                          userDetailsCubit.updateCoins(
+                            addCoin: false,
+                            coins: entryFee,
+                          );
+
+                          Navigator.of(context).pushNamed(
+                            Routes.quiz,
+                            arguments: {
+                              'numberOfPlayer': 1,
+                              'quizType': QuizTypes.contest,
+                              'contestId': contest.id,
+                              'quizName': 'Contest',
+                            },
+                          );
+                        } else {
+                          UiUtils.showSnackBar(
+                            context.tr(noCoinsMsg)!,
+                            context,
+                          );
+                        }
+                      }
+
+                      return Stack(
+                        children: [
+                          /// Shadow
+                          Positioned(
+                            top: 0,
+                            left: maxWidth * .1,
+                            right: maxWidth * .1,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.transparent,
+                                boxShadow: const [
+                                  BoxShadow(
+                                    offset: Offset(0, 40),
+                                    blurRadius: 30,
+                                    spreadRadius: 5,
+                                    color: Color(0xbf000000),
+                                  ),
+                                ],
+                                borderRadius: BorderRadius.vertical(
+                                  bottom: Radius.circular(maxWidth * .525),
+                                ),
+                              ),
+                              width: maxWidth,
+                              height: maxHeight * .6,
+                            ),
+                          ),
+
+                          ///
+                          Align(
+                            child: Container(
+                              height: maxHeight,
+                              width: maxWidth,
+                              decoration: BoxDecoration(
+                                color: colorScheme.background,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              padding: const EdgeInsets.all(12.5),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      /// Contest Image
+                                      Container(
+                                        padding: const EdgeInsets.all(5),
+                                        decoration: BoxDecoration(
+                                          color: Colors.transparent,
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          border: Border.all(
+                                            color: Theme.of(context)
+                                                .scaffoldBackgroundColor,
+                                          ),
+                                        ),
+                                        child: ClipRRect(
+                                          borderRadius:
+                                              BorderRadius.circular(5),
+                                          child: QImage(
+                                            imageUrl: contest.image!,
+                                            height: 45,
+                                            width: 45,
+                                          ),
+                                          // child: CachedNetworkImage(
+                                          //   placeholder: (_, __) =>
+                                          //       const Center(
+                                          //     child:
+                                          //         CircularProgressContainer(),
+                                          //   ),
+                                          //   memCacheWidth: 90,
+                                          //   memCacheHeight: 90,
+                                          //   errorWidget: (_, i, e) => Center(
+                                          //     child: Icon(
+                                          //       Icons.error,
+                                          //       color: Theme.of(context)
+                                          //           .primaryColor,
+                                          //     ),
+                                          //   ),
+                                          //   width: 45,
+                                          //   height: 45,
+                                          //   fit: BoxFit.cover,
+                                          //   imageUrl: contest.image.toString(),
+                                          // ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+
+                                      /// Contest Name & Description
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              contest.name.toString(),
+                                              style: _boldTextStyle.copyWith(
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                            Text(
+                                              contest.description.toString(),
+                                              softWrap: true,
+                                              textAlign: TextAlign.left,
+                                              overflow: TextOverflow.ellipsis,
+                                              maxLines: 2,
+                                              style: textStyle,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 10),
+
+                                  ///
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          /// Entry Fees
+                                          Text.rich(
+                                            TextSpan(
+                                              children: [
+                                                TextSpan(
+                                                  text: context
+                                                      .tr('entryFeesLbl'),
+                                                ),
+                                                const TextSpan(text: ' : '),
+                                                TextSpan(
+                                                  text:
+                                                      "$entryFee ${context.tr("coinsLbl")!}",
+                                                  style: textStyle.copyWith(
+                                                    color:
+                                                        colorScheme.onTertiary,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            style: textStyle,
+                                          ),
+                                          const SizedBox(height: 5),
+
+                                          /// Ends on
+                                          Text.rich(
+                                            style: textStyle,
+                                            TextSpan(
+                                              children: [
+                                                TextSpan(
+                                                  text: context.tr('endsOnLbl'),
+                                                ),
+                                                const TextSpan(text: ' : '),
+                                                TextSpan(
+                                                  text:
+                                                      '${contest.endDate}  |  ',
+                                                  style: textStyle.copyWith(
+                                                    color:
+                                                        colorScheme.onTertiary,
+                                                  ),
+                                                ),
+                                                TextSpan(
+                                                  text: contest.participants
+                                                      .toString(),
+                                                  style: textStyle.copyWith(
+                                                    color:
+                                                        colorScheme.onTertiary,
+                                                  ),
+                                                ),
+                                                const TextSpan(text: ' : '),
+                                                TextSpan(
+                                                  text: context.tr(
+                                                    'playersLbl',
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+
+                                      /// Play Now
+                                      GestureDetector(
+                                        onTap: onTapPlayNow,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 8,
+                                            horizontal: 5,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                            color: Theme.of(context)
+                                                .scaffoldBackgroundColor,
+                                          ),
+                                          child: Text(
+                                            context.tr('playnowLbl')!,
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: Theme.of(context)
+                                                  .primaryColor,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                );
+              }
+
+              return const Center(child: CircularProgressContainer());
+            },
+          ),
+        ],
+      ),
     );
   }
 
-  String _userRank = "0";
-  String _userCoins = "0";
-  String _userScore = "0";
+  String _userRank = '0';
+  String _userCoins = '0';
+  String _userScore = '0';
 
   Widget _buildHome() {
     return Stack(
@@ -1745,29 +1661,30 @@ class _HomeScreenState extends State<HomeScreen>
           color: Theme.of(context).primaryColor,
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           onRefresh: () async {
-            final String quizZoneType =
-                UiUtils.getCategoryTypeNumberFromQuizType(QuizTypes.quizZone);
+            fetchUserDetails();
+
+            _currLangId = UiUtils.getCurrentQuestionLanguageId(context);
             final quizCubit = context.read<QuizCategoryCubit>();
             final quizZoneCubit = context.read<QuizoneCategoryCubit>();
 
             if (widget.isGuest) {
-              quizCubit.getQuizCategory(
-                  languageId: _currLangId, type: quizZoneType);
-              quizZoneCubit.getQuizCategory(languageId: _currLangId);
+              await quizCubit.getQuizCategory(
+                languageId: _currLangId,
+                type: _quizZoneId,
+              );
+              await quizZoneCubit.getQuizCategory(languageId: _currLangId);
             } else {
-              quizCubit.getQuizCategoryWithUserId(
+              await quizCubit.getQuizCategoryWithUserId(
                 languageId: _currLangId,
-                type: quizZoneType,
-                userId: _userId,
+                type: _quizZoneId,
               );
-              quizZoneCubit.getQuizCategoryWithUserId(
-                languageId: _currLangId,
-                userId: _userId,
-              );
-              context.read<ContestCubit>().getContest(_userId);
 
-              context.read<UserDetailsCubit>().fetchUserDetails(
-                  context.read<AuthCubit>().getUserFirebaseId());
+              await quizZoneCubit.getQuizCategoryWithUserId(
+                languageId: _currLangId,
+              );
+              await context
+                  .read<ContestCubit>()
+                  .getContest(languageId: _currLangId);
             }
             setState(() {});
           },
@@ -1778,48 +1695,32 @@ class _HomeScreenState extends State<HomeScreen>
                 userRank: _userRank,
                 userCoins: _userCoins,
                 userScore: _userScore,
-                animation: slideAnimation,
               ),
-              _buildCategory(),
-              if (isContestAvailable && !widget.isGuest) ...[
-                buildContestLive(),
-                _buildContest(),
+              BlocBuilder<QuizoneCategoryCubit, QuizoneCategoryState>(
+                builder: (context, state) {
+                  if (state is QuizoneCategoryFailure &&
+                      state.errorMessage == errorCodeDataNotFound) {
+                    return const SizedBox.shrink();
+                  }
+
+                  if (_sysConfigCubit.isQuizZoneEnabled) {
+                    return _buildCategory();
+                  }
+
+                  return const SizedBox.shrink();
+                },
+              ),
+              if (_sysConfigCubit.isAdsEnable &&
+                  _sysConfigCubit.isDailyAdsEnabled &&
+                  !widget.isGuest) ...[
+                _buildDailyAds(),
+              ],
+              if (_sysConfigCubit.isContestEnabled && !widget.isGuest) ...[
+                _buildLiveContestSection(),
               ],
               _buildBattle(),
               _buildExamSelf(),
-              BlocBuilder<AppLocalizationCubit, AppLocalizationState>(
-                builder: (context, state) {
-                  if (_sysConfigCubit.getIsGuessTheWordAvailable()) {
-                    if (AppLocalization.of(context)!.locale.languageCode ==
-                            "en-GB" ||
-                        AppLocalization.of(context)!.locale.languageCode ==
-                            "en") {
-                      if (!(playDifferentZone.contains("guessTheWord"))) {
-                        playDifferentZone.insert(2, "guessTheWord");
-                      }
-                      if (!(playDifferentImg.contains("guess_icon.svg"))) {
-                        playDifferentImg.insert(2, "guess_icon.svg");
-                      }
-                      if (!(playDifferentZoneDesc
-                          .contains("desGuessTheWord"))) {
-                        playDifferentZoneDesc.insert(2, "desGuessTheWord");
-                      }
-                    }
-
-                    //
-                    if (state.language.languageCode != "en-GB" &&
-                        state.language.languageCode != "en") {
-                      playDifferentZone
-                          .removeWhere((element) => element == "guessTheWord");
-                      playDifferentImg.removeWhere(
-                          (element) => element == "guess_icon.svg");
-                      playDifferentZoneDesc.removeWhere(
-                          (element) => element == "desGuessTheWord");
-                    }
-                  }
-                  return _buildZones();
-                },
-              ),
+              _buildZones(),
             ],
           ),
         ),
@@ -1828,88 +1729,82 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
+  void fetchUserDetails() {
+    context.read<UserDetailsCubit>().fetchUserDetails();
+  }
+
+  bool profileComplete = false;
+
   @override
   Widget build(BuildContext context) {
     /// need to add this here, cause textStyle doesn't update automatically when changing theme.
     _boldTextStyle = TextStyle(
       fontWeight: FontWeight.bold,
-      fontSize: 18.0,
+      fontSize: 18,
       color: Theme.of(context).colorScheme.onTertiary,
     );
 
     return Scaffold(
-      body: widget.isGuest
-          ? _buildHome()
+      body: SafeArea(
+        child: widget.isGuest
+            ? _buildHome()
 
-          /// Build home with User
-          : BlocConsumer<UserDetailsCubit, UserDetailsState>(
-              bloc: context.read<UserDetailsCubit>(),
-              listener: (context, state) {
-                print("current page state ${state.toString()}");
-                if (state is UserDetailsFetchSuccess) {
-                  UiUtils.fetchBookmarkAndBadges(
-                    context: context,
-                    userId: state.userProfile.userId!,
-                  );
-                  if (state.userProfile.name!.isEmpty) {
-                    showUpdateNameBottomSheet();
+            /// Build home with User
+            : BlocConsumer<UserDetailsCubit, UserDetailsState>(
+                bloc: context.read<UserDetailsCubit>(),
+                listener: (context, state) {
+                  if (state is UserDetailsFetchSuccess) {
+                    UiUtils.fetchBookmarkAndBadges(
+                      context: context,
+                      userId: state.userProfile.userId!,
+                    );
+                    if (state.userProfile.profileUrl!.isEmpty ||
+                        state.userProfile.name!.isEmpty) {
+                      if (!profileComplete) {
+                        profileComplete = true;
+
+                        Navigator.of(context).pushNamed(
+                          Routes.selectProfile,
+                          arguments: false,
+                        );
+                      }
+                      return;
+                    }
+                  } else if (state is UserDetailsFetchFailure) {
+                    if (state.errorMessage == errorCodeUnauthorizedAccess) {
+                      showAlreadyLoggedInDialog(context);
+                    }
                   }
-                  if (state.userProfile.profileUrl!.isEmpty) {
-                    Navigator.of(context)
-                        .pushNamed(Routes.selectProfile, arguments: false);
-                    return;
+                },
+                builder: (context, state) {
+                  if (state is UserDetailsFetchInProgress ||
+                      state is UserDetailsInitial) {
+                    return const Center(child: CircularProgressContainer());
                   }
-                } else if (state is UserDetailsFetchFailure) {
-                  if (state.errorMessage == unauthorizedAccessCode) {
-                    UiUtils.showAlreadyLoggedInDialog(context: context);
+                  if (state is UserDetailsFetchFailure) {
+                    return Center(
+                      child: ErrorContainer(
+                        showBackButton: true,
+                        errorMessage:
+                            convertErrorCodeToLanguageKey(state.errorMessage),
+                        onTapRetry: fetchUserDetails,
+                        showErrorImage: true,
+                      ),
+                    );
                   }
-                }
-              },
-              builder: (context, state) {
-                if (state is UserDetailsFetchInProgress ||
-                    state is UserDetailsInitial) {
-                  return const Center(child: CircularProgressContainer());
-                }
-                if (state is UserDetailsFetchFailure) {
-                  return ErrorContainer(
-                    showBackButton: true,
-                    errorMessage:
-                        AppLocalization.of(context)!.getTranslatedValues(
-                      convertErrorCodeToLanguageKey(state.errorMessage),
-                    )!,
-                    onTapRetry: () {
-                      context.read<UserDetailsCubit>().fetchUserDetails(
-                            context.read<AuthCubit>().getUserFirebaseId(),
-                          );
-                    },
-                    showErrorImage: true,
-                  );
-                }
 
-                final user = (state as UserDetailsFetchSuccess).userProfile;
-                if (user.status == "0") {
-                  return ErrorContainer(
-                    showBackButton: true,
-                    errorMessage: AppLocalization.of(context)!
-                        .getTranslatedValues(accountDeactivatedKey)!,
-                    onTapRetry: () {
-                      context.read<UserDetailsCubit>().fetchUserDetails(
-                            context.read<AuthCubit>().getUserFirebaseId(),
-                          );
-                    },
-                    showErrorImage: true,
-                  );
-                }
+                  final user = (state as UserDetailsFetchSuccess).userProfile;
 
-                _userName = user.name!;
-                _userProfileImg = user.profileUrl!;
-                _userRank = user.allTimeRank!;
-                _userCoins = user.coins!;
-                _userScore = user.allTimeScore!;
+                  _userName = user.name!;
+                  _userProfileImg = user.profileUrl!;
+                  _userRank = user.allTimeRank!;
+                  _userCoins = user.coins!;
+                  _userScore = user.allTimeScore!;
 
-                return _buildHome();
-              },
-            ),
+                  return _buildHome();
+                },
+              ),
+      ),
     );
   }
 }

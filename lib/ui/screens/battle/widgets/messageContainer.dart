@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -7,20 +9,19 @@ import 'package:flutterquiz/features/battleRoom/cubits/multiUserBattleRoomCubit.
 import 'package:flutterquiz/features/battleRoom/models/message.dart';
 import 'package:flutterquiz/features/profileManagement/cubits/userDetailsCubit.dart';
 import 'package:flutterquiz/features/quiz/models/quizType.dart';
-import 'package:flutterquiz/utils/ui_utils.dart';
-import 'dart:ui' as ui;
+import 'package:flutterquiz/utils/constants/assets_constants.dart';
 
 class MessageContainer extends StatelessWidget {
+  const MessageContainer({
+    required this.isCurrentUser,
+    required this.quizType,
+    super.key,
+    this.opponentUserIndex,
+  });
+
   final bool isCurrentUser;
   final QuizTypes quizType;
   final int? opponentUserIndex;
-
-  const MessageContainer({
-    super.key,
-    this.opponentUserIndex,
-    required this.isCurrentUser,
-    required this.quizType,
-  });
 
   Widget _buildMessage(BuildContext context, MessageState messageState) {
     if (messageState is MessageFetchedSuccess) {
@@ -28,42 +29,45 @@ class MessageContainer extends StatelessWidget {
       if (messageState.messages.isEmpty) {
         return const SizedBox();
       }
-      Message message = Message.buildEmptyMessage();
+      var message = Message.empty();
 
-      String currentUserId = context.read<UserDetailsCubit>().getUserId();
+      final currentUserId = context.read<UserDetailsCubit>().userId();
 
-      if (quizType == QuizTypes.battle) {
-        BattleRoomCubit battleRoomCubit = context.read<BattleRoomCubit>();
+      if (quizType == QuizTypes.oneVsOneBattle) {
+        final battleRoomCubit = context.read<BattleRoomCubit>();
         if (isCurrentUser) {
           //get current user's latest message
           message = context.read<MessageCubit>().getUserLatestMessage(
-              battleRoomCubit.getCurrentUserDetails(currentUserId).uid);
+                battleRoomCubit.getCurrentUserDetails(currentUserId).uid,
+              );
         } else {
           //get opponent user's latest message
           message = context.read<MessageCubit>().getUserLatestMessage(
-              battleRoomCubit.getOpponentUserDetails(currentUserId).uid);
+                battleRoomCubit.getOpponentUserDetails(currentUserId).uid,
+              );
         }
       } else {
-        MultiUserBattleRoomCubit battleRoomCubit =
-            context.read<MultiUserBattleRoomCubit>();
+        final battleRoomCubit = context.read<MultiUserBattleRoomCubit>();
         if (isCurrentUser) {
           //get current user's latest message
           message = context.read<MessageCubit>().getUserLatestMessage(
-              battleRoomCubit.getUser(currentUserId)!.uid);
+                battleRoomCubit.getUser(currentUserId)!.uid,
+              );
         } else {
           //get opponent user's latest message
-          String opponentUserId = battleRoomCubit
+          final opponentUserId = battleRoomCubit
               .getOpponentUsers(currentUserId)[opponentUserIndex!]!
               .uid;
           message = context.read<MessageCubit>().getUserLatestMessage(
-              battleRoomCubit.getUser(opponentUserId)!.uid);
+                battleRoomCubit.getUser(opponentUserId)!.uid,
+              );
         }
       }
 
       return Padding(
         padding: const EdgeInsets.symmetric(
-          horizontal: 15.0,
-          vertical: 8.0,
+          horizontal: 15,
+          vertical: 8,
         ),
         child: message.isTextMessage
             ? Text(
@@ -74,11 +78,11 @@ class MessageContainer extends StatelessWidget {
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.background,
                   fontSize: 13.5,
-                  height: 1.0,
+                  height: 1,
                 ),
               )
             : SvgPicture.asset(
-                UiUtils.getEmojiPath(message.message),
+                Assets.emoji(message.message),
                 height: 25,
                 // color: Theme.of(context).colorScheme.background,
               ),
@@ -111,14 +115,13 @@ class MessageContainer extends StatelessWidget {
         maxWidth: MediaQuery.of(context).size.width * (0.425),
       ),
       child: CustomPaint(
-        painter:
-            quizType == QuizTypes.battle || quizType == QuizTypes.tournament
-                ? MessageCustomPainter(
-                    triangleIsLeft: isCurrentUser,
-                    firstGradientColor: Theme.of(context).primaryColor,
-                    secondGradientColor: Theme.of(context).primaryColor,
-                  )
-                : _buildGroupBattleCustomPainter(context),
+        painter: quizType == QuizTypes.oneVsOneBattle
+            ? MessageCustomPainter(
+                triangleIsLeft: isCurrentUser,
+                firstGradientColor: Theme.of(context).primaryColor,
+                secondGradientColor: Theme.of(context).primaryColor,
+              )
+            : _buildGroupBattleCustomPainter(context),
         child: BlocBuilder<MessageCubit, MessageState>(
           bloc: context.read<MessageCubit>(),
           builder: (context, state) {
@@ -134,52 +137,64 @@ class MessageContainer extends StatelessWidget {
 }
 
 class TopMessageCustomPainter extends CustomPainter {
-  final bool triangleIsLeft;
-  final Color firstGradientColor;
-
-  final Color secondGradientColor;
-
   TopMessageCustomPainter({
     required this.triangleIsLeft,
     required this.firstGradientColor,
     required this.secondGradientColor,
   });
 
+  final bool triangleIsLeft;
+  final Color firstGradientColor;
+
+  final Color secondGradientColor;
+
   @override
   void paint(Canvas canvas, Size size) {
-    Path path = Path();
+    final path = Path();
 
-    Paint paint = Paint()
+    final paint = Paint()
       ..shader = ui.Gradient.linear(
-          Offset(size.width * (0.5), 0),
-          Offset(size.width * (0.5), size.height),
-          [firstGradientColor, secondGradientColor])
+        Offset(size.width * (0.5), 0),
+        Offset(size.width * (0.5), size.height),
+        [firstGradientColor, secondGradientColor],
+      )
       ..style = PaintingStyle.fill;
 
-    path.moveTo(size.width * (0.1), 0);
-    path.lineTo(size.width * (triangleIsLeft ? 0.25 : 0.75), 0);
-    path.lineTo(size.width * (triangleIsLeft ? 0.2 : 0.8),
-        size.height - size.height * (1.3));
-    path.lineTo(size.width * (triangleIsLeft ? 0.15 : 0.85), 0); //85,15
+    path
+      ..moveTo(size.width * (0.1), 0)
+      ..lineTo(size.width * (triangleIsLeft ? 0.25 : 0.75), 0)
+      ..lineTo(
+        size.width * (triangleIsLeft ? 0.2 : 0.8),
+        size.height - size.height * (1.3),
+      )
+      ..lineTo(size.width * (triangleIsLeft ? 0.15 : 0.85), 0) //85,15
 
-    //
-    path.lineTo(size.width * (0.9), 0);
-    //add curve effect
-    path.quadraticBezierTo(size.width, 0, size.width, size.height * 0.2);
-    path.lineTo(size.width, size.height * (0.8));
-    //add curve
-    path.quadraticBezierTo(
-        size.width, size.height, size.width * (0.9), size.height);
-    path.lineTo(size.width * (0.1), size.height);
-    //add curve
-    path.quadraticBezierTo(0, size.height, 0, size.height * (0.8));
-    path.lineTo(0, size.height * (0.2));
-    //add curve
-    path.quadraticBezierTo(0, 0, size.width * (0.1), 0);
-    canvas.drawShadow(path.shift(const Offset(2, 2)),
-        Colors.grey.withOpacity(0.3), 3.0, true);
-
-    canvas.drawPath(path, paint);
+      //
+      ..lineTo(size.width * (0.9), 0)
+      //add curve effect
+      ..quadraticBezierTo(size.width, 0, size.width, size.height * 0.2)
+      ..lineTo(size.width, size.height * (0.8))
+      //add curve
+      ..quadraticBezierTo(
+        size.width,
+        size.height,
+        size.width * (0.9),
+        size.height,
+      )
+      ..lineTo(size.width * (0.1), size.height)
+      //add curve
+      ..quadraticBezierTo(0, size.height, 0, size.height * (0.8))
+      ..lineTo(0, size.height * (0.2))
+      //add curve
+      ..quadraticBezierTo(0, 0, size.width * (0.1), 0);
+    canvas
+      ..drawShadow(
+        path.shift(const Offset(2, 2)),
+        Colors.grey.withOpacity(0.3),
+        3,
+        true,
+      )
+      ..drawPath(path, paint);
   }
 
   @override
@@ -189,52 +204,63 @@ class TopMessageCustomPainter extends CustomPainter {
 }
 
 class MessageCustomPainter extends CustomPainter {
-  final bool triangleIsLeft;
-  final Color firstGradientColor;
-
-  final Color secondGradientColor;
-
   MessageCustomPainter({
     required this.triangleIsLeft,
     required this.firstGradientColor,
     required this.secondGradientColor,
   });
 
+  final bool triangleIsLeft;
+  final Color firstGradientColor;
+
+  final Color secondGradientColor;
+
   @override
   void paint(Canvas canvas, Size size) {
-    Path path = Path();
+    final path = Path();
 
-    Paint paint = Paint()
+    final paint = Paint()
       ..shader = ui.Gradient.linear(
-          Offset(size.width * (0.5), 0),
-          Offset(size.width * (0.5), size.height),
-          [firstGradientColor, secondGradientColor])
+        Offset(size.width * (0.5), 0),
+        Offset(size.width * (0.5), size.height),
+        [firstGradientColor, secondGradientColor],
+      )
       ..style = PaintingStyle.fill;
 
-    path.moveTo(size.width * (0.1), 0);
-    path.lineTo(size.width * (0.9), 0);
-    //add curve effect
-    path.quadraticBezierTo(size.width, 0, size.width, size.height * 0.2);
-    path.lineTo(size.width, size.height * (0.8));
-    //add curve
-    path.quadraticBezierTo(
-        size.width, size.height, size.width * (0.9), size.height);
-    //add triangle here
-    path.lineTo(size.width * (triangleIsLeft ? 0.25 : 0.75), size.height);
-    //to add how long triangle will go down
-    path.lineTo(size.width * (triangleIsLeft ? 0.2 : 0.8), size.height * (1.3));
-    //
-    path.lineTo(size.width * (triangleIsLeft ? 0.15 : 0.85), size.height);
-    //
-    path.lineTo(size.width * (0.1), size.height);
-    //add curve
-    path.quadraticBezierTo(0, size.height, 0, size.height * (0.8));
-    path.lineTo(0, size.height * (0.2));
-    //add curve
-    path.quadraticBezierTo(0, 0, size.width * (0.1), 0);
-    canvas.drawShadow(path.shift(const Offset(2, 2)),
-        Colors.grey.withOpacity(0.3), 3.0, true);
-    canvas.drawPath(path, paint);
+    path
+      ..moveTo(size.width * (0.1), 0)
+      ..lineTo(size.width * (0.9), 0)
+      //add curve effect
+      ..quadraticBezierTo(size.width, 0, size.width, size.height * 0.2)
+      ..lineTo(size.width, size.height * (0.8))
+      //add curve
+      ..quadraticBezierTo(
+        size.width,
+        size.height,
+        size.width * (0.9),
+        size.height,
+      )
+      //add triangle here
+      ..lineTo(size.width * (triangleIsLeft ? 0.25 : 0.75), size.height)
+      //to add how long triangle will go down
+      ..lineTo(size.width * (triangleIsLeft ? 0.2 : 0.8), size.height * (1.3))
+      //
+      ..lineTo(size.width * (triangleIsLeft ? 0.15 : 0.85), size.height)
+      //
+      ..lineTo(size.width * (0.1), size.height)
+      //add curve
+      ..quadraticBezierTo(0, size.height, 0, size.height * (0.8))
+      ..lineTo(0, size.height * (0.2))
+      //add curve
+      ..quadraticBezierTo(0, 0, size.width * (0.1), 0);
+    canvas
+      ..drawShadow(
+        path.shift(const Offset(2, 2)),
+        Colors.grey.withOpacity(0.3),
+        3,
+        true,
+      )
+      ..drawPath(path, paint);
   }
 
   @override

@@ -5,20 +5,12 @@ import 'package:flutterquiz/utils/constants/fonts.dart';
 import 'package:flutterquiz/utils/normalize_number.dart';
 
 class RadialPercentageResultContainer extends StatefulWidget {
-  final Size size;
-  final double percentage;
-  final double circleStrokeWidth;
-  final double arcStrokeWidth;
-  final Color? circleColor;
-  final Color? arcColor;
-  final double? textFontSize;
-  final int? timeTakenToCompleteQuizInSeconds;
-  final double radiusPercentage; //respect to width
+  //respect to width
 
   const RadialPercentageResultContainer({
-    super.key,
     required this.percentage,
     required this.size,
+    super.key,
     this.textFontSize,
     this.circleStrokeWidth = 8.0,
     this.arcStrokeWidth = 8.0,
@@ -27,6 +19,16 @@ class RadialPercentageResultContainer extends StatefulWidget {
     this.arcColor,
     this.circleColor,
   });
+
+  final Size size;
+  final double percentage;
+  final double circleStrokeWidth;
+  final double arcStrokeWidth;
+  final Color? circleColor;
+  final Color? arcColor;
+  final double? textFontSize;
+  final int? timeTakenToCompleteQuizInSeconds;
+  final double radiusPercentage;
 
   @override
   State<RadialPercentageResultContainer> createState() =>
@@ -44,17 +46,20 @@ class _RadialPercentageResultContainerState
     animationController =
         AnimationController(vsync: this, duration: const Duration(seconds: 1));
     animation = Tween<double>(
-            begin: 0.0,
-            end: NormalizeNumber.inRange(
-                currentValue: widget.percentage,
-                minValue: 0.0,
-                maxValue: 100.0,
-                newMaxValue: 360.0,
-                newMinValue: 0.0))
-        .animate(CurvedAnimation(
-      parent: animationController,
-      curve: Curves.easeInOut,
-    ));
+      begin: 0,
+      end: NormalizeNumber.inRange(
+        currentValue: widget.percentage,
+        minValue: 0,
+        maxValue: 100,
+        newMaxValue: 360,
+        newMinValue: 0,
+      ),
+    ).animate(
+      CurvedAnimation(
+        parent: animationController,
+        curve: Curves.easeInOut,
+      ),
+    );
     animationController.forward();
     super.initState();
   }
@@ -66,14 +71,12 @@ class _RadialPercentageResultContainerState
   }
 
   String _getTimeInMinutesAndSeconds() {
-    int totalTime = widget.timeTakenToCompleteQuizInSeconds ?? 0;
+    final totalTime = widget.timeTakenToCompleteQuizInSeconds ?? 0;
     if (totalTime == 0) {
-      return "";
+      return '';
     }
-    int seconds = totalTime % 60;
-    int minutes = totalTime ~/ 60;
-    print("----------------------------");
-    print("Time taken to complete ${widget.timeTakenToCompleteQuizInSeconds}");
+    final seconds = totalTime % 60;
+    final minutes = totalTime ~/ 60;
     return "${minutes < 10 ? 0 : ''}$minutes:${seconds < 10 ? 0 : ''}$seconds";
   }
 
@@ -86,7 +89,8 @@ class _RadialPercentageResultContainerState
           width: widget.size.width,
           child: CustomPaint(
             painter: CircleCustomPainter(
-              color: widget.circleColor ?? Theme.of(context).primaryColor,
+              color: widget.circleColor ??
+                  Theme.of(context).scaffoldBackgroundColor,
               radiusPercentage: widget.radiusPercentage,
               strokeWidth: widget.circleStrokeWidth,
             ),
@@ -98,21 +102,19 @@ class _RadialPercentageResultContainerState
           child: AnimatedBuilder(
             builder: (context, _) {
               return CustomPaint(
-                willChange: false,
                 painter: ArcCustomPainter(
                   sweepAngle: animation.value,
-                  color: Theme.of(context).scaffoldBackgroundColor,
+                  color: Theme.of(context).primaryColor,
                   radiusPercentage: widget.radiusPercentage,
                   strokeWidth: widget.arcStrokeWidth,
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Transform.translate(
                       offset: const Offset(0, 2.5),
                       child: Text(
-                        "${widget.percentage.toStringAsFixed(0)}%",
+                        '${widget.percentage.toStringAsFixed(0)}%',
                         style: TextStyle(
                           fontSize: widget.textFontSize ?? 17.0,
                           color: Theme.of(context).colorScheme.onTertiary,
@@ -120,44 +122,45 @@ class _RadialPercentageResultContainerState
                         ),
                       ),
                     ),
-                    _getTimeInMinutesAndSeconds().isNotEmpty
-                        ? Text(
-                            _getTimeInMinutesAndSeconds(),
-                            style: TextStyle(
-                              fontSize: widget.textFontSize != null
-                                  ? (widget.textFontSize! - 5)
-                                  : 12,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onTertiary
-                                  .withOpacity(0.3),
-                              fontWeight: FontWeights.regular,
-                            ),
-                          )
-                        : const SizedBox(),
+                    if (_getTimeInMinutesAndSeconds().isNotEmpty)
+                      Text(
+                        _getTimeInMinutesAndSeconds(),
+                        style: TextStyle(
+                          fontSize: widget.textFontSize != null
+                              ? (widget.textFontSize! - 5)
+                              : 12,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onTertiary
+                              .withOpacity(0.3),
+                          fontWeight: FontWeights.regular,
+                        ),
+                      )
+                    else
+                      const SizedBox(),
                   ],
                 ),
               );
             },
             animation: animationController,
           ),
-        )
+        ),
       ],
     );
   }
 }
 
 class CircleCustomPainter extends CustomPainter {
+  CircleCustomPainter({this.color, this.radiusPercentage, this.strokeWidth});
+
   final Color? color;
   final double? strokeWidth;
   final double? radiusPercentage;
 
-  CircleCustomPainter({this.color, this.radiusPercentage, this.strokeWidth});
-
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width * (0.5), size.height * (0.5));
-    Paint paint = Paint()
+    final paint = Paint()
       ..strokeWidth = strokeWidth!
       ..color = color!
       ..style = PaintingStyle.stroke;
@@ -174,11 +177,6 @@ class CircleCustomPainter extends CustomPainter {
 }
 
 class ArcCustomPainter extends CustomPainter {
-  final double sweepAngle;
-  final Color color;
-  final double radiusPercentage;
-  final double strokeWidth;
-
   ArcCustomPainter({
     required this.sweepAngle,
     required this.color,
@@ -186,7 +184,12 @@ class ArcCustomPainter extends CustomPainter {
     required this.strokeWidth,
   });
 
-  double _degreeToRadian() => (sweepAngle * pi) / 180.0;
+  final double sweepAngle;
+  final Color color;
+  final double radiusPercentage;
+  final double strokeWidth;
+
+  double _degreeToRadian() => -((sweepAngle * pi) / 180.0);
 
   @override
   void paint(Canvas canvas, Size size) {

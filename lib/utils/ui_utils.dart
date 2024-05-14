@@ -2,10 +2,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutterquiz/app/app_localization.dart';
-import 'package:flutterquiz/features/auth/cubits/authCubit.dart';
 import 'package:flutterquiz/features/badges/cubits/badgesCubit.dart';
-import 'package:flutterquiz/features/battleRoom/battleRoomRepository.dart';
 import 'package:flutterquiz/features/bookmark/cubits/audioQuestionBookmarkCubit.dart';
 import 'package:flutterquiz/features/bookmark/cubits/bookmarkCubit.dart';
 import 'package:flutterquiz/features/bookmark/cubits/guessTheWordBookmarkCubit.dart';
@@ -15,33 +12,26 @@ import 'package:flutterquiz/features/profileManagement/cubits/userDetailsCubit.d
 import 'package:flutterquiz/features/profileManagement/profileManagementLocalDataSource.dart';
 import 'package:flutterquiz/features/quiz/models/quizType.dart';
 import 'package:flutterquiz/features/systemConfig/cubits/systemConfigCubit.dart';
-import 'package:flutterquiz/ui/widgets/alreadyLoggedInDialog.dart';
 import 'package:flutterquiz/ui/widgets/errorMessageDialog.dart';
 import 'package:flutterquiz/utils/constants/constants.dart';
-import 'package:flutterquiz/utils/constants/fonts.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:share_plus/share_plus.dart';
 
 //Need to optimize and separate the ui and other logic related process
 
 class UiUtils {
   static const questionContainerHeightPercentage = 0.785;
 
-  // static const quizTypeMaxHeightPercentage = 0.275;
-  // static const quizTypeMinHeightPercentage = 0.185;
   static const questionContainerWidthPercentage = 0.90;
 
   static const profileHeightBreakPointResultScreen = 355.0;
-  static double quesitonContainerWidthPercentage = 0.85;
   static const appBarHeightPercentage = 0.16;
   static const bottomMenuPercentage = 0.075;
 
   /// Dialog
-  static const dialogHeightPercentage = 0.65;
-  static const dialogWidthPercentage = 0.85;
   static const dialogBlurSigma = 9.0;
-  static const dialogRadius = 40.0;
 
   /// Bottom Sheet
   static const bottomSheetTopRadius = BorderRadius.vertical(
@@ -59,63 +49,49 @@ class UiUtils {
   // Space in-between List Tiles
   static const listTileGap = 12.0;
 
-  static final kAppbarBoxShadow = [
-    BoxShadow(
-      blurRadius: 5.0,
-      color: Colors.black.withOpacity(0.3),
-      offset: Offset.zero,
-    )
-  ];
-
-  void bottomSheet({required BuildContext context, required Widget child}) {
-    showModalBottomSheet(
-      context: context,
-      enableDrag: true,
-      isDismissible: true,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: bottomSheetTopRadius),
-      builder: (_) => child,
-    );
-  }
-
   static String buildGuessTheWordQuestionAnswer(List<String> submittedAnswer) {
-    String answer = "";
-    for (var element in submittedAnswer) {
+    var answer = '';
+    for (final element in submittedAnswer) {
       if (element.isNotEmpty) answer = answer + element;
     }
     return answer;
   }
 
   static Future<void> onBackgroundMessage(RemoteMessage message) async {
-    // print(message.notification);
-    var msgType = message.data['type'].toString();
-    if (msgType == "badges") {
+    //
+    final msgType = message.data['type'].toString();
+    if (msgType == 'badges') {
       needToUpdateBadgesLocally.add(message.data['badge_type'].toString());
-    } else if (msgType == "payment_request") {
-      ProfileManagementLocalDataSource.updateReversedCoins(
-          double.parse(message.data['coins'].toString()).toInt());
+    } else if (msgType == 'payment_request') {
+      await ProfileManagementLocalDataSource.updateReversedCoins(
+        double.parse(message.data['coins'].toString()).toInt(),
+      );
     }
   }
 
   static void updateBadgesLocally(BuildContext context) {
-    for (var badgeType in needToUpdateBadgesLocally) {
+    for (final badgeType in needToUpdateBadgesLocally) {
       context.read<BadgesCubit>().unlockBadge(badgeType);
     }
     needToUpdateBadgesLocally.clear();
   }
 
-  static void needToUpdateCoinsLocally(BuildContext context) async {
-    int coins = await ProfileManagementLocalDataSource.getUpdateReversedCoins();
-
-    print("Need to update coins by $coins");
+  static Future<void> needToUpdateCoinsLocally(BuildContext context) async {
+    final coins =
+        await ProfileManagementLocalDataSource.getUpdateReversedCoins();
 
     if (coins != 0) {
       context.read<UserDetailsCubit>().updateCoins(addCoin: true, coins: coins);
     }
   }
 
-  static void setSnackbar(String msg, BuildContext context, bool showAction,
-      {Function? onPressedAction, Duration? duration}) {
+  static void showSnackBar(
+    String msg,
+    BuildContext context, {
+    bool showAction = false,
+    Function? onPressedAction,
+    Duration? duration,
+  }) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -125,7 +101,7 @@ class UiUtils {
             textStyle: TextStyle(
               color: Theme.of(context).colorScheme.background,
               fontWeight: FontWeights.regular,
-              fontSize: 16.0,
+              fontSize: 16,
             ),
           ),
         ),
@@ -134,51 +110,44 @@ class UiUtils {
         backgroundColor: Theme.of(context).primaryColor,
         action: showAction
             ? SnackBarAction(
-                label: "Retry",
-                onPressed: onPressedAction as void Function(),
+                label: 'Retry',
+                onPressed: onPressedAction! as void Function(),
                 textColor: Theme.of(context).colorScheme.background,
               )
             : null,
-        elevation: 2.0,
+        elevation: 2,
       ),
     );
   }
 
   static void errorMessageDialog(BuildContext context, String? errorMessage) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (_) => ErrorMessageDialog(errorMessage: errorMessage),
     );
   }
 
-  static String getImagePath(final String imageName) {
-    return "assets/images/$imageName";
-  }
-
-  static String getprofileImagePath(String imageName) {
-    return "assets/images/profile/$imageName";
-  }
-
-  static String getEmojiPath(String emojiName) {
-    return "assets/images/emojis/$emojiName";
-  }
-
-  static BoxShadow buildBoxShadow(
-      {Offset? offset, double? blurRadius, Color? color}) {
+  static BoxShadow buildBoxShadow({
+    Offset? offset,
+    double? blurRadius,
+    Color? color,
+  }) {
     return BoxShadow(
       color: color ?? Colors.black.withOpacity(0.1),
       blurRadius: blurRadius ?? 10.0,
-      offset: offset ?? const Offset(5.0, 5.0),
+      offset: offset ?? const Offset(5, 5),
     );
   }
 
   static String getCurrentQuestionLanguageId(BuildContext context) {
     final currentLanguage = context.read<AppLocalizationCubit>().state.language;
-    if (context.read<SystemConfigCubit>().getLanguageMode() == "1") {
+    if (context.read<SystemConfigCubit>().isLanguageModeEnabled) {
       final supportedLanguage =
           context.read<SystemConfigCubit>().getSupportedLanguages();
-      final supportedLanguageIndex = supportedLanguage.indexWhere((element) =>
-          getLocaleFromLanguageCode(element.languageCode) == currentLanguage);
+      final supportedLanguageIndex = supportedLanguage.indexWhere(
+        (element) =>
+            getLocaleFromLanguageCode(element.languageCode) == currentLanguage,
+      );
 
       return supportedLanguageIndex == -1
           ? defaultLanguageCode
@@ -190,11 +159,13 @@ class UiUtils {
 
   static String getCurrentQuestionLanguagecode(BuildContext context) {
     final currentLanguage = context.read<AppLocalizationCubit>().state.language;
-    if (context.read<SystemConfigCubit>().getLanguageMode() == "1") {
+    if (context.read<SystemConfigCubit>().isLanguageModeEnabled) {
       final supportedLanguage =
           context.read<SystemConfigCubit>().getSupportedLanguages();
-      final supportedLanguageIndex = supportedLanguage.indexWhere((element) =>
-          getLocaleFromLanguageCode(element.languageCode) == currentLanguage);
+      final supportedLanguageIndex = supportedLanguage.indexWhere(
+        (element) =>
+            getLocaleFromLanguageCode(element.languageCode) == currentLanguage,
+      );
 
       return supportedLanguageIndex == -1
           ? defaultLanguageCode
@@ -231,7 +202,7 @@ class UiUtils {
   }
 
   static Locale getLocaleFromLanguageCode(String languageCode) {
-    List<String> result = languageCode.split("-");
+    final result = languageCode.split('-');
 
     return result.length == 1
         ? Locale(result.first)
@@ -244,8 +215,13 @@ class UiUtils {
 
   //This method will determine how much coins will user get after
   //completing the quiz
-  static int coinsBasedOnWinPercentage(double percentage, QuizTypes quizType,
-      double maxCoinsWinningPercentage, int maxWinningCoins) {
+  static int coinsBasedOnWinPercentage({
+    required double percentage,
+    required QuizTypes quizType,
+    required double maxCoinsWinningPercentage,
+    required int guessTheWordMaxWinningCoins,
+    required int maxWinningCoins,
+  }) {
     //if percentage is more than maxCoinsWinningPercentage then user will earn maxWinningCoins
     //
     //if percentage is less than maxCoinsWinningPercentage
@@ -255,41 +231,39 @@ class UiUtils {
     //For example: if percentage is 70 then user will
     //earn 3 coins if maxWinningCoins is 4
 
-    int earnedCoins = 0;
+    var earnedCoins = 0;
     if (percentage >= maxCoinsWinningPercentage) {
       earnedCoins = quizType == QuizTypes.guessTheWord
           ? guessTheWordMaxWinningCoins
           : maxWinningCoins;
     } else {
-      int maxCoins = quizType == QuizTypes.guessTheWord
+      final maxCoins = quizType == QuizTypes.guessTheWord
           ? guessTheWordMaxWinningCoins
           : maxWinningCoins;
 
       earnedCoins =
           (maxCoins - ((maxCoinsWinningPercentage - percentage) / 10)).toInt();
     }
-    if (earnedCoins < 0) {
-      earnedCoins = 0;
-    }
-    return earnedCoins;
+
+    return earnedCoins < 0 ? 0 : earnedCoins;
   }
 
   static String getCategoryTypeNumberFromQuizType(QuizTypes quizType) {
-    //quiz_zone=1, fun_n_learn=2, guess_the_word=3, audio_question=4, maths_question=5
-    if (quizType == QuizTypes.mathMania) {
-      return "5";
-    }
-    if (quizType == QuizTypes.audioQuestions) {
-      return "4";
-    }
-    if (quizType == QuizTypes.guessTheWord) {
-      return "3";
-    }
-    if (quizType == QuizTypes.funAndLearn) {
-      return "2";
-    }
-    return "1";
+    return switch (quizType) {
+      QuizTypes.mathMania => '5',
+      QuizTypes.audioQuestions => '4',
+      QuizTypes.guessTheWord => '3',
+      QuizTypes.funAndLearn => '2',
+      _ => '1', // Quiz Zone
+    };
   }
+
+  static String subTypeFromQuizType(QuizTypes type) => switch (type) {
+        QuizTypes.groupPlay => '3',
+        QuizTypes.oneVsOneBattle => '2',
+        QuizTypes.selfChallenge => '1',
+        _ => '',
+      };
 
   //calculate amount per coins based on users coins
   static double calculateAmountPerCoins({
@@ -314,29 +288,35 @@ class UiUtils {
       return false;
     }
 
-    PackageInfo packageInfo = await PackageInfo.fromPlatform();
-    String currentVersion = "${packageInfo.version}+${packageInfo.buildNumber}";
+    final packageInfo = await PackageInfo.fromPlatform();
+    final currentVersion = '${packageInfo.version}+${packageInfo.buildNumber}';
 
-    bool updateBasedOnVersion = _shouldUpdateBasedOnVersion(
-        currentVersion.split("+").first, updatedVersion.split("+").first);
+    final updateBasedOnVersion = _shouldUpdateBasedOnVersion(
+      currentVersion.split('+').first,
+      updatedVersion.split('+').first,
+    );
 
-    if (updatedVersion.split("+").length == 1 ||
-        currentVersion.split("+").length == 1) {
+    if (updatedVersion.split('+').length == 1 ||
+        currentVersion.split('+').length == 1) {
       return updateBasedOnVersion;
     }
 
-    bool updateBasedOnBuildNumber = _shouldUpdateBasedOnBuildNumber(
-        currentVersion.split("+").last, updatedVersion.split("+").last);
+    final updateBasedOnBuildNumber = _shouldUpdateBasedOnBuildNumber(
+      currentVersion.split('+').last,
+      updatedVersion.split('+').last,
+    );
 
-    return (updateBasedOnVersion || updateBasedOnBuildNumber);
+    return updateBasedOnVersion || updateBasedOnBuildNumber;
   }
 
   static bool _shouldUpdateBasedOnVersion(
-      String currentVersion, String updatedVersion) {
-    List<int> currentVersionList =
-        currentVersion.split(".").map((e) => int.parse(e)).toList();
-    List<int> updatedVersionList =
-        updatedVersion.split(".").map((e) => int.parse(e)).toList();
+    String currentVersion,
+    String updatedVersion,
+  ) {
+    final currentVersionList =
+        currentVersion.split('.').map(int.parse).toList();
+    final updatedVersionList =
+        updatedVersion.split('.').map(int.parse).toList();
 
     if (updatedVersionList[0] > currentVersionList[0]) {
       return true;
@@ -352,7 +332,9 @@ class UiUtils {
   }
 
   static bool _shouldUpdateBasedOnBuildNumber(
-      String currentBuildNumber, String updatedBuildNumber) {
+    String currentBuildNumber,
+    String updatedBuildNumber,
+  ) {
     return int.parse(updatedBuildNumber) > int.parse(currentBuildNumber);
   }
 
@@ -361,11 +343,12 @@ class UiUtils {
     HapticFeedback.vibrate();
   }
 
-  static void fetchBookmarkAndBadges(
-      {required BuildContext context, required String userId}) {
+  static void fetchBookmarkAndBadges({
+    required BuildContext context,
+    required String userId,
+  }) {
     //fetch bookmark quiz zone
     if (context.read<BookmarkCubit>().state is! BookmarkFetchSuccess) {
-      print("Fetch bookmark details");
       context.read<BookmarkCubit>().getBookmark(userId);
       //delete any unused group battle room which is created by this user
       // BattleRoomRepository().deleteUnusedBattleRoom(userId);
@@ -374,71 +357,77 @@ class UiUtils {
     //fetch guess the word bookmark
     if (context.read<GuessTheWordBookmarkCubit>().state
         is! GuessTheWordBookmarkFetchSuccess) {
-      print("Fetch guess the word bookmark details");
       context.read<GuessTheWordBookmarkCubit>().getBookmark(userId);
     }
 
     //fetch audio question bookmark
     if (context.read<AudioQuestionBookmarkCubit>().state
         is! AudioQuestionBookmarkFetchSuccess) {
-      print("Fetch audio question bookmark details");
       context.read<AudioQuestionBookmarkCubit>().getBookmark(userId);
     }
 
     if (context.read<BadgesCubit>().state is! BadgesFetchSuccess) {
-      print("Fetch badges details");
       //get badges for given user
-      context.read<BadgesCubit>().getBadges(userId: userId);
-
-      //complete any pennding exam
-      context.read<ExamCubit>().completePendingExams(userId: userId);
+      context.read<BadgesCubit>().getBadges(
+            languageId: UiUtils.getCurrentQuestionLanguageId(context),
+          );
     }
+
+    //complete any pending exam
+    context.read<ExamCubit>().completePendingExams();
   }
 
   static int determineBattleCorrectAnswerPoints(
-      double animationControllerValue, int questionDurationInSeconds) {
-    double secondsTakenToAnswer =
-        (questionDurationInSeconds * animationControllerValue);
-
-    print("Took ${secondsTakenToAnswer}s to give the answer");
+    double animationControllerValue,
+    int questionDurationInSeconds,
+    int correctAnswerScore,
+    int quickestExtraScore,
+    int secondQuickestExtraScore,
+  ) {
+    final secondsTakenToAnswer =
+        questionDurationInSeconds * animationControllerValue;
 
     //improve points system here if needed
     if (secondsTakenToAnswer <= 2) {
-      return correctAnswerPointsForBattle + extraPointForQuickestAnswer;
+      return correctAnswerScore + quickestExtraScore;
     } else if (secondsTakenToAnswer <= 4) {
-      return correctAnswerPointsForBattle + extraPointForSecondQuickestAnswer;
+      return correctAnswerScore + secondQuickestExtraScore;
     }
-    return correctAnswerPointsForBattle;
+    return correctAnswerScore;
   }
 
-  static double timeTakenToSubmitAnswer(
-      {required double animationControllerValue,
-      required QuizTypes quizType,
-      required int guessTheWordTime,
-      required int quizZoneTimer}) {
-    double secondsTakenToAnswer;
+  static double timeTakenToSubmitAnswer({
+    required double animationControllerValue,
+    required int quizTimer,
+  }) =>
+      quizTimer * animationControllerValue;
 
-    if (quizType == QuizTypes.guessTheWord) {
-      secondsTakenToAnswer = (guessTheWordTime * animationControllerValue);
-    } else {
-      secondsTakenToAnswer = (quizZoneTimer * animationControllerValue);
-    }
-    return secondsTakenToAnswer;
-  }
-
-  static void showAlreadyLoggedInDialog({
+  /// Use Builder on top of the widget you use it. to get the correct context.
+  /// and size of the widget.
+  static Future<void> share(
+    String text, {
     required BuildContext context,
-    Function()? onLoggedInCallback,
-  }) {
-    context.read<AuthCubit>().signOut();
-    showDialog(
-      context: context,
-      builder: (_) => WillPopScope(
-        onWillPop: () => Future.value(false),
-        child: AlreadyLoggedInDialog(
-          onAlreadyLoggedInCallBack: onLoggedInCallback,
-        ),
-      ),
-    );
+    List<XFile>? files,
+    String? subject,
+  }) async {
+    final box = context.findRenderObject() as RenderBox?;
+    if (box == null) return;
+
+    final sharePositionOrigin = box.localToGlobal(Offset.zero) & box.size;
+
+    if (files != null) {
+      await Share.shareXFiles(
+        files,
+        text: text,
+        subject: subject,
+        sharePositionOrigin: sharePositionOrigin,
+      );
+    } else {
+      await Share.share(
+        text,
+        subject: subject,
+        sharePositionOrigin: sharePositionOrigin,
+      );
+    }
   }
 }

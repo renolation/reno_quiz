@@ -2,25 +2,24 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:flutterquiz/app/app_localization.dart';
 import 'package:flutterquiz/app/routes.dart';
 import 'package:flutterquiz/features/ads/rewarded_ad_cubit.dart';
 import 'package:flutterquiz/features/profileManagement/cubits/updateScoreAndCoinsCubit.dart';
 import 'package:flutterquiz/features/profileManagement/cubits/userDetailsCubit.dart';
-import 'package:flutterquiz/features/profileManagement/models/userProfile.dart';
 import 'package:flutterquiz/features/profileManagement/profileManagementRepository.dart';
 import 'package:flutterquiz/features/quiz/cubits/quizCategoryCubit.dart';
 import 'package:flutterquiz/features/quiz/models/quizType.dart';
 import 'package:flutterquiz/features/systemConfig/cubits/systemConfigCubit.dart';
 import 'package:flutterquiz/ui/screens/battle/create_or_join_screen.dart';
 import 'package:flutterquiz/ui/screens/battle/widgets/top_curve_clipper.dart';
+import 'package:flutterquiz/ui/widgets/alreadyLoggedInDialog.dart';
 import 'package:flutterquiz/ui/widgets/customRoundedButton.dart';
 import 'package:flutterquiz/ui/widgets/watchRewardAdDialog.dart';
 import 'package:flutterquiz/utils/assets_utils.dart';
-import 'package:flutterquiz/utils/constants/constants.dart';
 import 'package:flutterquiz/utils/constants/error_message_keys.dart';
 import 'package:flutterquiz/utils/constants/fonts.dart';
 import 'package:flutterquiz/utils/constants/string_labels.dart';
+import 'package:flutterquiz/utils/extensions.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
 
 class RandomBattleScreen extends StatefulWidget {
@@ -41,38 +40,40 @@ class RandomBattleScreen extends StatefulWidget {
 
 class _RandomBattleScreenState extends State<RandomBattleScreen> {
   String selectedCategory = selectCategoryKey;
-  String selectedCategoryId = "0";
+  String selectedCategoryId = '0';
 
   @override
   void initState() {
+    super.initState();
     Future.delayed(Duration.zero, () {
-      context.read<RewardedAdCubit>().createRewardedAd(context,
-          onFbRewardAdCompleted: _addCoinsAfterRewardAd);
-      if (context.read<SystemConfigCubit>().getIsCategoryEnableForBattle() ==
-          "1") {
-        context.read<QuizCategoryCubit>().getQuizCategoryWithUserId(
-              languageId: UiUtils.getCurrentQuestionLanguageId(context),
-              type: UiUtils.getCategoryTypeNumberFromQuizType(QuizTypes.battle),
-              userId: context.read<UserDetailsCubit>().getUserId(),
-            );
+      context.read<RewardedAdCubit>().createRewardedAd(context);
+      if (context.read<SystemConfigCubit>().isCategoryEnabledForRandomBattle) {
+        _getCategories();
       }
     });
-    super.initState();
+  }
+
+  void _getCategories() {
+    context.read<QuizCategoryCubit>().getQuizCategoryWithUserId(
+          languageId: UiUtils.getCurrentQuestionLanguageId(context),
+          type: UiUtils.getCategoryTypeNumberFromQuizType(
+            QuizTypes.oneVsOneBattle,
+          ),
+          subType: UiUtils.subTypeFromQuizType(QuizTypes.oneVsOneBattle),
+        );
   }
 
   void _addCoinsAfterRewardAd() {
-    //ad rewards here
-    //once user sees ad then add coins to user wallet
-    context.read<UserDetailsCubit>().updateCoins(
-          addCoin: true,
-          coins: lifeLineDeductCoins,
-        );
+    final rewardAdsCoins = context.read<SystemConfigCubit>().rewardAdsCoins;
+
+    context
+        .read<UserDetailsCubit>()
+        .updateCoins(addCoin: true, coins: rewardAdsCoins);
 
     context.read<UpdateScoreAndCoinsCubit>().updateCoins(
-          context.read<UserDetailsCubit>().getUserId(),
-          lifeLineDeductCoins,
-          true,
-          watchedRewardAdKey,
+          coins: rewardAdsCoins,
+          addCoin: true,
+          title: watchedRewardAdKey,
         );
   }
 
@@ -119,8 +120,7 @@ class _RandomBattleScreenState extends State<RandomBattleScreen> {
             ),
             value: selectedCategory,
             hint: Text(
-              AppLocalization.of(context)!
-                  .getTranslatedValues(selectCategoryKey)!,
+              context.tr(selectCategoryKey)!,
               style: TextStyle(
                 color: colorScheme.onTertiary.withOpacity(0.4),
                 fontSize: 16,
@@ -132,7 +132,7 @@ class _RandomBattleScreenState extends State<RandomBattleScreen> {
                 selectedCategory = value!;
 
                 // set id for selected category
-                for (var v in values) {
+                for (final v in values) {
                   if (v['name'] == selectedCategory) {
                     selectedCategoryId = v['id']!;
                   }
@@ -143,8 +143,9 @@ class _RandomBattleScreenState extends State<RandomBattleScreen> {
               return DropdownMenuItem(
                 value: name,
                 child: name == selectCategoryKey
-                    ? Text(AppLocalization.of(context)!
-                        .getTranslatedValues(selectCategoryKey)!)
+                    ? Text(
+                        context.tr(selectCategoryKey)!,
+                      )
                     : Text(name!),
               );
             }).toList(),
@@ -155,8 +156,7 @@ class _RandomBattleScreenState extends State<RandomBattleScreen> {
   }
 
   Widget selectCategoryDropDown() {
-    return context.read<SystemConfigCubit>().getIsCategoryEnableForBattle() ==
-            '1'
+    return context.read<SystemConfigCubit>().isCategoryEnabledForRandomBattle
         ? BlocConsumer<QuizCategoryCubit, QuizCategoryState>(
             listener: (context, state) {
               if (state is QuizCategorySuccess) {
@@ -167,41 +167,38 @@ class _RandomBattleScreenState extends State<RandomBattleScreen> {
               }
 
               if (state is QuizCategoryFailure) {
-                if (state.errorMessage == unauthorizedAccessCode) {
-                  UiUtils.showAlreadyLoggedInDialog(context: context);
+                if (state.errorMessage == errorCodeUnauthorizedAccess) {
+                  showAlreadyLoggedInDialog(context);
                   return;
                 }
                 showDialog<bool>(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                          actions: [
-                            TextButton(
-                              onPressed: () {
-                                Navigator.of(context).pop(true);
-                                //context.read<QuizCategoryCubit>().getQuizCategory(UiUtils.getCurrentQuestionLanguageId(context), "");
-                              },
-                              child: Text(
-                                AppLocalization.of(context)!
-                                    .getTranslatedValues(retryLbl)!,
-                                style: TextStyle(
-                                  color: Theme.of(context).primaryColor,
-                                ),
-                              ),
-                            )
-                          ],
-                          content: Text(AppLocalization.of(context)!
-                              .getTranslatedValues(
-                                  convertErrorCodeToLanguageKey(
-                                      state.errorMessage))!),
-                        )).then((value) {
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    actions: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop(true);
+                          //context.read<QuizCategoryCubit>().getQuizCategory(UiUtils.getCurrentQuestionLanguageId(context), "");
+                        },
+                        child: Text(
+                          context.tr(retryLbl)!,
+                          style: TextStyle(
+                            color: Theme.of(context).primaryColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                    content: Text(
+                      context.tr(
+                        convertErrorCodeToLanguageKey(
+                          state.errorMessage,
+                        ),
+                      )!,
+                    ),
+                  ),
+                ).then((value) {
                   if (value != null && value) {
-                    context.read<QuizCategoryCubit>().getQuizCategoryWithUserId(
-                          languageId:
-                              UiUtils.getCurrentQuestionLanguageId(context),
-                          type: UiUtils.getCategoryTypeNumberFromQuizType(
-                              QuizTypes.battle),
-                          userId: context.read<UserDetailsCubit>().getUserId(),
-                        );
+                    _getCategories();
                   }
                 });
               }
@@ -212,17 +209,18 @@ class _RandomBattleScreenState extends State<RandomBattleScreen> {
                 child: state is QuizCategorySuccess
                     ? _buildDropDown(
                         values: state.categories
-                            .map((e) => {"name": e.categoryName, "id": e.id})
+                            .where((c) => !c.isPremium)
+                            .map((e) => {'name': e.categoryName, 'id': e.id})
                             .toList(),
-                        keyValue: "selectCategorySuccess",
+                        keyValue: 'selectCategorySuccess',
                       )
                     : Opacity(
                         opacity: 0.65,
                         child: _buildDropDown(
                           values: [
-                            {"name": selectCategoryKey, "id": "0"}
+                            {'name': selectCategoryKey, 'id': '0'},
                           ],
-                          keyValue: "selectCategory",
+                          keyValue: 'selectCategory',
                         ),
                       ),
               );
@@ -238,8 +236,8 @@ class _RandomBattleScreenState extends State<RandomBattleScreen> {
     return BlocListener<UpdateScoreAndCoinsCubit, UpdateScoreAndCoinsState>(
       listener: (context, state) {
         if (state is UpdateScoreAndCoinsFailure) {
-          if (state.errorMessage == unauthorizedAccessCode) {
-            UiUtils.showAlreadyLoggedInDialog(context: context);
+          if (state.errorMessage == errorCodeUnauthorizedAccess) {
+            showAlreadyLoggedInDialog(context);
           }
         }
       },
@@ -260,7 +258,7 @@ class _RandomBattleScreenState extends State<RandomBattleScreen> {
                     children: [
                       /// BG
                       SvgPicture.asset(
-                        AssetsUtils.getImagePath("battle_design.svg"),
+                        AssetsUtils.getImagePath('battle_design.svg'),
                         fit: BoxFit.cover,
                         width: size.width,
                         height: size.height,
@@ -270,7 +268,7 @@ class _RandomBattleScreenState extends State<RandomBattleScreen> {
                       Padding(
                         padding: const EdgeInsets.only(top: 75, left: 3),
                         child: SvgPicture.asset(
-                          AssetsUtils.getImagePath("vs.svg"),
+                          AssetsUtils.getImagePath('vs.svg'),
                           width: 247.177,
                           height: 126.416,
                         ),
@@ -278,8 +276,10 @@ class _RandomBattleScreenState extends State<RandomBattleScreen> {
 
                       /// Title & Back Button
                       Padding(
-                        padding:
-                            EdgeInsets.only(top: size.height * 0.07, left: 25),
+                        padding: EdgeInsets.only(
+                          top: size.height * 0.07,
+                          left: 25,
+                        ),
                         child: Stack(
                           children: [
                             Align(
@@ -297,8 +297,7 @@ class _RandomBattleScreenState extends State<RandomBattleScreen> {
                             Align(
                               alignment: Alignment.topCenter,
                               child: Text(
-                                AppLocalization.of(context)!
-                                    .getTranslatedValues("randomLbl")!,
+                                context.tr('randomLbl')!,
                                 style: TextStyle(
                                   fontSize: 22,
                                   color:
@@ -334,12 +333,10 @@ class _RandomBattleScreenState extends State<RandomBattleScreen> {
 
                           /// Select Category
                           if (context
-                                  .read<SystemConfigCubit>()
-                                  .getIsCategoryEnableForBattle() ==
-                              "1")
+                              .read<SystemConfigCubit>()
+                              .isCategoryEnabledForRandomBattle)
                             Text(
-                              AppLocalization.of(context)!
-                                  .getTranslatedValues(selectCategoryKey)!,
+                              context.tr(selectCategoryKey)!,
                               style: TextStyle(
                                 fontWeight: FontWeights.regular,
                                 fontSize: 18,
@@ -349,14 +346,12 @@ class _RandomBattleScreenState extends State<RandomBattleScreen> {
 
                           /// dropDown
                           if (context
-                                  .read<SystemConfigCubit>()
-                                  .getIsCategoryEnableForBattle() ==
-                              "1")
+                              .read<SystemConfigCubit>()
+                              .isCategoryEnabledForRandomBattle)
                             SizedBox(height: size.height * .01),
                           if (context
-                                  .read<SystemConfigCubit>()
-                                  .getIsCategoryEnableForBattle() ==
-                              "1")
+                              .read<SystemConfigCubit>()
+                              .isCategoryEnabledForRandomBattle)
                             selectCategoryDropDown(),
 
                           /// Entry fees & Current user coins
@@ -367,13 +362,17 @@ class _RandomBattleScreenState extends State<RandomBattleScreen> {
                           SizedBox(height: size.height * .04),
                           letsPlayButton(size, context),
 
-                          /// OR
-                          SizedBox(height: size.height * .02),
-                          _buildOrDivider(context, size),
+                          if (context
+                              .read<SystemConfigCubit>()
+                              .isOneVsOneBattleEnabled) ...[
+                            /// OR
+                            SizedBox(height: size.height * .02),
+                            _buildOrDivider(context, size),
 
-                          /// Let's Play
-                          SizedBox(height: size.height * .02),
-                          playWithFrndsButton(size, context),
+                            /// Let's Play
+                            SizedBox(height: size.height * .02),
+                            playWithFrndsButton(size, context),
+                          ],
                         ],
                       ),
                     ),
@@ -391,8 +390,7 @@ class _RandomBattleScreenState extends State<RandomBattleScreen> {
     return CustomRoundedButton(
       widthPercentage: size.width,
       backgroundColor: Theme.of(context).primaryColor,
-      buttonTitle:
-          AppLocalization.of(context)!.getTranslatedValues("playWithFrdLbl")!,
+      buttonTitle: context.tr('playWithFrdLbl'),
       radius: 8,
       showBorder: false,
       height: size.height * .07,
@@ -400,14 +398,13 @@ class _RandomBattleScreenState extends State<RandomBattleScreen> {
       textSize: 18,
       onTap: () {
         Navigator.of(context).push(
-          CupertinoPageRoute(
+          CupertinoPageRoute<CreateOrJoinRoomScreen>(
             builder: (_) => BlocProvider<UpdateScoreAndCoinsCubit>(
-              create: (context) =>
+              create: (_) =>
                   UpdateScoreAndCoinsCubit(ProfileManagementRepository()),
               child: CreateOrJoinRoomScreen(
-                quizType: QuizTypes.battle,
-                title: AppLocalization.of(context)!
-                    .getTranslatedValues("playWithFrdLbl")!,
+                quizType: QuizTypes.oneVsOneBattle,
+                title: context.tr('playWithFrdLbl')!,
               ),
             ),
           ),
@@ -420,28 +417,29 @@ class _RandomBattleScreenState extends State<RandomBattleScreen> {
     return CustomRoundedButton(
       widthPercentage: size.width,
       backgroundColor: Theme.of(context).primaryColor,
-      buttonTitle:
-          AppLocalization.of(context)!.getTranslatedValues("letsPlay")!,
+      buttonTitle: context.tr('letsPlay'),
       radius: 8,
       showBorder: false,
       height: size.height * .07,
       fontWeight: FontWeights.semiBold,
       textSize: 18,
       onTap: () {
-        UserProfile userProfile =
-            context.read<UserDetailsCubit>().getUserProfile();
+        final userProfile = context.read<UserDetailsCubit>().getUserProfile();
 
-        if (int.parse(userProfile.coins!) < randomBattleEntryCoins) {
+        if (int.parse(userProfile.coins!) <
+            context.read<SystemConfigCubit>().randomBattleEntryCoins) {
           //if ad not loaded than show not enough coins
           if (context.read<RewardedAdCubit>().state is! RewardedAdLoaded) {
             UiUtils.errorMessageDialog(
-                context,
-                AppLocalization.of(context)!.getTranslatedValues(
-                    convertErrorCodeToLanguageKey(notEnoughCoinsCode))!);
+              context,
+              context.tr(
+                convertErrorCodeToLanguageKey(errorCodeNotEnoughCoins),
+              ),
+            );
             return;
           }
 
-          showDialog(
+          showDialog<void>(
             context: context,
             builder: (_) => WatchRewardAdDialog(
               onTapYesButton: () {
@@ -456,12 +454,13 @@ class _RandomBattleScreenState extends State<RandomBattleScreen> {
           return;
         }
         if (selectedCategory == selectCategoryKey &&
-            context.read<SystemConfigCubit>().getIsCategoryEnableForBattle() ==
-                "1") {
+            context
+                .read<SystemConfigCubit>()
+                .isCategoryEnabledForRandomBattle) {
           UiUtils.errorMessageDialog(
-              context,
-              AppLocalization.of(context)!
-                  .getTranslatedValues(pleaseSelectCategoryKey)!);
+            context,
+            context.tr(pleaseSelectCategoryKey),
+          );
           return;
         }
 
@@ -489,8 +488,7 @@ class _RandomBattleScreenState extends State<RandomBattleScreen> {
             TextSpan(
               children: [
                 TextSpan(
-                  text:
-                      "${AppLocalization.of(context)!.getTranslatedValues("entryFeesLbl")!}\n",
+                  text: "${context.tr("entryFeesLbl")!}\n",
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeights.regular,
@@ -502,7 +500,7 @@ class _RandomBattleScreenState extends State<RandomBattleScreen> {
                 ),
                 TextSpan(
                   text:
-                      '$randomBattleEntryCoins ${AppLocalization.of(context)!.getTranslatedValues(coinsLbl)}',
+                      '${context.read<SystemConfigCubit>().randomBattleEntryCoins} ${context.tr(coinsLbl)}',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeights.bold,
@@ -521,8 +519,7 @@ class _RandomBattleScreenState extends State<RandomBattleScreen> {
             TextSpan(
               children: [
                 TextSpan(
-                  text:
-                      "${AppLocalization.of(context)!.getTranslatedValues(currentCoinsKey)!}\n",
+                  text: '${context.tr(currentCoinsKey)!}\n',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeights.regular,
@@ -538,7 +535,7 @@ class _RandomBattleScreenState extends State<RandomBattleScreen> {
                     builder: (context, state) {
                       return state is UserDetailsFetchSuccess
                           ? Text(
-                              "${context.read<UserDetailsCubit>().getCoins()!} ${AppLocalization.of(context)!.getTranslatedValues(coinsLbl)}",
+                              '${context.read<UserDetailsCubit>().getCoins()!} ${context.tr(coinsLbl)}',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeights.bold,
@@ -569,7 +566,7 @@ class _RandomBattleScreenState extends State<RandomBattleScreen> {
           ),
         ),
         Text(
-          AppLocalization.of(context)!.getTranslatedValues(orLbl)!,
+          context.tr(orLbl)!,
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeights.regular,

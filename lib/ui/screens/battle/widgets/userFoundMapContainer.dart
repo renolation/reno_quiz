@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutterquiz/utils/ui_utils.dart';
+import 'package:flutterquiz/utils/constants/assets_constants.dart';
 
 class UserFoundMapContainer extends StatefulWidget {
   const UserFoundMapContainer({super.key});
 
   @override
-  _UserFoundMapContainerState createState() => _UserFoundMapContainerState();
+  State<UserFoundMapContainer> createState() => _UserFoundMapContainerState();
 }
 
 class _UserFoundMapContainerState extends State<UserFoundMapContainer> {
@@ -27,10 +27,7 @@ class _UserFoundMapContainerState extends State<UserFoundMapContainer> {
       transformAlignment: Alignment.center,
       transform: Matrix4.identity()..scale(scale),
       duration: const Duration(milliseconds: 300),
-      child: Image.asset(
-        UiUtils.getImagePath("map_finded.png"),
-        fit: BoxFit.cover,
-      ),
+      child: Image.asset(Assets.mapFinded, fit: BoxFit.cover),
     );
   }
 }

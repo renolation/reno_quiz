@@ -6,12 +6,12 @@ import 'package:flutterquiz/utils/constants/constants.dart';
 import 'package:flutterquiz/utils/ui_utils.dart';
 
 class AppLocalization {
+  AppLocalization(this.locale);
+
   final Locale locale;
 
   //it will hold key of text and it's values in given language
   late Map<String, String> _localizedValues;
-
-  AppLocalization(this.locale);
 
   //to access applocalization instance any where in app using context
   static AppLocalization? of(BuildContext context) {
@@ -19,14 +19,14 @@ class AppLocalization {
   }
 
   //to load json(language) from assets
-  Future loadJson() async {
-    String languageJsonName = locale.countryCode == null
+  Future<void> loadJson() async {
+    final languageJsonName = locale.countryCode == null
         ? locale.languageCode
-        : "${locale.languageCode}-${locale.countryCode}";
-    String jsonStringValues =
+        : '${locale.languageCode}-${locale.countryCode}';
+    final jsonStringValues =
         await rootBundle.loadString('assets/languages/$languageJsonName.json');
     //value from rootbundle will be encoded string
-    Map<String, dynamic> mappedJson = json.decode(jsonStringValues);
+    final mappedJson = jsonDecode(jsonStringValues) as Map<String, dynamic>;
 
     _localizedValues =
         mappedJson.map((key, value) => MapEntry(key, value.toString()));
@@ -50,7 +50,7 @@ class _AppLocalizationDelegate extends LocalizationsDelegate<AppLocalization> {
   @override
   bool isSupported(Locale locale) {
     return supportedLocales
-        .map((langCode) => UiUtils.getLocaleFromLanguageCode(langCode))
+        .map(UiUtils.getLocaleFromLanguageCode)
         .toList()
         .contains(locale);
   }
@@ -58,7 +58,7 @@ class _AppLocalizationDelegate extends LocalizationsDelegate<AppLocalization> {
   //load languageCode.json files
   @override
   Future<AppLocalization> load(Locale locale) async {
-    AppLocalization localization = AppLocalization(locale);
+    final localization = AppLocalization(locale);
     await localization.loadJson();
 
     return localization;

@@ -1,7 +1,6 @@
 class ExamException implements Exception {
-  final String errorMessageCode;
-
   ExamException({required this.errorMessageCode});
+  final String errorMessageCode;
 
   @override
   String toString() => errorMessageCode;

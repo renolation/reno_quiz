@@ -2,13 +2,10 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutterquiz/utils/constants/api_body_parameter_labels.dart';
+import 'package:flutterquiz/features/leaderBoard/leaderboardException.dart';
 import 'package:flutterquiz/utils/api_utils.dart';
 import 'package:flutterquiz/utils/constants/constants.dart';
-import 'package:flutterquiz/utils/constants/error_message_keys.dart';
 import 'package:http/http.dart' as http;
-
-import '../leaderboardException.dart';
 
 @immutable
 abstract class LeaderBoardAllTimeState {}
@@ -18,39 +15,38 @@ class LeaderBoardAllTimeInitial extends LeaderBoardAllTimeState {}
 class LeaderBoardAllTimeProgress extends LeaderBoardAllTimeState {}
 
 class LeaderBoardAllTimeSuccess extends LeaderBoardAllTimeState {
-  final List leaderBoardDetails;
-  final int totalData;
-  final bool hasMore;
-
   LeaderBoardAllTimeSuccess(
     this.leaderBoardDetails,
-    this.totalData,
-    this.hasMore,
-  );
+    this.totalData, {
+    required this.hasMore,
+  });
+
+  final List<Map<String, dynamic>> leaderBoardDetails;
+  final int totalData;
+  final bool hasMore;
 }
 
 class LeaderBoardAllTimeFailure extends LeaderBoardAllTimeState {
-  final String errorMessage;
-
   LeaderBoardAllTimeFailure(this.errorMessage);
+
+  final String errorMessage;
 }
 
 class LeaderBoardAllTimeCubit extends Cubit<LeaderBoardAllTimeState> {
-  static late String profileA, nameA, scoreA, rankA;
-
   LeaderBoardAllTimeCubit() : super(LeaderBoardAllTimeInitial());
+  static late String profileA;
+  static late String nameA;
+  static late String scoreA;
+  static late String rankA;
 
-  Future<Map<String, dynamic>> _fetchData({
+  Future<({int total, List<Map<String, dynamic>> otherUsersRanks})> _fetchData({
     required String limit,
-    required String userId,
     String? offset,
   }) async {
     try {
-      Map<String, String> body = {
-        accessValueKey: accessValue,
+      final body = <String, String>{
         limitKey: limit,
-        offsetKey: offset ?? "",
-        userIdKey: userId,
+        offsetKey: offset ?? '',
       };
       if (offset == null) {
         body.remove(offset);
@@ -60,74 +56,78 @@ class LeaderBoardAllTimeCubit extends Cubit<LeaderBoardAllTimeState> {
         body: body,
         headers: await ApiUtils.getHeaders(),
       );
-      final responseJson = jsonDecode(response.body);
+      final responseJson = jsonDecode(response.body) as Map<String, dynamic>;
 
-      print("\njsonResponse::=$responseJson\n\n\n");
-
-      if (responseJson['error']) {
-        throw LeaderBoardException(errorMessageCode: responseJson['message']);
+      if (responseJson['error'] as bool) {
+        throw LeaderBoardException(
+          errorMessageCode: responseJson['message'].toString(),
+        );
       }
 
-      if (responseJson['total'] != '0') {
-        nameA = responseJson["data"]["my_rank"]["name"].toString();
-        rankA = responseJson["data"]["my_rank"]["user_rank"].toString();
-        profileA = responseJson["data"]["my_rank"]["profile"].toString();
-        scoreA = responseJson["data"]["my_rank"]["score"].toString();
+      final total = int.parse(responseJson['total'] as String? ?? '0');
+      final data = responseJson['data'] as Map<String, dynamic>;
+
+      if (total != 0) {
+        final myRank = data['my_rank'] as Map<String, dynamic>;
+
+        nameA = myRank['name'].toString();
+        rankA = myRank['user_rank'].toString();
+        profileA = myRank['profile'].toString();
+        scoreA = myRank['score'].toString();
       } else {
-        nameA = "";
-        rankA = "";
-        profileA = "";
-        scoreA = "0";
+        nameA = '';
+        rankA = '';
+        profileA = '';
+        scoreA = '0';
       }
 
-      return Map.from(responseJson);
+      return (
+        total: total,
+        otherUsersRanks:
+            (data['other_users_rank'] as List).cast<Map<String, dynamic>>()
+      );
     } catch (e) {
       throw LeaderBoardException(errorMessageCode: e.toString());
     }
   }
 
-  void fetchLeaderBoard(String limit, String userId) {
+  void fetchLeaderBoard(String limit) {
     emit(LeaderBoardAllTimeProgress());
-    _fetchData(
-      limit: limit,
-      userId: userId,
-    ).then((value) {
-      final usersDetails = value['data']['other_users_rank'] as List;
-      final total = int.parse(value['total'].toString());
-      print("Total: $total");
-      emit(LeaderBoardAllTimeSuccess(
-        usersDetails,
-        total,
-        total > usersDetails.length,
-      ));
-    }).catchError((e) {
-      print(e.toString());
+    _fetchData(limit: limit).then((v) {
+      emit(
+        LeaderBoardAllTimeSuccess(
+          v.otherUsersRanks,
+          v.total,
+          hasMore: v.total > v.otherUsersRanks.length,
+        ),
+      );
+    }).catchError((dynamic e) {
       emit(LeaderBoardAllTimeFailure(e.toString()));
     });
   }
 
-  void fetchMoreLeaderBoardData(String limit, String userId) {
+  void fetchMoreLeaderBoardData(String limit) {
     _fetchData(
-            limit: limit,
-            userId: userId,
-            offset: (state as LeaderBoardAllTimeSuccess)
-                .leaderBoardDetails
-                .length
-                .toString())
-        .then((value) {
-      final oldState = (state as LeaderBoardAllTimeSuccess);
-      final usersDetails = value['data']['other_users_rank'] as List;
-      final updatedUserDetails = List.from(oldState.leaderBoardDetails);
+      limit: limit,
+      offset: (state as LeaderBoardAllTimeSuccess)
+          .leaderBoardDetails
+          .length
+          .toString(),
+    ).then((v) {
+      final oldState = state as LeaderBoardAllTimeSuccess;
 
-      updatedUserDetails.addAll(usersDetails);
+      final updatedUserDetails = oldState.leaderBoardDetails
+        ..addAll(v.otherUsersRanks);
 
-      emit(LeaderBoardAllTimeSuccess(
-        updatedUserDetails,
-        oldState.totalData,
-        oldState.totalData > updatedUserDetails.length,
-      ));
+      emit(
+        LeaderBoardAllTimeSuccess(
+          updatedUserDetails,
+          oldState.totalData,
+          hasMore: oldState.totalData > updatedUserDetails.length,
+        ),
+      );
     }).catchError((e) {
-      emit(LeaderBoardAllTimeFailure(defaultErrorMessageCode));
+      emit(LeaderBoardAllTimeFailure(errorCodeDefaultMessage));
     });
   }
 

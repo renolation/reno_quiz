@@ -1,17 +1,24 @@
 import 'package:flutterquiz/utils/constants/api_body_parameter_labels.dart';
 
 class ContestLeaderboard {
-  final String? userId, score, userRank, name, profile;
+  const ContestLeaderboard({
+    this.userId,
+    this.score,
+    this.userRank,
+    this.name,
+    this.profile,
+  });
 
-  ContestLeaderboard(
-      {this.userId, this.score, this.userRank, this.name, this.profile});
+  ContestLeaderboard.fromJson(Map<String, dynamic> json)
+      : userId = json['user_id'] as String?,
+        score = json['score'] as String?,
+        userRank = json['user_rank'] as String?,
+        name = json['name'] as String?,
+        profile = json[profileKey] as String?;
 
-  factory ContestLeaderboard.fromJson(Map<String, dynamic> jsonData) {
-    return ContestLeaderboard(
-        userId: jsonData[userIdKey],
-        score: jsonData["score"],
-        userRank: jsonData["user_rank"],
-        name: jsonData["name"],
-        profile: jsonData[profileKey]);
-  }
+  final String? userId;
+  final String? score;
+  final String? userRank;
+  final String? name;
+  final String? profile;
 }

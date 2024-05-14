@@ -1,7 +1,6 @@
 class ProfileManagementException implements Exception {
-  final String errorMessageCode;
-
   ProfileManagementException({required this.errorMessageCode});
+  final String errorMessageCode;
 
   @override
   String toString() => errorMessageCode;

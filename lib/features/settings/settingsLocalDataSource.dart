@@ -1,71 +1,44 @@
 import 'package:flutterquiz/utils/constants/constants.dart';
-import 'package:flutterquiz/utils/constants/string_labels.dart';
-import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 class SettingsLocalDataSource {
-  bool? showIntroSlider() {
-    return Hive.box(settingsBox).get(showIntroSliderKey, defaultValue: true);
-  }
+  Box<dynamic> get _box => Hive.box<dynamic>(settingsBox);
 
-  Future<void> setShowIntroSlider(bool value) async {
-    Hive.box(settingsBox).put(showIntroSliderKey, value);
-  }
+  bool get showIntroSlider =>
+      _box.get(showIntroSliderKey, defaultValue: true) as bool;
 
-  bool? sound() {
-    return Hive.box(settingsBox).get(soundKey, defaultValue: true);
-  }
+  set showIntroSlider(bool value) => _box.put(showIntroSliderKey, value);
 
-  Future<void> setSound(bool value) async {
-    Hive.box(settingsBox).put(soundKey, value);
-  }
+  bool get sound => _box.get(soundKey, defaultValue: true) as bool;
 
-  bool? backgroundMusic() {
-    return Hive.box(settingsBox).get(backgroundMusicKey, defaultValue: true);
-  }
+  set sound(bool value) => _box.put(soundKey, value);
 
-  Future<void> setbackgroundMusic(bool value) async {
-    Hive.box(settingsBox).put(backgroundMusicKey, value);
-  }
+  bool get backgroundMusic =>
+      _box.get(backgroundMusicKey, defaultValue: true) as bool;
 
-  bool? vibration() {
-    return Hive.box(settingsBox).get(vibrationKey, defaultValue: true);
-  }
+  set backgroundMusic(bool value) => _box.put(backgroundMusicKey, value);
 
-  Future<void> setVibration(bool value) async {
-    Hive.box(settingsBox).put(vibrationKey, value);
-  }
+  bool get vibration => _box.get(vibrationKey, defaultValue: true) as bool;
 
-  String? languageCode() {
-    return Hive.box(settingsBox)
-        .get(languageCodeKey, defaultValue: defaultLanguageCode); //
-  }
+  set vibration(bool value) => _box.put(vibrationKey, value);
 
-  Future<void> setLanguageCode(String value) async {
-    Hive.box(settingsBox).put(languageCodeKey, value);
-  }
+  String get languageCode =>
+      _box.get(languageCodeKey, defaultValue: defaultLanguageCode) as String;
 
-  double? playAreaFontSize() {
-    return Hive.box(settingsBox).get(fontSizeKey, defaultValue: 16.0); //
-  }
+  set languageCode(String value) => _box.put(languageCodeKey, value);
 
-  Future<void> setPlayAreaFontSize(double value) async {
-    Hive.box(settingsBox).put(fontSizeKey, value);
-  }
+  double get playAreaFontSize =>
+      _box.get(fontSizeKey, defaultValue: 16.0) as double;
 
-  bool rewardEarned() {
-    return Hive.box(settingsBox).get(rewardEarnedKey, defaultValue: false);
-  }
+  set playAreaFontSize(double value) => _box.put(fontSizeKey, value);
 
-  Future<void> setRewardEarned(bool value) async {
-    Hive.box(settingsBox).put(rewardEarnedKey, value);
-  }
+  bool get rewardEarned =>
+      _box.get(rewardEarnedKey, defaultValue: false) as bool;
 
-  String theme() {
-    return Hive.box(settingsBox)
-        .get(settingsThemeKey, defaultValue: lightThemeKey);
-  }
+  set rewardEarned(bool value) => _box.put(rewardEarnedKey, value);
 
-  Future<void> setTheme(String value) async {
-    Hive.box(settingsBox).put(settingsThemeKey, value);
-  }
+  String get theme =>
+      _box.get(settingsThemeKey, defaultValue: defaultThemeKey) as String;
+
+  set theme(String value) => _box.put(settingsThemeKey, value);
 }

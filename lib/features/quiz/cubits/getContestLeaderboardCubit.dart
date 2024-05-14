@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutterquiz/features/quiz/models/contestLeaderboard.dart';
-import '../quizRepository.dart';
+import 'package:flutterquiz/features/quiz/quizRepository.dart';
 
 @immutable
 abstract class GetContestLeaderboardState {}
@@ -11,28 +11,29 @@ class GetContestLeaderboardInitial extends GetContestLeaderboardState {}
 class GetContestLeaderboardProgress extends GetContestLeaderboardState {}
 
 class GetContestLeaderboardSuccess extends GetContestLeaderboardState {
-  final List<ContestLeaderboard> getContestLeaderboardList;
-
   GetContestLeaderboardSuccess(this.getContestLeaderboardList);
+
+  final List<ContestLeaderboard> getContestLeaderboardList;
 }
 
 class GetContestLeaderboardFailure extends GetContestLeaderboardState {
-  final String errorMessage;
-
   GetContestLeaderboardFailure(this.errorMessage);
+
+  final String errorMessage;
 }
 
 class GetContestLeaderboardCubit extends Cubit<GetContestLeaderboardState> {
-  final QuizRepository _quizRepository;
-
   GetContestLeaderboardCubit(this._quizRepository)
       : super(GetContestLeaderboardInitial());
+  final QuizRepository _quizRepository;
 
-  getContestLeaderboard({String? userId, String? contestId}) async {
+  Future<void> getContestLeaderboard({String? contestId}) async {
     emit(GetContestLeaderboardProgress());
-    _quizRepository
-        .getContestLeaderboard(userId: userId, contestId: contestId)
+    await _quizRepository
+        .getContestLeaderboard(contestId: contestId)
         .then((val) => emit(GetContestLeaderboardSuccess(val)))
-        .catchError((e) => emit(GetContestLeaderboardFailure(e.toString())));
+        .catchError(
+          (Object e) => emit(GetContestLeaderboardFailure(e.toString())),
+        );
   }
 }

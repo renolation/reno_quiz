@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutterquiz/features/profileManagement/profileManagementRepository.dart';
@@ -11,34 +12,32 @@ class UploadProfileInitial extends UploadProfileState {}
 class UploadProfileInProgress extends UploadProfileState {}
 
 class UploadProfileSuccess extends UploadProfileState {
-  final String imageUrl;
-
   UploadProfileSuccess(this.imageUrl);
+
+  final String imageUrl;
 }
 
 class UploadProfileFailure extends UploadProfileState {
-  final String errorMessage;
-
   UploadProfileFailure(this.errorMessage);
+
+  final String errorMessage;
 }
 
 class UploadProfileCubit extends Cubit<UploadProfileState> {
-  final ProfileManagementRepository _profileManagementRepository;
-
   UploadProfileCubit(this._profileManagementRepository)
       : super(UploadProfileInitial());
+  final ProfileManagementRepository _profileManagementRepository;
 
-  void uploadProfilePicture(File? file, String? userId) async {
+  Future<void> uploadProfilePicture(File? file) async {
     emit(UploadProfileInProgress());
-    _profileManagementRepository
-        .uploadProfilePicture(file, userId)
-        .then((imageUrl) {
+    try {
+      final imageUrl =
+          await _profileManagementRepository.uploadProfilePicture(file);
       //success
       emit(UploadProfileSuccess(imageUrl));
-    }).catchError((e) {
-      print(e);
+    } catch (e) {
       //failure
       emit(UploadProfileFailure(e.toString()));
-    });
+    }
   }
 }
